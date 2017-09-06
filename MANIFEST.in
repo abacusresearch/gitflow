@@ -1,0 +1,6 @@
+include *.txt
+include *.sh
+recursive-include doc
+recursive-include gen
+recursive-include res
+recursive-include hooks

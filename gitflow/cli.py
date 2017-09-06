@@ -1,0 +1,134 @@
+import os
+import sys
+import types
+from typing import TextIO
+
+import colors
+
+_ERROR_COLOR = colors.partial(colors.color, fg='red')
+_WARN_COLOR = colors.partial(colors.color, fg='orange')
+
+__enable_color = False
+
+
+def set_allow_color(allow):
+    global __enable_color
+    __enable_color = allow and supports_color()
+
+
+def supports_color():
+    """
+    Returns True if the running system's terminal supports color, and False
+    otherwise.
+    """
+    plat = sys.platform
+    supported_platform = plat != 'Pocket PC' and (plat != 'win32' or
+                                                  'ANSICON' in os.environ)
+    # isatty is not always implemented, #6223.
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not supported_platform or not is_a_tty:
+        return False
+    return True
+
+
+def print(message):
+    sys.stdout.write(message)
+    if not message.endswith('\n'):
+        sys.stdout.write('\n')
+
+
+def fcwrite(out: TextIO, color, message: str):
+    if __enable_color and color is not None:
+        out.write(color(message))
+    else:
+        out.write(message)
+
+
+def fcwriteln(out: TextIO, color, message: str = None):
+    if message is not None:
+        fcwrite(out, color, message + os.linesep)
+    else:
+        fcwrite(out, color, os.linesep)
+
+
+def eprint(message: str):
+    fcwriteln(sys.stderr, _ERROR_COLOR, message)
+
+
+def warn(message: str):
+    fcwriteln(sys.stderr, _WARN_COLOR, message)
+
+
+def fail(exit_code, *message):
+    for line in message:
+        eprint(line)
+    if exit_code == os.EX_OK:
+        eprint("internal error")
+        exit_code = os.EX_SOFTWARE
+    exit(exit_code)
+
+
+def if_none(obj, default=""):
+    if obj is None:
+        return default
+    return str(obj)
+
+
+def shellquote(s):
+    return "'" + s.replace("'", "'\\''") + "'"
+
+
+def get_cmd(command_funcs, args):
+    """
+    :param command_funcs: a list of functions prefixed with 'cmd_'.
+    Pattern: cmd_<command_name>, '_' in <command_name> translate to '-'.
+    :param args: command line arguments
+    :return: the first function present in args.
+    """
+    for func in command_funcs:
+        if not isinstance(func, types.FunctionType):
+            fail(os.EX_SOFTWARE, "internal error")
+
+        func_name = str.lower(func.__name__)
+        if not func_name.startswith('cmd_'):
+            fail(os.EX_SOFTWARE, "internal error")
+        func_name = func_name[4:None]
+        command_name = str.lower(func_name.replace('_', '-'))
+        if args[command_name]:
+            return func
+    return None
+
+
+def query_yes_no(output_stream, question, default="yes"):
+    """Ask a yes/no question via raw_input() and return their answer.
+
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+
+    The "answer" return value is True for "yes" or False for "no".
+
+    Source: https://stackoverflow.com/a/3041990
+    """
+    valid = {"yes": True, "y": True, "ye": True,
+             "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        output_stream.write(question + prompt)
+        choice = input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            output_stream.write("Please respond with 'yes' or 'no' "
+                                "(or 'y' or 'n').\n")
