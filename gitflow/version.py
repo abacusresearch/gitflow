@@ -109,10 +109,7 @@ class VersionMatcher(object):
         full_pattern += ')'
         if ref_name_infixes is not None and len(ref_name_infixes):
             full_pattern += '(?P<prefix>'
-            for index, ref_name_infix in enumerate(ref_name_infixes):
-                if index:
-                    full_pattern += '|'
-                full_pattern += re.escape(ref_name_infix)
+            full_pattern += '|'.join(ref_name_infixes)
             full_pattern += ')'
         full_pattern += pattern
 
