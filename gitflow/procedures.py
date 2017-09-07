@@ -10,9 +10,9 @@
 
 import atexit
 import os
+import platform
 import re
 import shutil
-import platform
 import subprocess
 import sys
 from typing import Union, Callable
@@ -1405,9 +1405,53 @@ def status(context):
     return result
 
 
+def update_hash_with_file(hash_state, file: str):
+    with open(file, 'rb') as file:
+        while True:
+            buffer = file.read(65536)
+            if len(buffer):
+                hash_state.update(buffer)
+            else:
+                break
+        return hash_state.digest()
+
+
+def download_file(source_uri: str, dest_file: str, hash: str):
+    from urllib import request
+    import hashlib
+
+    result = Result()
+
+    if not os.path.exists(dest_file):
+        request.urlretrieve(url=str(source_uri), filename=dest_file + "~")
+
+        filesystem.replace_file(dest_file + "~", dest_file)
+
+    if hash is not None:
+        hash_state = hashlib.sha256()
+
+        actual_hash = update_hash_with_file(hash_state, dest_file)
+
+        if actual_hash != bytes.fromhex(hash):
+            result.error(os.EX_IOERR,
+                         _("File verification failed."),
+                         _("The file {file} is expected to hash to {expected_hash},\n"
+                           "The actual hash is: {actual_hash}")
+                         .format(
+                             file=repr(dest_file),
+                             expected_hash=repr(hash),
+                             actual_hash=repr(actual_hash),
+                         )
+                         )
+
+    if not result.has_errors():
+        result.value = dest_file
+
+    return result
+
+
 def build(context):
     from urllib import parse
-    from urllib import request
     import zipfile
 
     result = Result()
@@ -1438,6 +1482,7 @@ def build(context):
 
     gradle_module_name = 'gradle-3.5.1'
     gradle_dist_url = 'https://services.gradle.org/distributions/' + gradle_module_name + '-bin.zip'
+    gradle_dist_hash_sha256 = '8dce35f52d4c7b4a4946df73aa2830e76ba7148850753d8b5e94c5dc325ceef8'
 
     repo_url = parse.urlparse(remote.url)
     repo_dir_name = repo_url.path.rsplit('/', 1)[-1]
@@ -1461,9 +1506,8 @@ def build(context):
                     )
 
     cli.print("Downloading Gradle ...")
-    if not os.path.exists(gradle_dist_archive_path):
-        request.urlretrieve(url=str(gradle_dist_url), filename=gradle_dist_archive_path + "~")
-        filesystem.replace_file(gradle_dist_archive_path + "~", gradle_dist_archive_path)
+    download_result = download_file(gradle_dist_url, gradle_dist_archive_path, gradle_dist_hash_sha256)
+    result.add_subresult(download_result)
 
     if os.path.exists(gradle_dist_install_path):
         shutil.rmtree(gradle_dist_install_path)
