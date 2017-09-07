@@ -15,7 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Union, Callable
+from typing import Union, Callable, Tuple
 
 import colors
 import semver
@@ -53,12 +53,42 @@ class BranchInfo(object):
     upstream_class: const.BranchClass = None
 
 
+def get_target_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
+        -> Tuple[repotools.Ref, const.BranchClass]:
+    if branch_info.local is not None and branch_info.upstream is not None:
+        if branch_info.local_class != branch_info.upstream_class:
+            result_out.error(os.EX_DATAERR,
+                             _("Local and upstream branch have a mismatching branch class."),
+                             None)
+        if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
+            result_out.error(os.EX_DATAERR,
+                             _("Local and upstream branch have a mismatching short name."),
+                             None)
+
+    candidate = None
+    candidate_class = None
+    if selection == BranchSelection.BRANCH_PREFER_LOCAL:
+        candidate = branch_info.local or branch_info.upstream
+        candidate_class = branch_info.local_class or branch_info.upstream_class
+    elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
+        candidate = branch_info.local
+        candidate_class = branch_info.local_class
+    if selection == BranchSelection.BRANCH_PREFER_REMOTE:
+        candidate = branch_info.upstream or branch_info.local
+        candidate_class = branch_info.upstream_class or branch_info.local_class
+    elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
+        candidate = branch_info.upstream
+        candidate_class = branch_info.upstream_class
+    return candidate, candidate_class
+
+
 class CommandContext(object):
     context: Context = None
 
     selected_ref: repotools.Ref = None
     selected_branch: BranchInfo = None
     selected_commit: str = None
+    selected_explicitly: bool = None
 
     current_branch: repotools.Ref = None
     affected_main_branches: list = None
@@ -158,8 +188,8 @@ def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, s
         branch_info = update_branch_info(command_context.context,
                                          command_context.branch_info_dict,
                                          command_context.upstreams,
-                                         ref if isinstance(ref, repotools.Ref) else repotools.get_ref_by_name(ref)
-                                         )
+                                         ref if isinstance(ref, repotools.Ref)
+                                         else repotools.get_ref_by_name(command_context.context.repo, ref))
     return branch_info
 
 
@@ -501,6 +531,8 @@ def get_command_context(context, object_arg: str,
     command_context.selected_ref = selected_ref
     command_context.selected_commit = commit
     command_context.selected_branch = branch_info
+    command_context.selected_explicitly = object_arg is not None
+
     command_context.affected_main_branches = affected_main_branches
     command_context.current_branch = current_branch
 
@@ -1349,32 +1381,49 @@ def begin(context: Context):
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
 
-    branch_prefix = None
+    branch_supertype = context.args['<supertype>']
     branch_type = context.args['<type>']
     branch_short_name = context.args['<name>']
 
-    if context.parsed_config.release_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
-
-        if branch_type not in context.parsed_config.dev_branch_types:
-            result.fail(os.EX_USAGE,
-                        _("Branch type {branch_type} is no allowed off a release branch: {release_branch}.")
-                        .format(branch_type=repr(branch_type), release_branch=repr(command_context.selected_ref.name)),
-                        None)
-
-        branch_prefix = 'prod'
-    elif command_context.selected_ref.short_name == context.parsed_config.release_branch_base:
-        branch_prefix = 'dev'
-    else:
+    if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
         result.fail(os.EX_USAGE,
-                    _("Invalid branch {branch}.")
-                    .format(branch=repr(command_context.selected_ref.name)),
+                    _("Invalid branch super type: {supertype}.")
+                    .format(supertype=repr(branch_supertype)),
                     None)
 
-    branch_name = utils.split_join('/', False, False, branch_prefix, branch_type, branch_short_name)
-    branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, branch_name)
+    work_branch_name = utils.split_join('/', False, False, branch_supertype, branch_type, branch_short_name)
+    work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
+    work_branch_class = get_branch_class(context, work_branch_ref_name)
+
+    allowed_base_branch_class = const.BRANCHING[work_branch_class]
+
+    base_branch, base_branch_class = get_target_ref(result, command_context.selected_branch,
+                                                    BranchSelection.BRANCH_PREFER_LOCAL)
+    if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
+        fixed_base_branch_info = get_branch_info(command_context,
+                                                 'refs/heads/' + context.parsed_config.release_branch_base)
+        fixed_base_branch, fixed_destination_branch_class = get_target_ref(result,
+                                                                           fixed_base_branch_info,
+                                                                           BranchSelection.BRANCH_PREFER_LOCAL)
+
+        base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
+
+    if allowed_base_branch_class != base_branch_class:
+        result.fail(os.EX_USAGE,
+                    _("The branch {branch} is not a valid base for {supertype} branches.")
+                    .format(branch=repr(base_branch.name),
+                            supertype=repr(branch_supertype)),
+                    None)
+
+    if base_branch is None:
+        result.fail(os.EX_USAGE,
+                    _("Base branch undetermined."),
+                    None)
 
     if context.verbose:
-        cli.print("branch_name: " + branch_name)
+        cli.print("branch_name: " + command_context.selected_ref.name)
+        cli.print("work_branch_name: " + work_branch_name)
+        cli.print("base_branch_name: " + base_branch.name)
 
     if not context.dry_run and not result.has_errors():
         index_status = git(context, ['diff-index', 'HEAD', '--'])
@@ -1389,14 +1438,14 @@ def begin(context: Context):
                         None)
 
         git_or_fail(context, result,
-                    ['update-ref', branch_ref_name, command_context.selected_commit, ''],
+                    ['update-ref', work_branch_ref_name, command_context.selected_commit, ''],
                     _("Failed to create branch {branch_name}.")
-                    .format(branch_name=branch_name)
+                    .format(branch_name=work_branch_name)
                     )
         git_or_fail(context, result,
-                    ['checkout', branch_name],
+                    ['checkout', work_branch_name],
                     _("Failed to checkout branch {branch_name}.")
-                    .format(branch_name=branch_name)
+                    .format(branch_name=work_branch_name)
                     )
 
     return result
@@ -1413,46 +1462,62 @@ def end(context: Context):
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
 
-    branch_prefix = None
+    branch_supertype = context.args['<supertype>']
     branch_type = context.args['<type>']
     branch_short_name = context.args['<name>']
 
-    destination_branch = None
-
-    if context.parsed_config.release_base_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
-        branch_prefix = const.BRANCH_PREFIX_DEV
-        destination_branch = command_context.selected_ref
-    elif context.parsed_config.release_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
-        branch_prefix = const.BRANCH_PREFIX_PROD
-        destination_branch = command_context.selected_ref
-    else:
-        match = context.parsed_config.work_branch_matcher.fullmatch(command_context.selected_ref.name)
-        if context.parsed_config.work_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
-            branch_prefix = match.group('prefix')
-        else:
-            result.fail(os.EX_USAGE,
-                        _("Invalid branch {branch}.")
-                        .format(branch=repr(command_context.selected_ref.name)),
-                        None)
-
-    work_branch_name = utils.split_join('/', False, False, branch_prefix, branch_type, branch_short_name)
-    work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
-
-    if destination_branch is None:
-        if branch_prefix == const.BRANCH_PREFIX_DEV:
-            destination_branch = repotools.get_branch_by_name(context.repo,
-                                                              context.parsed_config.release_branch_base,
-                                                              BranchSelection.BRANCH_PREFER_LOCAL)
-
-    if destination_branch is None:
+    if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
         result.fail(os.EX_USAGE,
-                    _("Destination branch undetermined."),
+                    _("Invalid branch super type: {supertype}.")
+                    .format(supertype=repr(branch_supertype)),
+                    None)
+
+    work_branch_name = utils.split_join('/', False, False, branch_supertype, branch_type, branch_short_name)
+    work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
+    work_branch_class = get_branch_class(context, work_branch_ref_name)
+
+    allowed_base_branch_class = const.BRANCHING[work_branch_class]
+
+    base_branch, base_branch_class = get_target_ref(result, command_context.selected_branch,
+                                                    BranchSelection.BRANCH_PREFER_LOCAL)
+    if not command_context.selected_explicitly:
+        if branch_supertype == const.BRANCH_PREFIX_DEV:
+            fixed_base_branch_info = get_branch_info(command_context,
+                                                     'refs/heads/' + context.parsed_config.release_branch_base)
+            fixed_base_branch, fixed_destination_branch_class = get_target_ref(result,
+                                                                               fixed_base_branch_info,
+                                                                               BranchSelection.BRANCH_PREFER_LOCAL)
+
+            base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
+        elif branch_supertype == const.BRANCH_PREFIX_PROD:
+            # TODO find merge base
+            pass
+
+    if allowed_base_branch_class != base_branch_class:
+        result.fail(os.EX_USAGE,
+                    _("The branch {branch} is not a valid base for {supertype} branches.")
+                    .format(branch=repr(base_branch.name),
+                            supertype=repr(branch_supertype)),
+                    None)
+
+    if base_branch is None:
+        result.fail(os.EX_USAGE,
+                    _("Base branch undetermined."),
+                    None)
+
+    if context.verbose:
+        cli.print("base_branch_name: " + base_branch.name)
+        cli.print("branch_name: " + work_branch_name)
+
+    if base_branch is None:
+        result.fail(os.EX_USAGE,
+                    _("Base branch undetermined."),
                     None)
 
     if context.verbose:
         cli.print("branch_name: " + command_context.selected_ref.name)
         cli.print("work_branch_name: " + work_branch_name)
-        cli.print("destination_branch_name: " + destination_branch.name)
+        cli.print("base_branch_name: " + base_branch.name)
 
     if not context.dry_run and not result.has_errors():
         index_status = git(context, ['diff-index', 'HEAD', '--'])
@@ -1467,22 +1532,22 @@ def end(context: Context):
                         None)
 
         git_or_fail(context, result,
-                    ['checkout', destination_branch.short_name],
+                    ['checkout', base_branch.short_name],
                     _("Failed to checkout branch {branch_name}.")
-                    .format(branch_name=repr(destination_branch.name))
+                    .format(branch_name=repr(base_branch.name))
                     )
 
         git_or_fail(context, result,
                     ['merge', '--no-ff', work_branch_name],
                     _("Failed to merge branch {work_branch}."
-                      "Rebase {work_branch} on {destination_branch} and try again")
-                    .format(work_branch=repr(work_branch_name), destination_branch=repr(destination_branch.name))
+                      "Rebase {work_branch} on {base_branch} and try again")
+                    .format(work_branch=repr(work_branch_name), base_branch=repr(base_branch.name))
                     )
 
         git_or_fail(context, result,
-                    ['push', context.parsed_config.remote_name, destination_branch],
+                    ['push', context.parsed_config.remote_name, base_branch],
                     _("Failed to push branch {branch_name}.")
-                    .format(branch_name=repr(destination_branch.name))
+                    .format(branch_name=repr(base_branch.name))
                     )
 
     return result
@@ -1567,14 +1632,14 @@ def status(context):
                 if context.verbose:
                     cli.fcwrite(sys.stdout, status_local_color, branch_info.local.name)
                 else:
-                    cli.fcwrite(sys.stdout, status_local_color, branch_info.local.local_name)
+                    cli.fcwrite(sys.stdout, status_local_color, branch_info.local.short_name)
             if branch_info.upstream is not None:
                 if branch_info.local is not None:
                     cli.fcwrite(sys.stdout, status_color, ' => ')
                 if context.verbose:
                     cli.fcwrite(sys.stdout, status_remote_color, branch_info.upstream.name)
                 else:
-                    cli.fcwrite(sys.stdout, status_remote_color, branch_info.upstream.local_name)
+                    cli.fcwrite(sys.stdout, status_remote_color, branch_info.upstream.short_name)
             cli.fcwrite(sys.stdout, status_color, "]")
             if discontinued:
                 cli.fcwrite(sys.stdout, status_color, ' (' + _('discontinued') + ')')

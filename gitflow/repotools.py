@@ -272,7 +272,7 @@ def git_list_refs(context: RepoContext, *args) -> list:
         yield ref
 
 
-def get_ref_by_name(context, ref_name):
+def get_ref_by_name(context: RepoContext, ref_name):
     return next(git_list_refs(context, ref_name))
 
 

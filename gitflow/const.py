@@ -66,4 +66,16 @@ class BranchClass(Enum):
     DEVELOPMENT_BASE = 1,
     RELEASE = 2,
     WORK_DEV = 3,
-    WORK_PROD = 3,
+    WORK_PROD = 4,
+
+
+BRANCH_CLASS_BY_SUPERTYPE = {
+    BRANCH_PREFIX_PROD: BranchClass.WORK_PROD,
+    BRANCH_PREFIX_DEV: BranchClass.WORK_DEV,
+}
+
+BRANCHING = {
+    BranchClass.WORK_DEV: BranchClass.DEVELOPMENT_BASE,
+    BranchClass.WORK_PROD: BranchClass.RELEASE,
+    BranchClass.RELEASE: BranchClass.DEVELOPMENT_BASE,
+}
