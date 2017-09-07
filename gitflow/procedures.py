@@ -1506,15 +1506,6 @@ def end(context: Context):
                     None)
 
     if context.verbose:
-        cli.print("base_branch_name: " + base_branch.name)
-        cli.print("branch_name: " + work_branch_name)
-
-    if base_branch is None:
-        result.fail(os.EX_USAGE,
-                    _("Base branch undetermined."),
-                    None)
-
-    if context.verbose:
         cli.print("branch_name: " + command_context.selected_ref.name)
         cli.print("work_branch_name: " + work_branch_name)
         cli.print("base_branch_name: " + base_branch.name)
