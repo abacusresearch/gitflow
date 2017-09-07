@@ -58,10 +58,16 @@ class CommandContext(object):
     selected_ref: repotools.Ref = None
 
 
-def git_or_fail(clone_context, result, command, error_message=None, error_reason=None):
-    proc = repotools.git(clone_context.repo, *command)
+def git(context: Context, command: list) -> int:
+    proc = repotools.git(context.repo, *command)
     proc.wait()
-    if proc.returncode != os.EX_OK:
+    return proc.returncode
+
+
+def git_or_fail(context: Context, result: Result, command: list,
+                error_message: str = None, error_reason: str = None):
+    returncode = git(context, command)
+    if returncode != os.EX_OK:
         if error_message is not None:
             result.fail(os.EX_DATAERR, error_message, error_reason)
         else:
@@ -1268,6 +1274,72 @@ def discontinue_version(context: Context):
             _("Failed to fast forward from {remote}")
                 .format(remote=context.parsed_config.remote_name),
             None)
+
+    return result
+
+
+def begin(context: Context):
+    result = Result()
+    context_result = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<object>', None),
+        for_modification=True,
+        base_branch=True,
+        release_branches=True
+    )
+    result.add_subresult(context_result)
+    command_context: CommandContext = context_result.value
+
+    branch_prefix = None
+    branch_type = context.args['<type>']
+    branch_short_name = context.args['<name>']
+
+    if context.parsed_config.release_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
+
+        if branch_type not in context.parsed_config.dev_branch_types:
+            result.fail(os.EX_USAGE,
+                        _("Branch type {branch_type} is no allowed on release branch {release_branch}.")
+                        .format(branch_type=repr(branch_type), release_branch=repr(command_context.selected_ref.name)),
+                        None)
+
+        branch_prefix = 'prod'
+        pass
+    elif command_context.selected_ref.short_name == context.parsed_config.release_branch_base:
+        branch_prefix = 'dev'
+        pass
+    else:
+        result.fail(os.EX_USAGE,
+                    _("Invalid start branch."),
+                    None)
+
+    branch_name = utils.split_join('/', False, False, branch_prefix, branch_type, branch_short_name)
+    branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, branch_name)
+
+    if context.verbose:
+        cli.print("branch_name: " + branch_name)
+
+    if not context.dry_run and not result.has_errors():
+        index_status = git(context, ['diff-index', 'HEAD', '--'])
+        if index_status == 1:
+            result.fail(os.EX_USAGE,
+                        _("Branch creation aborted."),
+                        _("You have staged staged in your workspace.\n"
+                          "Unstage, commit or stash them and try again."))
+        elif index_status != 0:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to determine index status."),
+                        None)
+
+        git_or_fail(context, result,
+                    ['update-ref', branch_ref_name, command_context.commit, ''],
+                    _("Failed to create branch {branch_name}.")
+                    .format(branch_name=branch_name)
+                    )
+        git_or_fail(context, result,
+                    ['checkout', branch_name],
+                    _("Failed to checkout branch {branch_name}.")
+                    .format(branch_name=branch_name)
+                    )
 
     return result
 

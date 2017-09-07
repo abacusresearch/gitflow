@@ -41,6 +41,9 @@ LOCAL_BRANCH_PREFIX = 'refs/heads/'
 LOCAL_TAG_PREFIX = 'refs/tags/'
 REMOTES_PREFIX = 'refs/remotes/'
 
+BRANCH_PREFIX_DEV = 'dev'
+BRANCH_PREFIX_PROD = 'prod'
+
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
 INFO_VERBOSITY = 2
 TRACE_VERBOSITY = 3

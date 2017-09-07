@@ -13,6 +13,9 @@ class Config(object):
     remote_name = "origin"
 
     release_branch_base = None
+    dev_branch_types = ['feature', 'fix', 'chore', 'issue']
+    prod_branch_types = ['fix', 'chore', 'issue']
+
     release_branch_matcher = None
 
     version_tag_matcher = None
@@ -47,7 +50,7 @@ class Config(object):
 class Context(object):
     args = None
     config: Config = None
-    parsed_config = None
+    parsed_config: Config = None
     __property_store = None
     __repo = None
 

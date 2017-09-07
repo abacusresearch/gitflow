@@ -12,6 +12,10 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow discontinue [-d|--dry-run] [-y|--assume-yes] <object>
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+ flow begin [-d|--dry-run] [-y|--assume-yes] <type> <name> [<object>]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+ flow end [-d|--dry-run] [-y|--assume-yes] <type> <name> [<object>]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- [<git-arg>]]...
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow build [-d|--dry-run] [<object>]
@@ -63,7 +67,8 @@ ENABLE_PROFILER = False
 # mapped by cmd_<name>
 
 def cmd_bump(context):
-    return procedures.create_version(context, version.version_set(context.parsed_config.version, context.args['<version>']))
+    return procedures.create_version(context,
+                                     version.version_set(context.parsed_config.version, context.args['<version>']))
 
 
 def cmd_bump_major(context):
@@ -92,6 +97,14 @@ def cmd_bump_to_release(context):
 
 def cmd_discontinue(context):
     return procedures.discontinue_version(context)
+
+
+def cmd_begin(context):
+    return procedures.begin(context)
+
+
+def cmd_end(context):
+    return procedures.end(context)
 
 
 def cmd_log(context):
@@ -135,6 +148,8 @@ def main():
         cmd_bump_to_release,
         cmd_bump,
         cmd_discontinue,
+        cmd_begin,
+        cmd_end,
         cmd_log,
         cmd_build,
     ], context.args)
