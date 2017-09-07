@@ -1599,36 +1599,50 @@ def update_hash_with_file(hash_state, file: str):
                 hash_state.update(buffer)
             else:
                 break
-        return hash_state.digest()
 
 
-def download_file(source_uri: str, dest_file: str, hash: str):
+def hash_file(hash_state, file):
+    update_hash_with_file(hash_state, file)
+    return hash_state.digest()
+
+
+def download_file(source_uri: str, dest_file: str, hash_hex: str):
     from urllib import request
     import hashlib
 
     result = Result()
 
-    if not os.path.exists(dest_file):
-        request.urlretrieve(url=str(source_uri), filename=dest_file + "~")
+    hash = bytes.fromhex(hash_hex)
 
+    download = False
+
+    if not os.path.exists(dest_file):
+        cli.print("file does not exist: " + dest_file)
+        download = True
+    elif hash_file(hashlib.sha256(), dest_file) != hash:
+        cli.print("file hash does not match: " + dest_file)
+        download = True
+    else:
+        cli.print("keeping file: " + dest_file + ", sha256 matched: " + hash_hex)
+
+    if download:
+        cli.print("downloading: " + source_uri + " to " + dest_file)
+        request.urlretrieve(url=str(source_uri), filename=dest_file + "~")
         filesystem.replace_file(dest_file + "~", dest_file)
 
-    if hash is not None:
-        hash_state = hashlib.sha256()
-
-        actual_hash = update_hash_with_file(hash_state, dest_file)
-
-        if actual_hash != bytes.fromhex(hash):
-            result.error(os.EX_IOERR,
-                         _("File verification failed."),
-                         _("The file {file} is expected to hash to {expected_hash},\n"
-                           "The actual hash is: {actual_hash}")
-                         .format(
-                             file=repr(dest_file),
-                             expected_hash=repr(hash),
-                             actual_hash=repr(actual_hash),
-                         )
-                         )
+        if hash is not None:
+            actual_hash = hash_file(hashlib.sha256(), dest_file)
+            if actual_hash != hash:
+                result.error(os.EX_IOERR,
+                             _("File verification failed."),
+                             _("The file {file} is expected to hash to {expected_hash},\n"
+                               "The actual hash is: {actual_hash}")
+                             .format(
+                                 file=repr(dest_file),
+                                 expected_hash=repr(hash_hex),
+                                 actual_hash=repr(actual_hash.hex()),
+                             )
+                             )
 
     if not result.has_errors():
         result.value = dest_file
@@ -1686,7 +1700,6 @@ def build(context):
                     None
                     )
 
-    cli.print("Downloading Gradle ...")
     download_result = download_file(gradle_dist_url, gradle_dist_archive_path, gradle_dist_hash_sha256)
     result.add_subresult(download_result)
 
