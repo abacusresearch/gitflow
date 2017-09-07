@@ -69,11 +69,11 @@ class Ref(Object):
 
     @property
     def local_name(self):
-        return self.local_branch_name or self.local_tag_name or self.remote_branch_name
+        return self.local_branch_name or self.local_tag_name
 
     @property
     def short_name(self):
-        return self.local_branch_name or self.local_tag_name
+        return self.local_branch_name or self.local_tag_name or self.remote_branch_name
 
 
 def ref_target(ref: Union[Object, str] or Object):
@@ -148,7 +148,7 @@ def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, bran
 
     command = ['clone', '--reference', context.dir]
     if branch is not None:
-        command.extend(['--branch', branch.local_name if isinstance(branch, Ref) else branch])
+        command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
     command.extend([remote.url, target_dir])
 
     repo = RepoContext()
