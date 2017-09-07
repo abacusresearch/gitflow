@@ -81,9 +81,9 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
     return branch_info
 
 
-def update_project_metadata(context: Context,
-                            new_version: str, new_sequential_version: int,
-                            commit_out: VersionUpdateCommit):
+def update_project_property_file(context: Context,
+                                 new_version: str, new_sequential_version: int,
+                                 commit_out: VersionUpdateCommit):
     result = Result()
 
     version_property_name = context.config.get(const.CONFIG_VERSION_PROPERTY_NAME)
@@ -510,7 +510,7 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
                                 )
 
                 commit_info = VersionUpdateCommit()
-                update_result = update_project_metadata(clone_context, new_version, new_sequential_version, commit_info)
+                update_result = update_project_property_file(clone_context, new_version, new_sequential_version, commit_info)
                 result.add_subresult(update_result)
                 if (result.has_errors()):
                     result.fail(os.EX_DATAERR,
@@ -911,7 +911,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                             )
 
             commit_info = VersionUpdateCommit()
-            update_result = update_project_metadata(clone_context, new_version, new_sequential_version, commit_info)
+            update_result = update_project_property_file(clone_context, new_version, new_sequential_version, commit_info)
             result.add_subresult(update_result)
             if (result.has_errors()):
                 result.fail(os.EX_DATAERR,
