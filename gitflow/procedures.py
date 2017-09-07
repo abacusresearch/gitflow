@@ -457,16 +457,13 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
             clone_context = clone_result.value
 
             # create branch ref
-            cloned_repo_commands = []
-            cloned_repo_commands.append(['update-ref', 'refs/heads/' + branch_name, commit])
-            for command in cloned_repo_commands:
-                proc = repotools.git(clone_context.repo, *command)
-                proc.wait()
-                if proc.returncode != os.EX_OK:
-                    result.fail(os.EX_DATAERR,
-                                _("Failed to push."),
-                                _("An unexpected error occurred.")
-                                )
+            proc = repotools.git(clone_context.repo, *['update-ref', 'refs/heads/' + branch_name, commit])
+            proc.wait()
+            if proc.returncode != os.EX_OK:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to push."),
+                            _("An unexpected error occurred.")
+                            )
 
             # # checkout base branch
             # cloned_repo_commands = []
@@ -504,18 +501,13 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
                 #                 )
 
                 # run version change hooks on new release branch
-                cloned_repo_commands = []
-                checkout_command = ['checkout', '--force', branch_name]
-                cloned_repo_commands.append(checkout_command)
-
-                for command in cloned_repo_commands:
-                    proc = repotools.git(clone_context.repo, *command)
-                    proc.wait()
-                    if proc.returncode != os.EX_OK:
-                        result.fail(os.EX_DATAERR,
-                                    _("Failed to check out release branch."),
-                                    _("An unexpected error occurred.")
-                                    )
+                proc = repotools.git(clone_context.repo, *['checkout', '--force', branch_name])
+                proc.wait()
+                if proc.returncode != os.EX_OK:
+                    result.fail(os.EX_DATAERR,
+                                _("Failed to check out release branch."),
+                                _("An unexpected error occurred.")
+                                )
 
                 commit_info = VersionUpdateCommit()
                 update_result = update_project_metadata(clone_context, new_version, new_sequential_version, commit_info)
@@ -558,22 +550,7 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
 
             # create sequential tag ref
             if sequential_version_tag_name is not None:
-                cloned_repo_commands = []
-                cloned_repo_commands.append(['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag])
-                for command in cloned_repo_commands:
-                    proc = repotools.git(clone_context.repo, *command)
-                    proc.wait()
-                    if proc.returncode != os.EX_OK:
-                        result.fail(os.EX_DATAERR,
-                                    _("Failed to tag."),
-                                    _("An unexpected error occurred.")
-                                    )
-
-            # create tag ref
-            cloned_repo_commands = []
-            cloned_repo_commands.append(['update-ref', 'refs/tags/' + tag_name, object_to_tag])
-            for command in cloned_repo_commands:
-                proc = repotools.git(clone_context.repo, *command)
+                proc = repotools.git(clone_context.repo, *['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag])
                 proc.wait()
                 if proc.returncode != os.EX_OK:
                     result.fail(os.EX_DATAERR,
@@ -581,8 +558,16 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
                                 _("An unexpected error occurred.")
                                 )
 
+            # create tag ref
+            proc = repotools.git(clone_context.repo, *['update-ref', 'refs/tags/' + tag_name, object_to_tag])
+            proc.wait()
+            if proc.returncode != os.EX_OK:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to tag."),
+                            _("An unexpected error occurred.")
+                            )
+
             # push atomically
-            cloned_repo_commands = []
             push_command = ['push', '--atomic']
             if context.dry_run:
                 push_command.append('--dry-run')
@@ -602,16 +587,13 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
                 push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
                                      'refs/tags/' + sequential_version_tag_name + ':' + 'refs/tags/' + sequential_version_tag_name])
 
-            cloned_repo_commands.append(push_command)
-
-            for command in cloned_repo_commands:
-                proc = repotools.git(clone_context.repo, *command)
-                proc.wait()
-                if proc.returncode != os.EX_OK:
-                    result.fail(os.EX_DATAERR,
-                                _("Failed to push."),
-                                _("An unexpected error occurred.")
-                                )
+            proc = repotools.git(clone_context.repo, *push_command)
+            proc.wait()
+            if proc.returncode != os.EX_OK:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to push."),
+                            _("An unexpected error occurred.")
+                            )
 
         sys.stdout.flush()
         sys.stderr.flush()
@@ -917,19 +899,16 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                             .format(commit=commit, branch=repr(selected_ref.name))
                             )
 
-            cloned_repo_commands = []
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
                                 'refs/remotes/' + context.parsed_config.remote_name + '/' + branch_name]
-            cloned_repo_commands.append(checkout_command)
 
-            for command in cloned_repo_commands:
-                proc = repotools.git(clone_context.repo, *command)
-                proc.wait()
-                if proc.returncode != os.EX_OK:
-                    result.fail(os.EX_DATAERR,
-                                _("Failed to check out release branch."),
-                                _("An unexpected error occurred.")
-                                )
+            proc = repotools.git(clone_context.repo, *checkout_command)
+            proc.wait()
+            if proc.returncode != os.EX_OK:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to check out release branch."),
+                            _("An unexpected error occurred.")
+                            )
 
             commit_info = VersionUpdateCommit()
             update_result = update_project_metadata(clone_context, new_version, new_sequential_version, commit_info)
@@ -972,22 +951,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
 
         # create sequential tag ref
         if sequential_version_tag_name is not None:
-            cloned_repo_commands = []
-            cloned_repo_commands.append(['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag])
-            for command in cloned_repo_commands:
-                proc = repotools.git(clone_context.repo, *command)
-                proc.wait()
-                if proc.returncode != os.EX_OK:
-                    result.fail(os.EX_DATAERR,
-                                _("Failed to tag."),
-                                _("An unexpected error occurred.")
-                                )
-
-        # create tag ref
-        cloned_repo_commands = []
-        cloned_repo_commands.append(['update-ref', 'refs/tags/' + tag_name, object_to_tag])
-        for command in cloned_repo_commands:
-            proc = repotools.git(clone_context.repo, *command)
+            proc = repotools.git(clone_context.repo, *['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag])
             proc.wait()
             if proc.returncode != os.EX_OK:
                 result.fail(os.EX_DATAERR,
@@ -995,8 +959,16 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                             _("An unexpected error occurred.")
                             )
 
+        # create tag ref
+        proc = repotools.git(clone_context.repo, *['update-ref', 'refs/tags/' + tag_name, object_to_tag])
+        proc.wait()
+        if proc.returncode != os.EX_OK:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to tag."),
+                        _("An unexpected error occurred.")
+                        )
+
         # push atomically
-        cloned_repo_commands = []
         push_command = ['push', '--atomic']
         if context.dry_run:
             push_command.append('--dry-run')
@@ -1013,16 +985,13 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
             push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
                                  'refs/tags/' + sequential_version_tag_name + ':' + 'refs/tags/' + sequential_version_tag_name])
 
-        cloned_repo_commands.append(push_command)
-
-        for command in cloned_repo_commands:
-            proc = repotools.git(clone_context.repo, *command)
-            proc.wait()
-            if proc.returncode != os.EX_OK:
-                result.fail(os.EX_DATAERR,
-                            _("Failed to push."),
-                            _("An unexpected error occurred.")
-                            )
+        proc = repotools.git(clone_context.repo, *push_command)
+        proc.wait()
+        if proc.returncode != os.EX_OK:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to push."),
+                        _("An unexpected error occurred.")
+                        )
 
         sys.stdout.flush()
         sys.stderr.flush()
