@@ -53,8 +53,8 @@ class BranchInfo(object):
 
 class CommandContext(object):
     affected_main_branches: list = None
-    commit: str = None
     current_branch: repotools.Ref = None
+    selected_commit: str = None
     selected_ref: repotools.Ref = None
 
 
@@ -328,7 +328,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
 
 def get_command_context(context, object_arg: str,
                         for_modification: bool, with_upstream: bool,
-                        fail_message: str = _("Failed to resolve target branch")):
+                        fail_message: str = _("Failed to resolve target branch")) -> Result:
     result = Result()
     upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
     downstreams = {v: k for k, v in upstreams.items()}
@@ -441,7 +441,7 @@ def get_command_context(context, object_arg: str,
                                     remote_branch=repr(branch_info.upstream.name)))
 
     command_context = CommandContext()
-    command_context.commit = commit
+    command_context.selected_commit = commit
     command_context.selected_ref = selected_ref
     command_context.affected_main_branches = affected_main_branches
     command_context.current_branch = current_branch
@@ -1150,7 +1150,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
             or operation == version.version_bump_minor:
 
         tag_result = create_version_branch(context, command_context.affected_main_branches,
-                                           command_context.selected_ref, command_context.commit, operation)
+                                           command_context.selected_ref, command_context.selected_commit, operation)
         result.add_subresult(tag_result)
 
     elif operation == version.version_bump_patch \
@@ -1159,7 +1159,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
             or operation == version.version_bump_to_release:
 
         tag_result = create_version_tag(context, command_context.affected_main_branches,
-                                        command_context.selected_ref, command_context.commit, operation)
+                                        command_context.selected_ref, command_context.selected_commit, operation)
         result.add_subresult(tag_result)
 
     elif isinstance(operation, version.version_set):
@@ -1179,12 +1179,12 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
         release_branch = repotools.get_branch_by_name(context.repo, branch_name, BranchSelection.BRANCH_PREFER_LOCAL)
         if release_branch is None:
             tag_result = create_version_branch(context, command_context.affected_main_branches,
-                                               command_context.selected_ref, command_context.commit, operation)
+                                               command_context.selected_ref, command_context.selected_commit, operation)
             result.add_subresult(tag_result)
         else:
             selected_ref = release_branch
             tag_result = create_version_tag(context, command_context.affected_main_branches, selected_ref,
-                                            command_context.commit, operation)
+                                            command_context.selected_commit, operation)
             result.add_subresult(tag_result)
 
     if not result.has_errors() \
@@ -1331,7 +1331,7 @@ def begin(context: Context):
                         None)
 
         git_or_fail(context, result,
-                    ['update-ref', branch_ref_name, command_context.commit, ''],
+                    ['update-ref', branch_ref_name, command_context.selected_commit, ''],
                     _("Failed to create branch {branch_name}.")
                     .format(branch_name=branch_name)
                     )
