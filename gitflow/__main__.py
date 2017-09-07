@@ -14,7 +14,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow begin [-d|--dry-run] [-y|--assume-yes] <type> <name> [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow end [-d|--dry-run] [-y|--assume-yes] <type> <name> [<object>]
+ flow end [-d|--dry-run] [-y|--assume-yes] [<type> <name> [<object>]]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- [<git-arg>]]...
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]

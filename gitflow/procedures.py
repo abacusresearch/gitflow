@@ -178,13 +178,15 @@ def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo)
 
 
 def get_discontinuation_tag_name_for_version(context, version: Union[semver.VersionInfo, version.Version]):
-    return context.parsed_config.discontinuation_tag_matcher.ref_name_infixes[0] + get_branch_version_component_for_version(
+    return context.parsed_config.discontinuation_tag_matcher.ref_name_infixes[
+               0] + get_branch_version_component_for_version(
         context, version)
 
 
 def get_global_sequence_number(context):
     sequential_tags = repotools.git_list_refs(context.repo,
-                                              'refs/tags/' + context.parsed_config.sequential_version_tag_matcher.ref_name_infixes[0])
+                                              'refs/tags/' +
+                                              context.parsed_config.sequential_version_tag_matcher.ref_name_infixes[0])
     counter = 0
     for tag in sequential_tags:
         match = context.parsed_config.sequential_version_tag_matcher.fullmatch(tag.name)
@@ -238,7 +240,8 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
     if branch_ref is None:
         if not name.startswith(context.parsed_config.release_branch_matcher.ref_name_infixes[0]):
             branch_ref = repotools.get_branch_by_name(context.repo,
-                                                      context.parsed_config.release_branch_matcher.ref_name_infixes[0] + name,
+                                                      context.parsed_config.release_branch_matcher.ref_name_infixes[
+                                                          0] + name,
                                                       search_mode)
 
     return branch_ref
@@ -324,7 +327,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
 
 
 def get_command_context(context, object_arg: str,
-                        for_modification: bool, base_branch: bool, release_branches: bool,
+                        for_modification: bool, with_upstream: bool,
                         fail_message: str = _("Failed to resolve target branch")):
     result = Result()
     upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
@@ -402,13 +405,13 @@ def get_command_context(context, object_arg: str,
                     fail_message,
                     _("{branch} is discontinued.")
                     .format(branch=repr(selected_ref.name)))
-    if selected_ref.local_branch_name:
+    if selected_ref.local_branch_name is not None:
         # check, whether the  selected branch/commit is on remote
         upstreams = repotools.git_get_upstreams(context.repo)
         branch_info_dict = dict()
         branch_info = update_branch_info(context, branch_info_dict, upstreams, selected_ref)
 
-        if branch_info.upstream is None:
+        if with_upstream and branch_info.upstream is None:
             result.fail(os.EX_USAGE,
                         fail_message,
                         _("{branch} does not have an upstream branch.")
@@ -422,20 +425,21 @@ def get_command_context(context, object_arg: str,
         #                         remote_branch=repr(branch_info.upstream.name))
         #                 )
 
-        push_merge_base = repotools.git_merge_base(context.repo, commit, branch_info.upstream)
-        if push_merge_base is None:
-            result.fail(os.EX_USAGE,
-                        fail_message,
-                        _("{branch} does not have a common base with its upstream branch: {remote_branch}")
-                        .format(branch=repr(selected_ref.name),
-                                remote_branch=repr(branch_info.upstream.name)))
-        elif push_merge_base != commit:
-            result.fail(os.EX_USAGE,
-                        fail_message,
-                        _("{branch} is not in sync with its upstream branch.\n"
-                          "Push your changes and try again.")
-                        .format(branch=repr(selected_ref.name),
-                                remote_branch=repr(branch_info.upstream.name)))
+        if branch_info.upstream is not None:
+            push_merge_base = repotools.git_merge_base(context.repo, commit, branch_info.upstream)
+            if push_merge_base is None:
+                result.fail(os.EX_USAGE,
+                            fail_message,
+                            _("{branch} does not have a common base with its upstream branch: {remote_branch}")
+                            .format(branch=repr(selected_ref.name),
+                                    remote_branch=repr(branch_info.upstream.name)))
+            elif push_merge_base != commit:
+                result.fail(os.EX_USAGE,
+                            fail_message,
+                            _("{branch} is not in sync with its upstream branch.\n"
+                              "Push your changes and try again.")
+                            .format(branch=repr(selected_ref.name),
+                                    remote_branch=repr(branch_info.upstream.name)))
 
     command_context = CommandContext()
     command_context.commit = commit
@@ -1137,8 +1141,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None),
         for_modification=True,
-        base_branch=True,
-        release_branches=True
+        with_upstream=True
     )
     result.add_subresult(context_result)
     command_context = context_result.value
@@ -1284,8 +1287,7 @@ def begin(context: Context):
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None),
         for_modification=True,
-        base_branch=True,
-        release_branches=True
+        with_upstream=True
     )
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
@@ -1298,18 +1300,17 @@ def begin(context: Context):
 
         if branch_type not in context.parsed_config.dev_branch_types:
             result.fail(os.EX_USAGE,
-                        _("Branch type {branch_type} is no allowed on release branch {release_branch}.")
+                        _("Branch type {branch_type} is no allowed off a release branch: {release_branch}.")
                         .format(branch_type=repr(branch_type), release_branch=repr(command_context.selected_ref.name)),
                         None)
 
         branch_prefix = 'prod'
-        pass
     elif command_context.selected_ref.short_name == context.parsed_config.release_branch_base:
         branch_prefix = 'dev'
-        pass
     else:
         result.fail(os.EX_USAGE,
-                    _("Invalid start branch."),
+                    _("Invalid branch {branch}.")
+                    .format(branch=repr(command_context.selected_ref.name)),
                     None)
 
     branch_name = utils.split_join('/', False, False, branch_prefix, branch_type, branch_short_name)
@@ -1323,7 +1324,7 @@ def begin(context: Context):
         if index_status == 1:
             result.fail(os.EX_USAGE,
                         _("Branch creation aborted."),
-                        _("You have staged staged in your workspace.\n"
+                        _("You have staged changes in your workspace.\n"
                           "Unstage, commit or stash them and try again."))
         elif index_status != 0:
             result.fail(os.EX_DATAERR,
@@ -1339,6 +1340,86 @@ def begin(context: Context):
                     ['checkout', branch_name],
                     _("Failed to checkout branch {branch_name}.")
                     .format(branch_name=branch_name)
+                    )
+
+    return result
+
+
+def end(context: Context):
+    result = Result()
+    context_result = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<object>', None),
+        for_modification=True,
+        with_upstream=False
+    )
+    result.add_subresult(context_result)
+    command_context: CommandContext = context_result.value
+
+    branch_prefix = None
+    branch_type = context.args['<type>']
+    branch_short_name = context.args['<name>']
+
+    destination_branch = None
+
+    if context.parsed_config.release_base_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
+        branch_prefix = const.BRANCH_PREFIX_DEV
+        destination_branch = command_context.selected_ref
+    elif context.parsed_config.release_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
+        branch_prefix = const.BRANCH_PREFIX_PROD
+        destination_branch = command_context.selected_ref
+    else:
+        match = context.parsed_config.work_branch_matcher.fullmatch(command_context.selected_ref.name)
+        if context.parsed_config.work_branch_matcher.fullmatch(command_context.selected_ref.name) is not None:
+            branch_prefix = match.group('prefix')
+        else:
+            result.fail(os.EX_USAGE,
+                        _("Invalid branch {branch}.")
+                        .format(branch=repr(command_context.selected_ref.name)),
+                        None)
+
+    work_branch_name = utils.split_join('/', False, False, branch_prefix, branch_type, branch_short_name)
+    work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
+
+    if destination_branch is None:
+        result.fail(os.EX_USAGE,
+                    _("Destination branch undetermined."),
+                    None)
+
+    if context.verbose:
+        cli.print("branch_name: " + command_context.selected_ref.name)
+        cli.print("work_branch_name: " + work_branch_name)
+        cli.print("destination_branch_name: " + destination_branch.name)
+
+    if not context.dry_run and not result.has_errors():
+        index_status = git(context, ['diff-index', 'HEAD', '--'])
+        if index_status == 1:
+            result.fail(os.EX_USAGE,
+                        _("Branch creation aborted."),
+                        _("You have staged changes in your workspace.\n"
+                          "Unstage, commit or stash them and try again."))
+        elif index_status != 0:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to determine index status."),
+                        None)
+
+        git_or_fail(context, result,
+                    ['checkout', destination_branch.short_name],
+                    _("Failed to checkout branch {branch_name}.")
+                    .format(branch_name=repr(destination_branch.name))
+                    )
+
+        git_or_fail(context, result,
+                    ['merge', '--no-ff', work_branch_name],
+                    _("Failed to merge branch {work_branch}."
+                      "Rebase {work_branch} on {destination_branch} and try again")
+                    .format(work_branch=repr(work_branch_name), destination_branch=repr(destination_branch.name))
+                    )
+
+        git_or_fail(context, result,
+                    ['push', context.parsed_config.remote_name, destination_branch],
+                    _("Failed to push branch {branch_name}.")
+                    .format(branch_name=repr(destination_branch.name))
                     )
 
     return result
