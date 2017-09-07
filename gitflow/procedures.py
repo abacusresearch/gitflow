@@ -1382,6 +1382,12 @@ def end(context: Context):
     work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
 
     if destination_branch is None:
+        if branch_prefix == const.BRANCH_PREFIX_DEV:
+            destination_branch = repotools.get_branch_by_name(context.repo,
+                                                              context.parsed_config.release_branch_base,
+                                                              BranchSelection.BRANCH_PREFER_LOCAL)
+
+    if destination_branch is None:
         result.fail(os.EX_USAGE,
                     _("Destination branch undetermined."),
                     None)
