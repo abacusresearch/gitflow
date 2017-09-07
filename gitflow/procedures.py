@@ -168,23 +168,23 @@ def get_branch_version_component_for_version(context: Context,
 
 
 def get_branch_name_for_version(context: Context, version_on_branch: Union[semver.VersionInfo, version.Version]):
-    return context.parsed_config.release_branch_matcher.ref_name_infix \
+    return context.parsed_config.release_branch_matcher.ref_name_infixes[0] \
            + get_branch_version_component_for_version(context, version_on_branch)
 
 
 def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo):
-    return context.parsed_config.version_tag_matcher.ref_name_infix \
+    return context.parsed_config.version_tag_matcher.ref_name_infixes[0] \
            + version.format_version_info(version_info)
 
 
 def get_discontinuation_tag_name_for_version(context, version: Union[semver.VersionInfo, version.Version]):
-    return context.parsed_config.discontinuation_tag_matcher.ref_name_infix + get_branch_version_component_for_version(
+    return context.parsed_config.discontinuation_tag_matcher.ref_name_infixes[0] + get_branch_version_component_for_version(
         context, version)
 
 
 def get_global_sequence_number(context):
     sequential_tags = repotools.git_list_refs(context.repo,
-                                              'refs/tags/' + context.parsed_config.sequential_version_tag_matcher.ref_name_infix)
+                                              'refs/tags/' + context.parsed_config.sequential_version_tag_matcher.ref_name_infixes[0])
     counter = 0
     for tag in sequential_tags:
         match = context.parsed_config.sequential_version_tag_matcher.fullmatch(tag.name)
@@ -201,7 +201,7 @@ def create_sequence_number_for_version(context, new_version: Union[semver.Versio
 
 
 def create_sequential_version_tag_name(context, counter: int):
-    return context.parsed_config.sequential_version_tag_matcher.ref_name_infix + str(counter)
+    return context.parsed_config.sequential_version_tag_matcher.ref_name_infixes[0] + str(counter)
 
 
 def get_discontinuation_tags(context, version_branch):
@@ -236,9 +236,9 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
             branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
 
     if branch_ref is None:
-        if not name.startswith(context.parsed_config.release_branch_matcher.ref_name_infix):
+        if not name.startswith(context.parsed_config.release_branch_matcher.ref_name_infixes[0]):
             branch_ref = repotools.get_branch_by_name(context.repo,
-                                                      context.parsed_config.release_branch_matcher.ref_name_infix + name,
+                                                      context.parsed_config.release_branch_matcher.ref_name_infixes[0] + name,
                                                       search_mode)
 
     return branch_ref
