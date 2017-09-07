@@ -48,18 +48,22 @@ class BranchInfo(object):
     ref: repotools.Ref = None
     ref_is_local: bool = None
     local: repotools.Ref = None
+    local_class: const.BranchClass = None
     upstream: repotools.Ref = None
+    upstream_class: const.BranchClass = None
 
 
 class CommandContext(object):
     context: Context = None
 
-    branch_info_dict = None
-    affected_main_branches: list = None
-    current_branch: repotools.Ref = None
-    selected_commit: str = None
     selected_ref: repotools.Ref = None
+    selected_branch: BranchInfo = None
+    selected_commit: str = None
 
+    current_branch: repotools.Ref = None
+    affected_main_branches: list = None
+
+    branch_info_dict = None
     upstreams: dict = None
     downstreams: dict = None
 
@@ -87,6 +91,32 @@ def git_or_fail(context: Context, result: Result, command: list,
                         )
 
 
+def get_branch_class(context: Context, ref_name: str):
+    # TODO optimize
+    branch_class = None
+    branch_classes = list()
+    if context.parsed_config.release_base_branch_matcher.fullmatch(ref_name) is not None:
+        branch_classes.append(const.BranchClass.DEVELOPMENT_BASE)
+    if context.parsed_config.release_branch_matcher.fullmatch(ref_name) is not None:
+        branch_classes.append(const.BranchClass.RELEASE)
+    match = context.parsed_config.work_branch_matcher.fullmatch(ref_name)
+    if match is not None:
+        prefix = match.group('prefix').strip('/')
+        if prefix == const.BRANCH_PREFIX_DEV:
+            branch_classes.append(const.BranchClass.WORK_DEV)
+        elif prefix == const.BRANCH_PREFIX_PROD:
+            branch_classes.append(const.BranchClass.WORK_PROD)
+        else:
+            raise ValueError("invalid prefix: " + prefix)
+    if len(branch_classes) == 1:
+        branch_class = branch_classes[0]
+    elif len(branch_classes) == 0:
+        branch_class = None
+    else:
+        raise Exception("internal error")
+    return branch_class
+
+
 def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
                        branch_ref: repotools.Ref) -> BranchInfo:
     # TODO optimize
@@ -112,8 +142,10 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
 
     if branch_info is not None:
         if branch_info.local is not None:
+            branch_info.local_class = get_branch_class(context, branch_info.local.name)
             branch_info_out[branch_info.local.name] = branch_info
         if branch_info.upstream is not None:
+            branch_info.upstream_class = get_branch_class(context, branch_info.upstream.name)
             branch_info_out[branch_info.upstream.name] = branch_info
 
     return branch_info

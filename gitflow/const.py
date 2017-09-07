@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 
 VERSION = '1.0.0-alpha.1'
 MIN_GIT_VERSION = "2.9.0"
@@ -59,3 +60,10 @@ def __setattr__(self, name, value):
         raise AttributeError('Can\'t reassign const attribute "' + name + '"')
     else:
         super(self.__class__, self).__setattr__(name, value)
+
+
+class BranchClass(Enum):
+    DEVELOPMENT_BASE = 1,
+    RELEASE = 2,
+    WORK_DEV = 3,
+    WORK_PROD = 3,
