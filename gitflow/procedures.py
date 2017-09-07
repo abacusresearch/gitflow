@@ -407,7 +407,6 @@ def get_command_context(context, object_arg: str,
                     .format(branch=repr(selected_ref.name)))
     if selected_ref.local_branch_name is not None:
         # check, whether the  selected branch/commit is on remote
-        upstreams = repotools.git_get_upstreams(context.repo)
         branch_info_dict = dict()
         branch_info = update_branch_info(context, branch_info_dict, upstreams, selected_ref)
 
