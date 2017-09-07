@@ -801,7 +801,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                     # fail stray tags on exclusive branch commits
                     if version_info.major != branch_base_version_info.major \
                             or version_info.minor != branch_base_version_info.minor:
-                        result.fail(os.EX_USAGE,
+                        result.fail(os.EX_DATAERR,
                                     _("Cannot bump version."),
                                     _("Found stray version tag: {version}.")
                                     .format(version=repr(version.format_version_info(version_info)))
