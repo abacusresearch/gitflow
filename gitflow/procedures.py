@@ -1642,19 +1642,14 @@ def build(context):
 
     result = Result()
 
-    object_arg = context.args['<object>']
-
-    if object_arg is not None:
-        selected_branch = get_branch_by_branch_name_or_version_tag(context, object_arg,
-                                                                   BranchSelection.BRANCH_PREFER_LOCAL)
-        if selected_branch is None:
-            result.fail(os.EX_USAGE,
-                        _("Branch discontinuation failed."),
-                        _("Failed to resolve an object for token {object}.")
-                        .format(object=repr(object_arg))
-                        )
-    else:
-        selected_branch = repotools.git_get_current_branch(context.repo)
+    context_result = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<object>', None),
+        for_modification=False,
+        with_upstream=True
+    )
+    result.add_subresult(context_result)
+    command_context: CommandContext = context_result.value
 
     remote = repotools.git_get_remote(context.repo, context.parsed_config.remote_name)
     if remote is None:
@@ -1683,7 +1678,7 @@ def build(context):
     if os.path.exists(build_repo_path):
         shutil.rmtree(build_repo_path)
 
-    repo = repotools.git_clone(context.repo, build_repo_path, remote, selected_branch)
+    repo = repotools.git_clone(context.repo, build_repo_path, remote, command_context.selected_ref)
     if repo is None:
         result.fail(os.EX_IOERR,
                     _("Failed to clone {remote}.")
