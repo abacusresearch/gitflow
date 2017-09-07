@@ -1285,7 +1285,7 @@ def begin(context: Context):
     result = Result()
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<object>', None),
+        object_arg=utils.get_or_default(context.args, '<base-object>', None),
         for_modification=True,
         with_upstream=True
     )
@@ -1349,7 +1349,7 @@ def end(context: Context):
     result = Result()
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<object>', None),
+        object_arg=utils.get_or_default(context.args, '<dest-object>', None),
         for_modification=True,
         with_upstream=False
     )
