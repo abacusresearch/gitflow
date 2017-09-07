@@ -49,11 +49,18 @@ class BranchInfo(object):
     upstream: repotools.Ref = None
 
 
-def git_or_fail(clone_context, result, command, error_message, error_reason=_("An unexpected error occurred.")):
+def git_or_fail(clone_context, result, command, error_message=None, error_reason=None):
     proc = repotools.git(clone_context.repo, *command)
     proc.wait()
     if proc.returncode != os.EX_OK:
-        result.fail(os.EX_DATAERR, error_message, error_reason)
+        if error_message is not None:
+            result.fail(os.EX_DATAERR, error_message, error_reason)
+        else:
+            first_command_token = next(filter(lambda token: not token.startswith('-'), command))
+            result.fail(os.EX_DATAERR, _("git {sub_command} failed.")
+                        .format(sub_command=repr(first_command_token)),
+                        error_reason
+                        )
 
 
 def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,

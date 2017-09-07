@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2017-09-06 20:05+CEST\n"
+"POT-Creation-Date: 2017-09-07 10:41+CEST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,379 +23,381 @@ msgstr ""
 msgid "gitflow_config_file does not exist or is not a regular file: {path}."
 msgstr ""
 
-#: gitflow/context.py:122
+#: gitflow/context.py:124
 msgid ""
 "property file not supported: {path}\n"
 "Currently supported:\n"
 "{listing}"
 msgstr ""
 
-#: gitflow/context.py:191
+#: gitflow/context.py:198
 msgid "Failed to save properties.Missing property store."
 msgstr ""
 
-#: gitflow/procedures.py:98 gitflow/procedures.py:115
-msgid "Missing version property."
-msgstr ""
-
-#: gitflow/procedures.py:99 gitflow/procedures.py:116
-msgid "Missing property {property} in file {file}."
-msgstr ""
-
-#: gitflow/procedures.py:232 gitflow/procedures.py:254
-msgid "Failed to clone repo."
-msgstr ""
-
-#: gitflow/procedures.py:233
-msgid "The temporary target directory exists, but is not a directory."
-msgstr ""
-
-#: gitflow/procedures.py:255 gitflow/procedures.py:467
-#: gitflow/procedures.py:516 gitflow/procedures.py:525
-#: gitflow/procedures.py:553 gitflow/procedures.py:568
-#: gitflow/procedures.py:580 gitflow/procedures.py:612
-#: gitflow/procedures.py:930 gitflow/procedures.py:939
-#: gitflow/procedures.py:967 gitflow/procedures.py:982
-#: gitflow/procedures.py:994 gitflow/procedures.py:1023
+#: gitflow/procedures.py:52 gitflow/procedures.py:271
+#: gitflow/procedures.py:524 gitflow/procedures.py:895
+#: gitflow/procedures.py:905 gitflow/procedures.py:933
+#: gitflow/procedures.py:946 gitflow/procedures.py:955
+#: gitflow/procedures.py:980
 msgid "An unexpected error occurred."
 msgstr ""
 
-#: gitflow/procedures.py:302
+#: gitflow/procedures.py:60
+msgid "Git {sub_command} failed."
+msgstr ""
+
+#: gitflow/procedures.py:113 gitflow/procedures.py:130
+msgid "Missing version property."
+msgstr ""
+
+#: gitflow/procedures.py:114 gitflow/procedures.py:131
+msgid "Missing property {property} in file {file}."
+msgstr ""
+
+#: gitflow/procedures.py:248 gitflow/procedures.py:270
+msgid "Failed to clone repo."
+msgstr ""
+
+#: gitflow/procedures.py:249
+msgid "The temporary target directory exists, but is not a directory."
+msgstr ""
+
+#: gitflow/procedures.py:318
 msgid "Failed to create release branch based on {branch}."
 msgstr ""
 
-#: gitflow/procedures.py:304
+#: gitflow/procedures.py:320
 msgid "Release branches (major.minor) can only be created off {branch}"
 msgstr ""
 
-#: gitflow/procedures.py:311
+#: gitflow/procedures.py:327
 msgid "Failed to create release branch based on {branch} in batch mode."
 msgstr ""
 
-#: gitflow/procedures.py:313
+#: gitflow/procedures.py:329
 msgid "This operation disables version increments except for pre-release increments on all existing branches."
 msgstr ""
 
-#: gitflow/procedures.py:316
+#: gitflow/procedures.py:332
 msgid "This operation disables version increments on all existing branches."
 msgstr ""
 
-#: gitflow/procedures.py:317
+#: gitflow/procedures.py:333
 msgid "Continue?"
 msgstr ""
 
-#: gitflow/procedures.py:420 gitflow/procedures.py:429
+#: gitflow/procedures.py:436 gitflow/procedures.py:445
 msgid "Branch creation failed."
 msgstr ""
 
-#: gitflow/procedures.py:421
+#: gitflow/procedures.py:437
 msgid ""
 "Release branches cannot share a common ancestor commit.\n"
 "Existing branches on commit {commit}:\n"
 "{listing}"
 msgstr ""
 
-#: gitflow/procedures.py:430
+#: gitflow/procedures.py:446
 msgid ""
 "Subsequent release branches in history: %s\n"
 msgstr ""
 
-#: gitflow/procedures.py:436 gitflow/procedures.py:886
+#: gitflow/procedures.py:452 gitflow/procedures.py:854
 msgid "Internal error."
 msgstr ""
 
-#: gitflow/procedures.py:437 gitflow/procedures.py:887
+#: gitflow/procedures.py:453 gitflow/procedures.py:855
 msgid "Missing result version."
 msgstr ""
 
-#: gitflow/procedures.py:441
+#: gitflow/procedures.py:457
 msgid "Failed to increment version from {current_version} to {new_version}."
 msgstr ""
 
-#: gitflow/procedures.py:443 gitflow/procedures.py:893
+#: gitflow/procedures.py:459 gitflow/procedures.py:861
 msgid "The new version is lower than or equal to the current version."
 msgstr ""
 
-#: gitflow/procedures.py:466 gitflow/procedures.py:611
-#: gitflow/procedures.py:1022
+#: gitflow/procedures.py:476 gitflow/procedures.py:581
+#: gitflow/procedures.py:979
 msgid "Failed to push."
 msgstr ""
 
-#: gitflow/procedures.py:515 gitflow/procedures.py:929
+#: gitflow/procedures.py:515 gitflow/procedures.py:894
 msgid "Failed to check out release branch."
 msgstr ""
 
-#: gitflow/procedures.py:524 gitflow/procedures.py:938
+#: gitflow/procedures.py:523 gitflow/procedures.py:904
 msgid "Version change hook run failed."
 msgstr ""
 
-#: gitflow/procedures.py:552 gitflow/procedures.py:966
+#: gitflow/procedures.py:547 gitflow/procedures.py:932
 msgid "Failed to commit."
 msgstr ""
 
-#: gitflow/procedures.py:567 gitflow/procedures.py:579
-#: gitflow/procedures.py:981 gitflow/procedures.py:993
+#: gitflow/procedures.py:555 gitflow/procedures.py:559
+#: gitflow/procedures.py:945 gitflow/procedures.py:954
 msgid "Failed to tag."
 msgstr ""
 
-#: gitflow/procedures.py:641 gitflow/procedures.py:659
-#: gitflow/procedures.py:694
+#: gitflow/procedures.py:609 gitflow/procedures.py:627
+#: gitflow/procedures.py:662
 msgid "Cannot bump version."
 msgstr ""
 
-#: gitflow/procedures.py:642
+#: gitflow/procedures.py:610
 msgid "{branch} is not a release branch."
 msgstr ""
 
-#: gitflow/procedures.py:660
+#: gitflow/procedures.py:628
 msgid "{branch} has no merge base with {base_branch}."
 msgstr ""
 
-#: gitflow/procedures.py:695
+#: gitflow/procedures.py:663
 msgid "Found stray version tag: {version}."
 msgstr ""
 
-#: gitflow/procedures.py:812 gitflow/procedures.py:822
-#: gitflow/procedures.py:852 gitflow/procedures.py:858
-#: gitflow/procedures.py:873
+#: gitflow/procedures.py:780 gitflow/procedures.py:790
+#: gitflow/procedures.py:820 gitflow/procedures.py:826
+#: gitflow/procedures.py:841
 msgid "Tag creation failed."
 msgstr ""
 
-#: gitflow/procedures.py:813 gitflow/procedures.py:1427
+#: gitflow/procedures.py:781 gitflow/procedures.py:1384
 msgid "The major.minor part of the new version {new_version} does not match the branch version {branch_version}."
 msgstr ""
 
-#: gitflow/procedures.py:823
+#: gitflow/procedures.py:791
 msgid ""
 "There are version tags in branch history following the selected commit {commit}:\n"
 "{listing}"
 msgstr ""
 
-#: gitflow/procedures.py:853
+#: gitflow/procedures.py:821
 msgid ""
 "The selected commit already has version tags.\n"
 "Operations on such a commit are limited to pre-release type increments."
 msgstr ""
 
-#: gitflow/procedures.py:859
+#: gitflow/procedures.py:827
 msgid ""
 "There are version tags pointing to the selected commit {commit}.\n"
 "Consider reusing these versions or bumping them to stable.{listing}"
 msgstr ""
 
-#: gitflow/procedures.py:874
+#: gitflow/procedures.py:842
 msgid "The preceding sequential version {seq_val} does not equal the global sequential version {global_seq_val}."
 msgstr ""
 
-#: gitflow/procedures.py:891
+#: gitflow/procedures.py:859
 msgid "Failed to increment version from {current} to {new}."
 msgstr ""
 
-#: gitflow/procedures.py:914
+#: gitflow/procedures.py:882
 msgid "Failed to commit version update."
 msgstr ""
 
-#: gitflow/procedures.py:915
+#: gitflow/procedures.py:883
 msgid "The selected commit {commit} does not represent the tip of {branch}."
 msgstr ""
 
-#: gitflow/procedures.py:1067
+#: gitflow/procedures.py:1024
 msgid "Failed to resolve object {object}."
 msgstr ""
 
-#: gitflow/procedures.py:1069
+#: gitflow/procedures.py:1026
 msgid "No corresponding commit found."
 msgstr ""
 
-#: gitflow/procedures.py:1091
+#: gitflow/procedures.py:1048
 msgid "Failed to resolve target branch"
 msgstr ""
 
-#: gitflow/procedures.py:1092
+#: gitflow/procedures.py:1049
 msgid "Failed to resolve branch containing object: {object}"
 msgstr ""
 
-#: gitflow/procedures.py:1097
+#: gitflow/procedures.py:1054
 msgid "Failed to resolve unique release branch for object: {object}"
 msgstr ""
 
-#: gitflow/procedures.py:1099
+#: gitflow/procedures.py:1056
 msgid ""
 "Multiple different branches contain this commit:\n"
 "{listing}"
 msgstr ""
 
-#: gitflow/procedures.py:1106
+#: gitflow/procedures.py:1063
 msgid "Failed to resolve ref."
 msgstr ""
 
-#: gitflow/procedures.py:1107
+#: gitflow/procedures.py:1064
 msgid "{object} could not be resolved."
 msgstr ""
 
-#: gitflow/procedures.py:1111
+#: gitflow/procedures.py:1068
 msgid "Target branch: {name} ({commit})"
 msgstr ""
 
-#: gitflow/procedures.py:1113
+#: gitflow/procedures.py:1070
 msgid "Target commit: {commit}"
 msgstr ""
 
-#: gitflow/procedures.py:1119 gitflow/procedures.py:1131
-#: gitflow/procedures.py:1146 gitflow/procedures.py:1152
+#: gitflow/procedures.py:1076 gitflow/procedures.py:1088
+#: gitflow/procedures.py:1103 gitflow/procedures.py:1109
 msgid "Version creation failed."
 msgstr ""
 
-#: gitflow/procedures.py:1120
+#: gitflow/procedures.py:1077
 msgid "{branch} is discontinued."
 msgstr ""
 
-#: gitflow/procedures.py:1132
+#: gitflow/procedures.py:1089
 msgid "{branch} does not have an upstream branch."
 msgstr ""
 
-#: gitflow/procedures.py:1147
+#: gitflow/procedures.py:1104
 msgid "{branch} does not have a common base with its upstream branch: {remote_branch}"
 msgstr ""
 
-#: gitflow/procedures.py:1153
+#: gitflow/procedures.py:1110
 msgid ""
 "{branch} is not in sync with its upstream branch.\n"
 "Push your changes and try again."
 msgstr ""
 
-#: gitflow/procedures.py:1180
+#: gitflow/procedures.py:1137
 msgid "Illegal argument."
 msgstr ""
 
-#: gitflow/procedures.py:1181
+#: gitflow/procedures.py:1138
 msgid "Failed to parse version."
 msgstr ""
 
-#: gitflow/procedures.py:1203 gitflow/procedures.py:1210
+#: gitflow/procedures.py:1160 gitflow/procedures.py:1167
 msgid "Failed to fetch from {remote}"
 msgstr ""
 
-#: gitflow/procedures.py:1217 gitflow/procedures.py:1274
-#: gitflow/procedures.py:1282
+#: gitflow/procedures.py:1174 gitflow/procedures.py:1231
+#: gitflow/procedures.py:1239
 msgid "Failed to fast forward from {remote}"
 msgstr ""
 
-#: gitflow/procedures.py:1233 gitflow/procedures.py:1248
-#: gitflow/procedures.py:1463
+#: gitflow/procedures.py:1190 gitflow/procedures.py:1205
+#: gitflow/procedures.py:1420
 msgid "Branch discontinuation failed."
 msgstr ""
 
-#: gitflow/procedures.py:1234 gitflow/procedures.py:1301
-#: gitflow/procedures.py:1464
+#: gitflow/procedures.py:1191 gitflow/procedures.py:1258
+#: gitflow/procedures.py:1421
 msgid "Failed to resolve an object for token {object}."
 msgstr ""
 
-#: gitflow/procedures.py:1249
+#: gitflow/procedures.py:1206
 msgid "The branch {branch} is already discontinued."
 msgstr ""
 
-#: gitflow/procedures.py:1300
+#: gitflow/procedures.py:1257
 msgid "Log failed."
 msgstr ""
 
-#: gitflow/procedures.py:1378
+#: gitflow/procedures.py:1335
 msgid "discontinued"
 msgstr ""
 
-#: gitflow/procedures.py:1407
+#: gitflow/procedures.py:1364
 msgid "Invalid sequential version tag {tag}."
 msgstr ""
 
-#: gitflow/procedures.py:1409
+#: gitflow/procedures.py:1366
 msgid "The code element of version {version_string} is not unique."
 msgstr ""
 
-#: gitflow/procedures.py:1425
+#: gitflow/procedures.py:1382
 msgid "Invalid version tag {tag}."
 msgstr ""
 
-#: gitflow/procedures.py:1440
+#: gitflow/procedures.py:1397
 msgid "Version {version} breaks the sequence."
 msgstr ""
 
-#: gitflow/procedures.py:1499
+#: gitflow/procedures.py:1456
 msgid "Failed to clone from {remote} to {local}."
 msgstr ""
 
-#: gitflow/version.py:360 gitflow/version.py:379
+#: gitflow/version.py:318 gitflow/version.py:337
 msgid "Failed to increment the pre-release qualifier of version {version}."
 msgstr ""
 
-#: gitflow/version.py:362
+#: gitflow/version.py:320
 msgid "The current qualifier is invalid: {qualifier}"
 msgstr ""
 
-#: gitflow/version.py:370
+#: gitflow/version.py:328
 msgid "Failed to increment the pre-release qualifier {qualifier} of version {version}."
 msgstr ""
 
-#: gitflow/version.py:372
+#: gitflow/version.py:330
 msgid ""
 "There are no further qualifiers with higher precedence, configured qualifiers are:\n"
 "{listing}\n"
 "The sub command 'bump-to-release' may be used for a final bump."
 msgstr ""
 
-#: gitflow/version.py:381 gitflow/version.py:423
+#: gitflow/version.py:339 gitflow/version.py:381
 msgid "Pre-release increments cannot be performed on release versions."
 msgstr ""
 
-#: gitflow/version.py:401
+#: gitflow/version.py:359
 msgid "The pre-release increment has been skipped."
 msgstr ""
 
-#: gitflow/version.py:402
+#: gitflow/version.py:360
 msgid "In order to retain Maven compatibility, the pre-release component of snapshot versions must not be versioned."
 msgstr ""
 
-#: gitflow/version.py:406 gitflow/version.py:412 gitflow/version.py:421
+#: gitflow/version.py:364 gitflow/version.py:370 gitflow/version.py:379
 msgid "Failed to increment the pre-release component of version {version}."
 msgstr ""
 
-#: gitflow/version.py:408
+#: gitflow/version.py:366
 msgid "Snapshot versions must not have a pre-release version."
 msgstr ""
 
-#: gitflow/version.py:414
+#: gitflow/version.py:372
 msgid "The qualifier {qualifier} must already be versioned."
 msgstr ""
 
-#: gitflow/version.py:433
+#: gitflow/version.py:391
 msgid "Failed to increment the pre-release of version {version} for unknown reasons."
 msgstr ""
 
-#: gitflow/version.py:453
+#: gitflow/version.py:403
 msgid "Failed to increment version to release: {version}."
 msgstr ""
 
-#: gitflow/version.py:455
+#: gitflow/version.py:405
 msgid "Only pre-release versions can be incremented to a release version."
 msgstr ""
 
-#: gitflow/version.py:680 gitflow/version.py:688 gitflow/version.py:713
-#: gitflow/version.py:721
+#: gitflow/version.py:630 gitflow/version.py:638 gitflow/version.py:663
+#: gitflow/version.py:671
 msgid "Version change leaves a gap without a semantic meaning."
 msgstr ""
 
-#: gitflow/version.py:681 gitflow/version.py:714
+#: gitflow/version.py:631 gitflow/version.py:664
 msgid "The field {field_name} must be reset to {reset_val}."
 msgstr ""
 
-#: gitflow/version.py:689 gitflow/version.py:722
+#: gitflow/version.py:639 gitflow/version.py:672
 msgid "The field {field_name} must not be incremented by more than one."
 msgstr ""
 
-#: gitflow/version.py:772
+#: gitflow/version.py:722
 msgid "Version increment is flawed."
 msgstr ""
 
-#: gitflow/version.py:773
+#: gitflow/version.py:723
 msgid "A version increment from {version_a} to {version_b} is inconsistent."
 msgstr ""
 
