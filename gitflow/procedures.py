@@ -12,6 +12,8 @@ import atexit
 import os
 import re
 import shutil
+import platform
+import subprocess
 import sys
 from typing import Union, Callable
 
@@ -1470,7 +1472,7 @@ def build(context):
     zip_ref.close()
 
     gradle_executable = os.path.join(gradle_dist_bin_path,
-                                     "gradle.bat" if sys.platform.system().lower() == "windows" else "gradle")
+                                     "gradle.bat" if platform.system().lower() == "windows" else "gradle")
 
     st = os.stat(gradle_executable)
     os.chmod(gradle_executable, st.st_mode | 0o100)
@@ -1485,12 +1487,12 @@ def build(context):
         gradle_command.append('--info')
     gradle_command.append('app:assembleGenericDebug')
 
-    gradle_process = os.subprocess.run(gradle_command,
-                                       env=env,
-                                       cwd=build_repo_path,
-                                       # stdout=subprocess.PIPE,
-                                       # stderr=subprocess.PIPE
-                                       )
+    gradle_process = subprocess.run(gradle_command,
+                                    env=env,
+                                    cwd=build_repo_path,
+                                    # stdout=subprocess.PIPE,
+                                    # stderr=subprocess.PIPE
+                                    )
     # print(gradle_process.stdout)
     # print(gradle_process.stderr)
 
