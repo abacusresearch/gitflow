@@ -51,6 +51,13 @@ class BranchInfo(object):
     upstream: repotools.Ref = None
 
 
+class CommandContext(object):
+    affected_main_branches: list = None
+    commit: str = None
+    current_branch: repotools.Ref = None
+    selected_ref: repotools.Ref = None
+
+
 def git_or_fail(clone_context, result, command, error_message=None, error_reason=None):
     proc = repotools.git(clone_context.repo, *command)
     proc.wait()
@@ -306,6 +313,131 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
             result.value = True
         else:
             result.value = cli.query_yes_no(sys.stdout, prompt, "no")
+
+    return result
+
+
+def get_command_context(context, object_arg: str,
+                        for_modification: bool, base_branch: bool, release_branches: bool,
+                        fail_message: str = _("Failed to resolve target branch")):
+    result = Result()
+    upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
+    downstreams = {v: k for k, v in upstreams.items()}
+    # resolve the full rev name and its hash for consistency
+    selected_ref = None
+    current_branch = repotools.git_get_current_branch(context.repo)
+    affected_main_branches = None
+    if object_arg is None:
+        commit = current_branch.target.obj_name
+        selected_ref = current_branch
+    else:
+        branch_ref = get_branch_by_branch_name_or_version_tag(context, object_arg, BranchSelection.BRANCH_PREFER_LOCAL)
+        if branch_ref is not None:
+            selected_ref = branch_ref
+            commit = branch_ref.target.obj_name
+        else:
+            branch_ref = repotools.git_rev_parse(context.repo, '--revs-only', '--symbolic-full-name', object_arg)
+            commit = repotools.git_rev_parse(context.repo, '--revs-only', object_arg)
+            if branch_ref is not None:
+                selected_ref = repotools.Ref()
+                selected_ref.name = branch_ref
+                selected_ref.obj_type = 'commit'
+                selected_ref.obj_name = commit
+    if commit is None:
+        result.fail(os.EX_USAGE,
+                    _("Failed to resolve object {object}.")
+                    .format(object=repr(object_arg)),
+                    _("No corresponding commit found.")
+                    )
+
+    # determine affected branches
+    affected_main_branches = list(
+        filter(lambda ref:
+               (ref.name not in downstreams),
+               repotools.git_list_refs(context.repo,
+                                       '--contains', commit,
+                                       'refs/remotes/' + context.parsed_config.remote_name + '/release',
+                                       'refs/heads/release',
+                                       'refs/heads/master',
+                                       # 'refs/remotes/' + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base,
+                                       # 'refs/heads/' + context.parsed_config.release_branch_base,
+                                       )))
+    if len(affected_main_branches) == 1:
+        if selected_ref is None or selected_ref.name.startswith('refs/tags/'):
+            selected_ref = affected_main_branches[0]
+    if selected_ref is None:
+        if len(affected_main_branches) == 0:
+            result.fail(os.EX_USAGE,
+                        _("Failed to resolve target branch"),
+                        _("Failed to resolve branch containing object: {object}")
+                        .format(object=repr(object_arg))
+                        )
+        else:
+            result.fail(os.EX_USAGE,
+                        _("Failed to resolve unique release branch for object: {object}")
+                        .format(object=repr(object_arg)),
+                        _("Multiple different branches contain this commit:\n"
+                          "{listing}")
+                        .format(listing='\n'.join(' - ' + repr(ref.name) for ref in affected_main_branches))
+                        )
+    if selected_ref is None or commit is None:
+        result.fail(os.EX_USAGE,
+                    _("Failed to resolve ref."),
+                    _("{object} could not be resolved.")
+                    .format(object=repr(object_arg)))
+    if context.verbose >= const.INFO_VERBOSITY:
+        cli.print(_("Target branch: {name} ({commit})")
+                  .format(name=repr(selected_ref.name), commit=selected_ref.target.obj_name))
+        cli.print(_("Target commit: {commit}")
+                  .format(commit=commit))
+    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, selected_ref)
+    if len(discontinuation_tags):
+        result.fail(os.EX_USAGE,
+                    fail_message,
+                    _("{branch} is discontinued.")
+                    .format(branch=repr(selected_ref.name)))
+    if selected_ref.local_branch_name:
+        # check, whether the  selected branch/commit is on remote
+        upstreams = repotools.git_get_upstreams(context.repo)
+        branch_info_dict = dict()
+        branch_info = update_branch_info(context, branch_info_dict, upstreams, selected_ref)
+
+        if branch_info.upstream is None:
+            result.fail(os.EX_USAGE,
+                        fail_message,
+                        _("{branch} does not have an upstream branch.")
+                        .format(branch=repr(selected_ref.name)))
+
+        # if branch_info.upstream.short_name != selected_ref.short_name:
+        #     result.fail(os.EX_USAGE,
+        #                 _("Version creation failed."),
+        #                 _("{branch} has an upstream branch with mismatching short name: {remote_branch}.")
+        #                 .format(branch=repr(selected_ref.name),
+        #                         remote_branch=repr(branch_info.upstream.name))
+        #                 )
+
+        push_merge_base = repotools.git_merge_base(context.repo, commit, branch_info.upstream)
+        if push_merge_base is None:
+            result.fail(os.EX_USAGE,
+                        fail_message,
+                        _("{branch} does not have a common base with its upstream branch: {remote_branch}")
+                        .format(branch=repr(selected_ref.name),
+                                remote_branch=repr(branch_info.upstream.name)))
+        elif push_merge_base != commit:
+            result.fail(os.EX_USAGE,
+                        fail_message,
+                        _("{branch} is not in sync with its upstream branch.\n"
+                          "Push your changes and try again.")
+                        .format(branch=repr(selected_ref.name),
+                                remote_branch=repr(branch_info.upstream.name)))
+
+    command_context = CommandContext()
+    command_context.commit = commit
+    command_context.selected_ref = selected_ref
+    command_context.affected_main_branches = affected_main_branches
+    command_context.current_branch = current_branch
+
+    result.value = command_context
 
     return result
 
@@ -995,130 +1127,22 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
 
 def create_version(context: Context, operation: Callable[[VersionConfig, str], str]):
     result = Result()
-
-    upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
-    downstreams = {v: k for k, v in upstreams.items()}
-
-    # resolve the full rev name and its hash for consistency
-    object_arg = utils.get_or_default(context.args, '<object>', None)
-    selected_ref = None
-    current_branch = repotools.git_get_current_branch(context.repo)
-    affected_release_branches = None
-    if object_arg is None:
-        commit = current_branch.target.obj_name
-        selected_ref = current_branch
-    else:
-        branch_ref = get_branch_by_branch_name_or_version_tag(context, object_arg, BranchSelection.BRANCH_PREFER_LOCAL)
-        if branch_ref is not None:
-            selected_ref = branch_ref
-            commit = branch_ref.target.obj_name
-        else:
-            branch_ref = repotools.git_rev_parse(context.repo, '--revs-only', '--symbolic-full-name', object_arg)
-            commit = repotools.git_rev_parse(context.repo, '--revs-only', object_arg)
-            if branch_ref is not None:
-                selected_ref = repotools.Ref()
-                selected_ref.name = branch_ref
-                selected_ref.obj_type = 'commit'
-                selected_ref.obj_name = commit
-
-    if commit is None:
-        result.fail(os.EX_USAGE,
-                    _("Failed to resolve object {object}.")
-                    .format(object=repr(object_arg)),
-                    _("No corresponding commit found.")
-                    )
-
-    # determine affected branches
-    affected_release_branches = list(
-        filter(lambda ref:
-               (ref.name not in downstreams),
-               repotools.git_list_refs(context.repo,
-                                       '--contains', commit,
-                                       'refs/remotes/' + context.parsed_config.remote_name + '/release',
-                                       'refs/heads/release',
-                                       'refs/heads/master',
-                                       # 'refs/remotes/' + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base,
-                                       # 'refs/heads/' + context.parsed_config.release_branch_base,
-                                       )))
-
-    if len(affected_release_branches) == 1:
-        if selected_ref is None or selected_ref.name.startswith('refs/tags/'):
-            selected_ref = affected_release_branches[0]
-    if selected_ref is None:
-        if len(affected_release_branches) == 0:
-            result.fail(os.EX_USAGE,
-                        _("Failed to resolve target branch"),
-                        _("Failed to resolve branch containing object: {object}")
-                        .format(object=repr(object_arg))
-                        )
-        else:
-            result.fail(os.EX_USAGE,
-                        _("Failed to resolve unique release branch for object: {object}")
-                        .format(object=repr(object_arg)),
-                        _("Multiple different branches contain this commit:\n"
-                          "{listing}")
-                        .format(listing='\n'.join(' - ' + repr(ref.name) for ref in affected_release_branches))
-                        )
-
-    if selected_ref is None or commit is None:
-        result.fail(os.EX_USAGE,
-                    _("Failed to resolve ref."),
-                    _("{object} could not be resolved.")
-                    .format(object=repr(object_arg)))
-
-    if context.verbose >= const.INFO_VERBOSITY:
-        cli.print(_("Target branch: {name} ({commit})")
-                  .format(name=repr(selected_ref.name), commit=selected_ref.target.obj_name))
-        cli.print(_("Target commit: {commit}")
-                  .format(commit=commit))
-
-    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, selected_ref)
-    if len(discontinuation_tags):
-        result.fail(os.EX_USAGE,
-                    _("Version creation failed."),
-                    _("{branch} is discontinued.")
-                    .format(branch=repr(selected_ref.name)))
-
-    if selected_ref.local_branch_name:
-        # check, whether the  selected branch/commit is on remote
-        upstreams = repotools.git_get_upstreams(context.repo)
-        branch_info_dict = dict()
-        branch_info = update_branch_info(context, branch_info_dict, upstreams, selected_ref)
-
-        if branch_info.upstream is None:
-            result.fail(os.EX_USAGE,
-                        _("Version creation failed."),
-                        _("{branch} does not have an upstream branch.")
-                        .format(branch=repr(selected_ref.name)))
-
-        # if branch_info.upstream.short_name != selected_ref.short_name:
-        #     result.fail(os.EX_USAGE,
-        #                 _("Version creation failed."),
-        #                 _("{branch} has an upstream branch with mismatching short name: {remote_branch}.")
-        #                 .format(branch=repr(selected_ref.name),
-        #                         remote_branch=repr(branch_info.upstream.name))
-        #                 )
-
-        push_merge_base = repotools.git_merge_base(context.repo, commit, branch_info.upstream)
-        if push_merge_base is None:
-            result.fail(os.EX_USAGE,
-                        _("Version creation failed."),
-                        _("{branch} does not have a common base with its upstream branch: {remote_branch}")
-                        .format(branch=repr(selected_ref.name),
-                                remote_branch=repr(branch_info.upstream.name)))
-        elif push_merge_base != commit:
-            result.fail(os.EX_USAGE,
-                        _("Version creation failed."),
-                        _("{branch} is not in sync with its upstream branch.\n"
-                          "Push your changes and try again.")
-                        .format(branch=repr(selected_ref.name),
-                                remote_branch=repr(branch_info.upstream.name)))
+    context_result = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<object>', None),
+        for_modification=True,
+        base_branch=True,
+        release_branches=True
+    )
+    result.add_subresult(context_result)
+    command_context = context_result.value
 
     # determine the type of operation to be performed and run according subroutines
     if operation == version.version_bump_major \
             or operation == version.version_bump_minor:
 
-        tag_result = create_version_branch(context, affected_release_branches, selected_ref, commit, operation)
+        tag_result = create_version_branch(context, command_context.affected_main_branches,
+                                           command_context.selected_ref, command_context.commit, operation)
         result.add_subresult(tag_result)
 
     elif operation == version.version_bump_patch \
@@ -1126,7 +1150,8 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
             or operation == version.version_bump_prerelease \
             or operation == version.version_bump_to_release:
 
-        tag_result = create_version_tag(context, affected_release_branches, selected_ref, commit, operation)
+        tag_result = create_version_tag(context, command_context.affected_main_branches,
+                                        command_context.selected_ref, command_context.commit, operation)
         result.add_subresult(tag_result)
 
     elif isinstance(operation, version.version_set):
@@ -1145,11 +1170,13 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
 
         release_branch = repotools.get_branch_by_name(context.repo, branch_name, BranchSelection.BRANCH_PREFER_LOCAL)
         if release_branch is None:
-            tag_result = create_version_branch(context, affected_release_branches, selected_ref, commit, operation)
+            tag_result = create_version_branch(context, command_context.affected_main_branches,
+                                               command_context.selected_ref, command_context.commit, operation)
             result.add_subresult(tag_result)
         else:
             selected_ref = release_branch
-            tag_result = create_version_tag(context, affected_release_branches, selected_ref, commit, operation)
+            tag_result = create_version_tag(context, command_context.affected_main_branches, selected_ref,
+                                            command_context.commit, operation)
             result.add_subresult(tag_result)
 
     if not result.has_errors() \
@@ -1174,7 +1201,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
         if proc.returncode != os.EX_OK:
             result.warn(
                 _("Failed to fast forward from {remote}")
-                    .format(remote=current_branch.name),
+                    .format(remote=command_context.current_branch.name),
                 None)
 
     return result
