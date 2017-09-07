@@ -111,24 +111,22 @@ def query_yes_no(output_stream, question, default="yes"):
 
     Source: https://stackoverflow.com/a/3041990
     """
-    valid = {"yes": True, "y": True, "ye": True,
-             "no": False, "n": False}
+    responses = {"yes": True, "y": True,
+                 "no": False, "n": False}
     if default is None:
         prompt = " [y/n] "
-    elif default == "yes":
+    elif responses[default.lower()]:
         prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        prompt = " [y/N] "
 
     while True:
         output_stream.write(question + prompt)
         choice = input().lower()
         if default is not None and choice == '':
-            return valid[default]
-        elif choice in valid:
-            return valid[choice]
+            return responses[default]
+        elif choice in responses:
+            return responses[choice]
         else:
             output_stream.write("Please respond with 'yes' or 'no' "
                                 "(or 'y' or 'n').\n")
