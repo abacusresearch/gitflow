@@ -87,6 +87,15 @@ def ref_target(ref: Union[Object, str] or Object):
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
 
+def ref_name(ref: Union[Ref, str] or Object):
+    if isinstance(ref, str):
+        return ref
+    if isinstance(ref, Ref):
+        return ref.name
+    else:
+        raise ValueError('invalid type: ' + str(type(ref).__name__))
+
+
 def git(context: RepoContext, *args) -> subprocess.Popen:
     command = [context.git]
     if context.dir is not None:

@@ -52,10 +52,19 @@ class BranchInfo(object):
 
 
 class CommandContext(object):
+    context: Context = None
+
+    branch_info_dict = None
     affected_main_branches: list = None
     current_branch: repotools.Ref = None
     selected_commit: str = None
     selected_ref: repotools.Ref = None
+
+    upstreams: dict = None
+    downstreams: dict = None
+
+    def __init__(self):
+        self.branch_info_dict = dict()
 
 
 def git(context: Context, command: list) -> int:
@@ -107,6 +116,18 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
         if branch_info.upstream is not None:
             branch_info_out[branch_info.upstream.name] = branch_info
 
+    return branch_info
+
+
+def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, str]) -> BranchInfo:
+    # TODO optimize
+    branch_info = command_context.branch_info_dict.get(repotools.ref_name(ref))
+    if branch_info is None:
+        branch_info = update_branch_info(command_context.context,
+                                         command_context.branch_info_dict,
+                                         command_context.upstreams,
+                                         ref if isinstance(ref, repotools.Ref) else repotools.get_ref_by_name(ref)
+                                         )
     return branch_info
 
 
@@ -330,8 +351,13 @@ def get_command_context(context, object_arg: str,
                         for_modification: bool, with_upstream: bool,
                         fail_message: str = _("Failed to resolve target branch")) -> Result:
     result = Result()
-    upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
-    downstreams = {v: k for k, v in upstreams.items()}
+
+    command_context = CommandContext()
+
+    command_context.context = context
+    command_context.upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
+    command_context.downstreams = {v: k for k, v in command_context.upstreams.items()}
+
     # resolve the full rev name and its hash for consistency
     selected_ref = None
     current_branch = repotools.git_get_current_branch(context.repo)
@@ -362,7 +388,7 @@ def get_command_context(context, object_arg: str,
     # determine affected branches
     affected_main_branches = list(
         filter(lambda ref:
-               (ref.name not in downstreams),
+               (ref.name not in command_context.downstreams),
                repotools.git_list_refs(context.repo,
                                        '--contains', commit,
                                        'refs/remotes/' + context.parsed_config.remote_name + '/release',
@@ -405,10 +431,10 @@ def get_command_context(context, object_arg: str,
                     fail_message,
                     _("{branch} is discontinued.")
                     .format(branch=repr(selected_ref.name)))
+
+    branch_info = get_branch_info(command_context, selected_ref)
     if selected_ref.local_branch_name is not None:
         # check, whether the  selected branch/commit is on remote
-        branch_info_dict = dict()
-        branch_info = update_branch_info(context, branch_info_dict, upstreams, selected_ref)
 
         if with_upstream and branch_info.upstream is None:
             result.fail(os.EX_USAGE,
@@ -440,9 +466,9 @@ def get_command_context(context, object_arg: str,
                             .format(branch=repr(selected_ref.name),
                                     remote_branch=repr(branch_info.upstream.name)))
 
-    command_context = CommandContext()
-    command_context.selected_commit = commit
     command_context.selected_ref = selected_ref
+    command_context.selected_commit = commit
+    command_context.selected_branch = branch_info
     command_context.affected_main_branches = affected_main_branches
     command_context.current_branch = current_branch
 
