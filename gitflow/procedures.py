@@ -1376,7 +1376,7 @@ def begin(context: Context):
         context=context,
         object_arg=utils.get_or_default(context.args, '<base-object>', None),
         for_modification=True,
-        with_upstream=True
+        with_upstream=False
     )
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
