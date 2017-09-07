@@ -9,6 +9,7 @@ CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
 CONFIG_RELEASE_BRANCH_PATTERN = 'releaseBranchPattern'
+CONFIG_WORK_BRANCH_PATTERN = 'workBranchPattern'
 CONFIG_VERSION_TAG_PATTERN = 'versionTagPattern'
 CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN = 'sequentialVersionTagPattern'
@@ -18,6 +19,8 @@ CONFIG_INITIAL_VERSION = 'initialVersion'
 DEFAULT_RELEASE_BRANCH_BASE = "master"
 
 DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
+
+DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
 DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
                               r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \

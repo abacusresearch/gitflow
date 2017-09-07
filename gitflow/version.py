@@ -88,7 +88,7 @@ class VersionMatcher(object):
     comparator = None
     key_func = None
 
-    def __init__(self, ref_roots: list, ref_name_infixes: Union[list, str], pattern: str, format: str = None):
+    def __init__(self, ref_roots: list, ref_name_infixes: Union[list, str, None], pattern: str, format: str = None):
         """
         :param pattern:
         :param ref_name_infixes: the name prefixes of branches and tags following the conventional parents
@@ -96,11 +96,11 @@ class VersionMatcher(object):
         :param format: format that combines version elements to a SemVer version
         """
 
-        if not isinstance(ref_name_infixes, list):
-            ref_name_infixes = [ref_name_infixes]
-        for index, ref_name_infix in enumerate(ref_name_infixes):
-            ref_name_infixes[index] = utils.split_join('/', False, True, ref_name_infix)
-
+        if ref_name_infixes is not None:
+            if not isinstance(ref_name_infixes, list):
+                ref_name_infixes = [ref_name_infixes]
+            for index, ref_name_infix in enumerate(ref_name_infixes):
+                ref_name_infixes[index] = utils.split_join('/', False, True, ref_name_infix)
         self.ref_name_infixes = ref_name_infixes
 
         full_pattern = ''
@@ -108,7 +108,7 @@ class VersionMatcher(object):
         full_pattern += '|'.join(re.escape(utils.split_join('/', False, True, ref_root)) for ref_root in ref_roots)
         full_pattern += ')'
         if ref_name_infixes is not None and len(ref_name_infixes):
-            full_pattern += '(?:'
+            full_pattern += '(?P<prefix>'
             for index, ref_name_infix in enumerate(ref_name_infixes):
                 if index:
                     full_pattern += '|'

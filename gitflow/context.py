@@ -1,4 +1,5 @@
 import os
+import re
 
 import semver
 
@@ -16,11 +17,13 @@ class Config(object):
     dev_branch_types = ['feature', 'fix', 'chore', 'issue']
     prod_branch_types = ['fix', 'chore', 'issue']
 
-    release_branch_matcher = None
+    release_base_branch_matcher: VersionMatcher = None
+    release_branch_matcher: VersionMatcher = None
+    work_branch_matcher: VersionMatcher = None
 
-    version_tag_matcher = None
-    discontinuation_tag_matcher = None
-    sequential_version_tag_matcher = None
+    version_tag_matcher: VersionMatcher = None
+    discontinuation_tag_matcher: VersionMatcher = None
+    sequential_version_tag_matcher: VersionMatcher = None
 
     version_config: VersionConfig = None
 
@@ -89,9 +92,9 @@ class Context(object):
             git_version = repotools.git_version(self.__repo)
             if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
                 cli.fail(os.EX_UNAVAILABLE,
-                              _("git {required_version} or newer required, got {actual_version}.")
-                              .format(required_version=repr(const.MIN_GIT_VERSION, actual_version=repr(git_version)))
-                              )
+                         _("git {required_version} or newer required, got {actual_version}.")
+                         .format(required_version=repr(const.MIN_GIT_VERSION, actual_version=repr(git_version)))
+                         )
 
             root = repotools.git_rev_parse(self.__repo, '--show-toplevel')
             # None when invalid or bare
@@ -104,9 +107,9 @@ class Context(object):
 
             if not os.path.isfile(gitflow_config_file):
                 cli.fail(os.EX_DATAERR,
-                              _("gitflow_config_file does not exist or is not a regular file: {path}.")
-                              .format(path=repr(gitflow_config_file))
-                              )
+                         _("gitflow_config_file does not exist or is not a regular file: {path}.")
+                         .format(path=repr(gitflow_config_file))
+                         )
 
             self.config = filesystem.JavaPropertyFile(gitflow_config_file).load()
         else:
@@ -124,12 +127,12 @@ class Context(object):
                 self.__property_store = filesystem.JavaPropertyFile(property_file)
             else:
                 cli.fail(os.EX_DATAERR,
-                              _("property file not supported: {path}\n"
-                                "Currently supported:\n"
-                                "{listing}")
-                              .format(path=repr(property_file),
-                                      listing='\n'.join(' - ' + type for type in ['*.properties']))
-                              )
+                         _("property file not supported: {path}\n"
+                           "Currently supported:\n"
+                           "{listing}")
+                         .format(path=repr(property_file),
+                                 listing='\n'.join(' - ' + type for type in ['*.properties']))
+                         )
 
         # version config
 
@@ -151,12 +154,26 @@ class Context(object):
         self.parsed_config.release_branch_base = self.config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                                  const.DEFAULT_RELEASE_BRANCH_BASE)
 
+        self.parsed_config.release_base_branch_matcher = VersionMatcher(
+            ['refs/heads/', 'refs/remotes/' + self.parsed_config.remote_name + '/'],
+            None,
+            re.escape(self.parsed_config.release_branch_base),
+        )
+
         self.parsed_config.release_branch_matcher = VersionMatcher(
             ['refs/heads/', 'refs/remotes/' + self.parsed_config.remote_name + '/'],
             'release/',
             self.config.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
+        )
+
+        self.parsed_config.work_branch_matcher = VersionMatcher(
+            ['refs/heads/', 'refs/remotes/' + self.parsed_config.remote_name + '/'],
+            [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
+            self.config.get(
+                const.CONFIG_WORK_BRANCH_PATTERN,
+                const.DEFAULT_WORK_BRANCH_PATTERN),
         )
 
         self.parsed_config.version_tag_matcher = VersionMatcher(
@@ -198,8 +215,8 @@ class Context(object):
             return self.__property_store.store(properties)
         else:
             cli.fail(os.EX_SOFTWARE,
-                          _("Failed to save properties."
-                            "Missing property store."))
+                     _("Failed to save properties."
+                       "Missing property store."))
 
     def get_release_branches(self):
         release_branches = list(filter(
