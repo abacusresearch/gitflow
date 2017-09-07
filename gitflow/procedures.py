@@ -1686,8 +1686,8 @@ def build(context):
     repo = repotools.git_clone(context.repo, build_repo_path, remote, selected_branch)
     if repo is None:
         result.fail(os.EX_IOERR,
-                    _("Failed to clone from {remote} to {local}.")
-                    .format(remote=repr(remote.url), local=repr(repo.dir)),
+                    _("Failed to clone {remote}.")
+                    .format(remote=repr(remote.url)),
                     None
                     )
 
