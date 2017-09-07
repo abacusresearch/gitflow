@@ -1532,7 +1532,7 @@ def status(context):
             tags = list(tags)
 
             for branch_tag_ref in tags:
-                # print the sequential vsersion tag
+                # print the sequential version tag
                 tag_match = context.parsed_config.sequential_version_tag_matcher.fullmatch(branch_tag_ref.name)
                 if tag_match:
                     unique_code = tag_match.group(
