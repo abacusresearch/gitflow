@@ -1535,18 +1535,27 @@ def end(context: Context):
         cli.print("work_branch_name: " + work_branch.name)
         cli.print("base_branch_name: " + base_branch.name)
 
-    if not context.dry_run and not result.has_errors():
-        index_status = git(context, ['diff-index', 'HEAD', '--'])
-        if index_status == 1:
-            result.fail(os.EX_USAGE,
-                        _("Branch creation aborted."),
-                        _("You have staged changes in your workspace.\n"
-                          "Unstage, commit or stash them and try again."))
-        elif index_status != 0:
-            result.fail(os.EX_DATAERR,
-                        _("Failed to determine index status."),
-                        None)
+    # check, if already merged
+    merge_base = repotools.git_merge_base(context.repo, base_branch, work_branch_ref_name)
+    if work_branch.obj_name == merge_base:
+        cli.print(_("Branch {branch} is already merged.")
+                  .format(branch=repr(work_branch.name)))
+        return result
 
+    # check for staged changes
+    index_status = git(context, ['diff-index', 'HEAD', '--'])
+    if index_status == 1:
+        result.fail(os.EX_USAGE,
+                    _("Branch creation aborted."),
+                    _("You have staged changes in your workspace.\n"
+                      "Unstage, commit or stash them and try again."))
+    elif index_status != 0:
+        result.fail(os.EX_DATAERR,
+                    _("Failed to determine index status."),
+                    None)
+
+    if not context.dry_run and not result.has_errors():
+        # run merge
         git_or_fail(context, result,
                     ['checkout', base_branch.short_name],
                     _("Failed to checkout branch {branch_name}.")
