@@ -550,15 +550,15 @@ def get_command_context(context, object_arg: str,
     return result
 
 
-def create_version_branch(context: Context, affected_branches: list, selected_ref: repotools.Ref, commit: str,
-                          operation):
+def create_version_branch(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]):
     result = Result()
+    context: Context = command_context.context
 
-    if not selected_ref.name in ['refs/heads/' + context.parsed_config.release_branch_base,
-                                 'refs/remotes/' + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base]:
+    if not command_context.selected_ref.name in ['refs/heads/' + context.parsed_config.release_branch_base,
+                                                 'refs/remotes/' + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base]:
         result.fail(os.EX_USAGE,
                     _("Failed to create release branch based on {branch}.")
-                    .format(branch=repr(selected_ref.name)),
+                    .format(branch=repr(command_context.selected_ref.name)),
                     _("Release branches (major.minor) can only be created off {branch}")
                     .format(branch=repr(context.parsed_config.release_branch_base))
                     )
@@ -567,7 +567,7 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
         prompt_result = prompt_for_confirmation(
             context=context,
             fail_title=_("Failed to create release branch based on {branch} in batch mode.")
-                .format(branch=repr(selected_ref.name)),
+                .format(branch=repr(command_context.selected_ref.name)),
             message=_("This operation disables version increments except for pre-release increments "
                       "on all existing branches.")
             if not context.parsed_config.commit_version_property
@@ -594,7 +594,7 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
     branch_points_on_same_commit = list()
     subsequent_branches = list()
 
-    for history_commit in repotools.git_list_commits(context.repo, None, commit):
+    for history_commit in repotools.git_list_commits(context.repo, None, command_context.selected_commit):
         branch_refs = release_branch_merge_bases.get(history_commit)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
@@ -614,13 +614,14 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
             )
             if latest_branch is None:
                 latest_branch = branch_refs[0]
-            if history_commit == commit:
+            if history_commit == command_context.selected_commit:
                 branch_points_on_same_commit.extend(branch_refs)
             # for tag_ref in tag_refs:
             #     print('<<' + tag_ref.name)
             break
 
-    for history_commit in repotools.git_list_commits(context.repo, commit, selected_ref):
+    for history_commit in repotools.git_list_commits(context.repo, command_context.selected_commit,
+                                                     command_context.selected_ref):
         branch_refs = release_branch_merge_bases.get(history_commit)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
@@ -679,7 +680,7 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
                     _("Release branches cannot share a common ancestor commit.\n"
                       "Existing branches on commit {commit}:\n"
                       "{listing}")
-                    .format(commit=commit,
+                    .format(commit=command_context.selected_commit,
                             listing='\n'.join(' - ' + repr(tag_ref.name) for tag_ref in branch_points_on_same_commit)))
 
     if len(subsequent_branches):
@@ -714,7 +715,8 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
             clone_context = clone_result.value
 
             # create branch ref
-            git_or_fail(clone_context, result, ['update-ref', 'refs/heads/' + branch_name, commit],
+            git_or_fail(clone_context, result,
+                        ['update-ref', 'refs/heads/' + branch_name, command_context.selected_commit],
                         _("Failed to push."))
 
             # # checkout base branch
@@ -825,7 +827,7 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
         sys.stdout.flush()
         sys.stderr.flush()
 
-        print("branch              : " + cli.if_none(selected_ref.name))
+        print("branch              : " + cli.if_none(command_context.selected_ref.name))
         print("branch_version      : " + cli.if_none(latest_branch_version))
         print("new_branch          : " + cli.if_none(branch_name))
         print("new_version         : " + cli.if_none(new_version))
@@ -833,14 +835,14 @@ def create_version_branch(context: Context, affected_branches: list, selected_re
     return result
 
 
-def create_version_tag(context: Context, affected_branches: list, selected_ref: repotools.Ref, commit: str,
-                       operation):
+def create_version_tag(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]):
     result = Result()
+    context: Context = command_context.context
 
     # TODO configuration
     allow_merge_base_tags = True  # context.parsed_config.allow_shared_release_branch_base
 
-    branch_base_version = context.parsed_config.release_branch_matcher.format(selected_ref.name)
+    branch_base_version = context.parsed_config.release_branch_matcher.format(command_context.selected_ref.name)
     if branch_base_version is not None:
         branch_base_version_info = semver.parse_version_info(branch_base_version)
     else:
@@ -850,7 +852,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
         result.fail(os.EX_USAGE,
                     _("Cannot bump version."),
                     _("{branch} is not a release branch.")
-                    .format(branch=repr(selected_ref.name)))
+                    .format(branch=repr(command_context.selected_ref.name)))
 
     latest_version_tag = None
     preceding_version_tag = None
@@ -863,12 +865,13 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
     subsequent_sequential_version_tags = list()
 
     # merge_base = context.parsed_config.release_branch_base
-    merge_base = repotools.git_merge_base(context.repo, context.parsed_config.release_branch_base, commit)
+    merge_base = repotools.git_merge_base(context.repo, context.parsed_config.release_branch_base,
+                                          command_context.selected_commit)
     if merge_base is None:
         result.fail(os.EX_USAGE,
                     _("Cannot bump version."),
                     _("{branch} has no merge base with {base_branch}.")
-                    .format(branch=repr(selected_ref.name),
+                    .format(branch=repr(command_context.selected_ref.name),
                             base_branch=repr(context.parsed_config.release_branch_base)))
 
     # abort scan, when a preceding commit for each tag type has been processed.
@@ -879,8 +882,8 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
     abort_sequential_version_scan = False
 
     before_commit = False
-    for history_commit in repotools.git_list_commits(context.repo, merge_base, selected_ref):
-        at_commit = history_commit == commit
+    for history_commit in repotools.git_list_commits(context.repo, merge_base, command_context.selected_ref):
+        at_commit = history_commit == command_context.selected_commit
         at_merge_base = history_commit == merge_base
         version_tag_refs = None
         sequential_version_tag_refs = None
@@ -1032,7 +1035,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                     _("Tag creation failed."),
                     _("There are version tags in branch history following the selected commit {commit}:\n"
                       "{listing}")
-                    .format(commit=commit,
+                    .format(commit=command_context.selected_commit,
                             listing='\n'.join(' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
                     )
 
@@ -1069,7 +1072,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                         _("There are version tags pointing to the selected commit {commit}.\n"
                           "Consider reusing these versions or bumping them to stable."
                           "{listing}")
-                        .format(commit=commit,
+                        .format(commit=command_context.selected_commit,
                                 listing='\n'.join(
                                     ' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
                         )
@@ -1106,7 +1109,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
         # TODO use CommandContext
         original_current_branch = repotools.git_get_current_branch(context.repo)
         if context.parsed_config.push_to_local \
-                and original_current_branch.short_name == selected_ref.short_name:
+                and original_current_branch.short_name == command_context.selected_ref.short_name:
             if context.verbose:
                 cli.print(
                     _('Checking out {base_branch} in order to avoid failing the push to a checked-out release branch')
@@ -1132,11 +1135,12 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
         if (context.parsed_config.commit_version_property and new_version is not None) \
                 or (
                             context.parsed_config.commit_sequential_version_property and new_sequential_version is not None):
-            if commit != selected_ref.target.obj_name:
+            if command_context.selected_commit != command_context.selected_ref.target.obj_name:
                 result.fail(os.EX_DATAERR,
                             _("Failed to commit version update."),
                             _("The selected commit {commit} does not represent the tip of {branch}.")
-                            .format(commit=commit, branch=repr(selected_ref.name))
+                            .format(commit=command_context.selected_commit,
+                                    branch=repr(command_context.selected_ref.name))
                             )
 
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
@@ -1188,7 +1192,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                                 _("An unexpected error occurred.")
                                 )
 
-        object_to_tag = branch_name if has_local_commit else commit
+        object_to_tag = branch_name if has_local_commit else command_context.selected_commit
 
         # create sequential tag ref
         if sequential_version_tag_name is not None:
@@ -1238,7 +1242,7 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
         sys.stdout.flush()
         sys.stderr.flush()
 
-        print("branch              : " + cli.if_none(selected_ref.name))
+        print("branch              : " + cli.if_none(command_context.selected_ref.name))
         print("branch_version      : " + cli.if_none(latest_branch_version))
         print("new_tag             : " + cli.if_none(tag_name))
         print("new_version         : " + cli.if_none(new_version))
@@ -1273,8 +1277,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
     if operation == version.version_bump_major \
             or operation == version.version_bump_minor:
 
-        tag_result = create_version_branch(context, command_context.affected_main_branches,
-                                           command_context.selected_ref, command_context.selected_commit, operation)
+        tag_result = create_version_branch(command_context, operation)
         result.add_subresult(tag_result)
 
     elif operation == version.version_bump_patch \
@@ -1282,8 +1285,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
             or operation == version.version_bump_prerelease \
             or operation == version.version_bump_to_release:
 
-        tag_result = create_version_tag(context, command_context.affected_main_branches,
-                                        command_context.selected_ref, command_context.selected_commit, operation)
+        tag_result = create_version_tag(command_context, operation)
         result.add_subresult(tag_result)
 
     elif isinstance(operation, version.version_set):
@@ -1302,13 +1304,11 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
 
         release_branch = repotools.get_branch_by_name(context.repo, branch_name, BranchSelection.BRANCH_PREFER_LOCAL)
         if release_branch is None:
-            tag_result = create_version_branch(context, command_context.affected_main_branches,
-                                               command_context.selected_ref, command_context.selected_commit, operation)
+            tag_result = create_version_branch(command_context, operation)
             result.add_subresult(tag_result)
         else:
             selected_ref = release_branch
-            tag_result = create_version_tag(context, command_context.affected_main_branches, selected_ref,
-                                            command_context.selected_commit, operation)
+            tag_result = create_version_tag(command_context, operation)
             result.add_subresult(tag_result)
 
     if not result.has_errors() \
