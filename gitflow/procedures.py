@@ -121,7 +121,9 @@ def git_or_fail(context: Context, result: Result, command: list,
                         )
 
 
-def get_branch_class(context: Context, ref_name: str):
+def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
+    ref_name = repotools.ref_name(ref)
+
     # TODO optimize
     branch_class = None
     branch_classes = list()
