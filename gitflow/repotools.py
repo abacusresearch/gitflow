@@ -256,24 +256,31 @@ def git_list_refs(context: RepoContext, *args) -> list:
                *args)
     out, err = proc.communicate()
 
-    for ref_element in out.decode("utf-8").splitlines():
-        ref_element = ref_element.split(';')
+    if proc.returncode == os.EX_OK:
+        for ref_element in out.decode("utf-8").splitlines():
+            ref_element = ref_element.split(';')
 
-        ref = Ref()
-        ref.name = ref_element[0]
-        ref.obj_type = ref_element[1]
-        ref.obj_name = ref_element[2]
-        if len(ref_element[4]):
-            ref.dest = Object()
-            ref.dest.obj_type = ref_element[3] if len(ref_element[3]) else None
-            ref.dest.obj_name = ref_element[4] if len(ref_element[4]) else None
-        if len(ref_element[5]):
-            ref.upstream_name = ref_element[5]
-        yield ref
+            ref = Ref()
+            ref.name = ref_element[0]
+            ref.obj_type = ref_element[1]
+            ref.obj_name = ref_element[2]
+            if len(ref_element[4]):
+                ref.dest = Object()
+                ref.dest.obj_type = ref_element[3] if len(ref_element[3]) else None
+                ref.dest.obj_name = ref_element[4] if len(ref_element[4]) else None
+            if len(ref_element[5]):
+                ref.upstream_name = ref_element[5]
+            yield ref
 
 
 def get_ref_by_name(context: RepoContext, ref_name):
-    return next(git_list_refs(context, ref_name))
+    refs = list(git_list_refs(context, ref_name))
+    if len(refs) == 1:
+        return refs[0]
+    elif len(refs) == 0:
+        return None
+    else:
+        raise ValueError("multiple refs")
 
 
 def git_get_upstreams(context: RepoContext, *args) -> dict:

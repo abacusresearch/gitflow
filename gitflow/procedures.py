@@ -183,13 +183,20 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
 
 def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, str]) -> BranchInfo:
     # TODO optimize
-    branch_info = command_context.branch_info_dict.get(repotools.ref_name(ref))
-    if branch_info is None:
-        branch_info = update_branch_info(command_context.context,
-                                         command_context.branch_info_dict,
-                                         command_context.upstreams,
-                                         ref if isinstance(ref, repotools.Ref)
-                                         else repotools.get_ref_by_name(command_context.context.repo, ref))
+
+    if isinstance(ref, str):
+        ref = repotools.get_ref_by_name(command_context.context.repo, ref)
+
+    if ref is not None:
+        branch_info = command_context.branch_info_dict.get(repotools.ref_name(ref))
+        if branch_info is None:
+            branch_info = update_branch_info(command_context.context,
+                                             command_context.branch_info_dict,
+                                             command_context.upstreams,
+                                             ref
+                                             )
+    else:
+        branch_info = None
     return branch_info
 
 
@@ -1395,6 +1402,14 @@ def begin(context: Context):
     work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
     work_branch_class = get_branch_class(context, work_branch_ref_name)
 
+    if True:
+        work_branch_info = get_branch_info(command_context, work_branch_ref_name)
+        if work_branch_info is not None:
+            result.fail(os.EX_USAGE,
+                        _("The branch {branch} already exist locally or remotely.")
+                        .format(branch=repr(work_branch_name)),
+                        None)
+
     allowed_base_branch_class = const.BRANCHING[work_branch_class]
 
     base_branch, base_branch_class = get_target_ref(result, command_context.selected_branch,
@@ -1474,7 +1489,17 @@ def end(context: Context):
 
     work_branch_name = utils.split_join('/', False, False, branch_supertype, branch_type, branch_short_name)
     work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
-    work_branch_class = get_branch_class(context, work_branch_ref_name)
+
+    work_branch_info = get_branch_info(command_context, work_branch_ref_name)
+    if work_branch_info is None:
+        result.fail(os.EX_USAGE,
+                    _("The branch {branch} does neither exist locally nor remotely.")
+                    .format(branch=repr(work_branch_name)),
+                    None)
+
+    work_branch, work_branch_class = get_target_ref(result,
+                                                    work_branch_info,
+                                                    BranchSelection.BRANCH_PREFER_LOCAL)
 
     allowed_base_branch_class = const.BRANCHING[work_branch_class]
 
@@ -1507,7 +1532,7 @@ def end(context: Context):
 
     if context.verbose:
         cli.print("branch_name: " + command_context.selected_ref.name)
-        cli.print("work_branch_name: " + work_branch_name)
+        cli.print("work_branch_name: " + work_branch.name)
         cli.print("base_branch_name: " + base_branch.name)
 
     if not context.dry_run and not result.has_errors():
@@ -1529,10 +1554,10 @@ def end(context: Context):
                     )
 
         git_or_fail(context, result,
-                    ['merge', '--no-ff', work_branch_name],
-                    _("Failed to merge branch {work_branch}."
+                    ['merge', '--no-ff', work_branch],
+                    _("Failed to merge work branch."
                       "Rebase {work_branch} on {base_branch} and try again")
-                    .format(work_branch=repr(work_branch_name), base_branch=repr(base_branch.name))
+                    .format(work_branch=repr(work_branch.name), base_branch=repr(base_branch.name))
                     )
 
         git_or_fail(context, result,
