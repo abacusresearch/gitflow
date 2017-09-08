@@ -207,6 +207,9 @@ def update_project_property_file(context: Context,
                                  commit_out: VersionUpdateCommit):
     result = Result()
 
+    commit_out.add_message("#version     : " + cli.if_none(new_version))
+    commit_out.add_message("#seq_version : " + cli.if_none(new_sequential_version))
+
     version_property_name = context.config.get(const.CONFIG_VERSION_PROPERTY_NAME)
     sequential_version_property_name = context.config.get(const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
 
@@ -251,6 +254,7 @@ def update_project_property_file(context: Context,
 
         if result.value:
             context.store_project_properties(properties)
+
     return result
 
 
