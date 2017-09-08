@@ -9,6 +9,8 @@ from gitflow.version import VersionMatcher, VersionConfig
 
 
 class Config(object):
+    property_file: str = None
+
     strict_mode = True
 
     remote_name = "origin"
@@ -117,20 +119,19 @@ class Context(object):
 
         # project properties config
 
-        property_file = self.config.get(const.CONFIG_VERSION_PROPERTY_FILE)
-        if property_file is not None:
-            property_file = os.path.join(self.root, property_file)
-        version_property_name = self.config.get(const.CONFIG_VERSION_PROPERTY_NAME)
+        self.parsed_config.property_file = self.config.get(const.CONFIG_VERSION_PROPERTY_FILE)
+        if self.parsed_config.property_file is not None:
+            property_file = os.path.join(self.root, self.parsed_config.property_file)
 
-        if property_file is not None:
-            if property_file.endswith(".properties"):
-                self.__property_store = filesystem.JavaPropertyFile(property_file)
+        if self.parsed_config.property_file is not None:
+            if self.parsed_config.property_file.endswith(".properties"):
+                self.__property_store = filesystem.JavaPropertyFile(self.parsed_config.property_file)
             else:
                 cli.fail(os.EX_DATAERR,
                          _("property file not supported: {path}\n"
                            "Currently supported:\n"
                            "{listing}")
-                         .format(path=repr(property_file),
+                         .format(path=repr(self.parsed_config.property_file),
                                  listing='\n'.join(' - ' + type for type in ['*.properties']))
                          )
 
