@@ -1106,16 +1106,15 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                         _("The new version is lower than or equal to the current version.")
                         )
 
-        # TODO use CommandContext
-        original_current_branch = repotools.git_get_current_branch(context.repo)
         if context.parsed_config.push_to_local \
-                and original_current_branch.short_name == command_context.selected_ref.short_name:
+                and command_context.current_branch.short_name == command_context.selected_ref.short_name:
             if context.verbose:
                 cli.print(
                     _('Checking out {base_branch} in order to avoid failing the push to a checked-out release branch')
                         .format(base_branch=repr(context.parsed_config.release_branch_base)))
 
             git_or_fail(context, result, ['checkout', context.parsed_config.release_branch_base])
+            original_current_branch = command_context.current_branch
         else:
             original_current_branch = None
 
