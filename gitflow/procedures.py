@@ -1103,6 +1103,19 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
                         _("The new version is lower than or equal to the current version.")
                         )
 
+        # TODO use CommandContext
+        original_current_branch = repotools.git_get_current_branch(context.repo)
+        if context.parsed_config.push_to_local \
+                and original_current_branch.short_name == selected_ref.short_name:
+            if context.verbose:
+                cli.print(
+                    _('Checking out {base_branch} in order to avoid failing the push to a checked-out release branch')
+                        .format(base_branch=repr(context.parsed_config.release_branch_base)))
+
+            git_or_fail(context, result, ['checkout', context.parsed_config.release_branch_base])
+        else:
+            original_current_branch = None
+
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
@@ -1230,6 +1243,18 @@ def create_version_tag(context: Context, affected_branches: list, selected_ref: 
         print("new_tag             : " + cli.if_none(tag_name))
         print("new_version         : " + cli.if_none(new_version))
 
+        if original_current_branch is not None:
+            if context.verbose:
+                cli.print(
+                    _('Switching back to {original_branch} ')
+                        .format(original_branch=repr(original_current_branch.name)))
+
+            git_or_fail(context, result, ['checkout', original_current_branch.short_name])
+
+        current_branch = repotools.git_get_current_branch(context.repo)
+        cli.print(_("You are now on {branch}.")
+                  .format(branch=repr(current_branch.short_name)))
+
     return result
 
 
@@ -1239,7 +1264,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None),
         for_modification=True,
-        with_upstream=True
+        with_upstream=not context.parsed_config.push_to_local
     )
     result.add_subresult(context_result)
     command_context = context_result.value
