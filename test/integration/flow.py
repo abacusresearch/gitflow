@@ -43,6 +43,10 @@ class TestFlow:
         exit_code = self.git('push', 'origin')
         assert exit_code == os.EX_OK
 
+    def checkout(self, branch: str):
+        exit_code = self.git('checkout', branch)
+        assert exit_code == os.EX_OK
+
     def setup_method(self, method):
         self.orig_cwd = os.getcwd()
         self.tempdir = TemporaryDirectory()
@@ -85,4 +89,52 @@ class TestFlow:
 
     def test_bump_major(self):
         exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        # the head commit is the base of a release branch, further bumps shall not be possible
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+
+    def test_bump_minor(self):
+        exit_code = self.git_flow('bump-minor', '--assume-yes')
+        assert exit_code == os.EX_OK
+        # the head commit is the base of a release branch, further bumps shall not be possible
+        exit_code = self.git_flow('bump-minor', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+
+    def test_bump_patch(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.checkout('release/1.0')
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+
+        self.commit()
+        exit_code = self.git_flow('bump-patch', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+        self.push()
+        exit_code = self.git_flow('bump-patch', '--assume-yes')
+        assert exit_code == os.EX_OK
+
+    def test_bump_prerelease_type(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.checkout('release/1.0')
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+
+        exit_code = self.git_flow('bump-prerelease-type', '--assume-yes')
+        assert exit_code == os.EX_OK
+
+    def test_bump_prerelease(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.checkout('release/1.0')
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+
+        self.commit()
+        exit_code = self.git_flow('bump-prerelease', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+        self.push()
+        exit_code = self.git_flow('bump-prerelease', '--assume-yes')
         assert exit_code == os.EX_OK
