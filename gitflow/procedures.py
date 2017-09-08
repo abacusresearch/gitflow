@@ -400,9 +400,9 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
     result = Result()
 
     if context.batch:
-        result.fail(os.EX_TEMPFAIL, fail_title, message)
-
-        result.value = False
+        result.value = context.assume_yes
+        if not result.value:
+            result.fail(os.EX_TEMPFAIL, fail_title, message)
     else:
         if message is not None:
             cli.warn(message)

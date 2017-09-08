@@ -5,6 +5,8 @@ from typing import TextIO
 
 import colors
 
+from gitflow.common import GitFlowException, Result
+
 _ERROR_COLOR = colors.partial(colors.color, fg='red')
 _WARN_COLOR = colors.partial(colors.color, fg='orange')
 
@@ -60,12 +62,15 @@ def warn(message: str):
 
 
 def fail(exit_code, *message):
+    # TODO remove
     for line in message:
         eprint(line)
     if exit_code == os.EX_OK:
         eprint("internal error")
         exit_code = os.EX_SOFTWARE
-    exit(exit_code)
+    result = Result()
+    result.error(exit_code, os.linesep.join(message), None)
+    raise GitFlowException(result)
 
 
 def if_none(obj, default=""):
