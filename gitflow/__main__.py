@@ -122,6 +122,8 @@ def cmd_build(context):
 # ========== entry point
 
 def main(argv: list = sys.argv) -> int:
+    exit_code = os.EX_SOFTWARE
+
     if ENABLE_PROFILER:
         import cProfile
         profiler = cProfile.Profile()
@@ -131,67 +133,70 @@ def main(argv: list = sys.argv) -> int:
 
     args = docopt.docopt(argv=argv[1:], doc=__doc__, version=const.VERSION, help=True, options_first=False)
     context = Context(args)
-
-    if context.verbose >= const.TRACE_VERBOSITY:
-        cli.print("cwd: " + os.getcwd())
-
-    if context.verbose >= const.TRACE_VERBOSITY:
-        cli.print("Python version:\n" + sys.version + "\n")
-
-    command_func = cli.get_cmd([
-        cmd_status,
-        cmd_bump_major,
-        cmd_bump_minor,
-        cmd_bump_patch,
-        cmd_bump_prerelease_type,
-        cmd_bump_prerelease,
-        cmd_bump_to_release,
-        cmd_bump,
-        cmd_discontinue,
-        cmd_begin,
-        cmd_end,
-        cmd_log,
-        cmd_build,
-    ], context.args)
-
-    if command_func is None:
-        cli.fail(os.EX_SOFTWARE, "unimplemented command")
-
-    if context.verbose >= const.TRACE_VERBOSITY:
-        cli.print("command: " + cli.if_none(command_func))
-
     try:
-        result = command_func(context)
-    except GitFlowException as e:
-        result = e.result
 
-    exit_code = os.EX_OK
-    if len(result.errors):
-        sys.stderr.flush()
-        sys.stdout.flush()
+        if context.verbose >= const.TRACE_VERBOSITY:
+            cli.print("cwd: " + os.getcwd())
 
-        for error in result.errors:
-            if error.exit_code != os.EX_OK and exit_code != os.EX_SOFTWARE:
-                exit_code = error.exit_code
-            cli.eprint('\n'.join(filter(None, [error.message, error.reason])))
+        if context.verbose >= const.TRACE_VERBOSITY:
+            cli.print("Python version:\n" + sys.version + "\n")
 
-    if exit_code == os.EX_OK:
-        if context.dry_run:
-            cli.print('')
-            cli.print("dry run succeeded")
+        command_func = cli.get_cmd([
+            cmd_status,
+            cmd_bump_major,
+            cmd_bump_minor,
+            cmd_bump_patch,
+            cmd_bump_prerelease_type,
+            cmd_bump_prerelease,
+            cmd_bump_to_release,
+            cmd_bump,
+            cmd_discontinue,
+            cmd_begin,
+            cmd_end,
+            cmd_log,
+            cmd_build,
+        ], context.args)
+
+        if command_func is None:
+            cli.fail(os.EX_SOFTWARE, "unimplemented command")
+
+        if context.verbose >= const.TRACE_VERBOSITY:
+            cli.print("command: " + cli.if_none(command_func))
+
+        try:
+            result = command_func(context)
+        except GitFlowException as e:
+            result = e.result
+
+        exit_code = os.EX_OK
+        if len(result.errors):
+            sys.stderr.flush()
+            sys.stdout.flush()
+
+            for error in result.errors:
+                if error.exit_code != os.EX_OK and exit_code != os.EX_SOFTWARE:
+                    exit_code = error.exit_code
+                cli.eprint('\n'.join(filter(None, [error.message, error.reason])))
+
+        if exit_code == os.EX_OK:
+            if context.dry_run:
+                cli.print('')
+                cli.print("dry run succeeded")
+            else:
+                pass
         else:
-            pass
-    else:
-        if context.dry_run:
-            cli.print('')
-            cli.eprint("dry run failed")
-        else:
-            pass
+            if context.dry_run:
+                cli.print('')
+                cli.eprint("dry run failed")
+            else:
+                pass
 
-    if profiler is not None:
-        profiler.disable()
-        # pr.dump_stats('profile.pstat')
-        profiler.print_stats(sort="calls")
+        if profiler is not None:
+            profiler.disable()
+            # pr.dump_stats('profile.pstat')
+            profiler.print_stats(sort="calls")
+    finally:
+        context.cleanup()
 
     return exit_code
 

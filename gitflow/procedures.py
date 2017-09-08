@@ -8,7 +8,6 @@
 #   - potentially undesired effects
 #   - operations involving a push
 
-import atexit
 import os
 import platform
 import re
@@ -365,8 +364,6 @@ def create_shared_clone_repository(context):
         else:
             os.chmod(path=tempdir_path, mode=clone_dir_mode)
 
-    atexit.register(lambda: shutil.rmtree(tempdir_path))
-
     if context.parsed_config.push_to_local:
         proc = repotools.git(context.repo, 'clone', '--shared',
                              '--branch', context.parsed_config.release_branch_base,
@@ -384,6 +381,8 @@ def create_shared_clone_repository(context):
                     _("Failed to clone repo."),
                     _("An unexpected error occurred.")
                     )
+        shutil.rmtree(tempdir_path)
+
     clone_context = Context({
         '--root': tempdir_path,
 
@@ -395,6 +394,14 @@ def create_shared_clone_repository(context):
         '--verbose': context.verbose,
         '--pretty': context.pretty,
     })
+
+    if clone_context.temp_dirs is None:
+        clone_context.temp_dirs = list()
+    clone_context.temp_dirs.append(tempdir_path)
+
+    if context.clones is None:
+        context.clones = list()
+    context.clones.append(clone_context)
 
     result.value = clone_context
     return result

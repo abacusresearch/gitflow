@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 
 import semver
 
@@ -65,6 +66,9 @@ class Context(object):
     dry_run = False
     verbose = False
     pretty = False
+
+    temp_dirs: list = None
+    clones: list = None
 
     def __init__(self, args):
         self.parsed_config: Config = Config()
@@ -230,3 +234,16 @@ class Context(object):
             key=self.parsed_config.release_branch_matcher.key_func
         )
         return release_branches
+
+    def cleanup(self):
+        if self.temp_dirs is not None:
+            for temp_dir in self.temp_dirs:
+                shutil.rmtree(temp_dir)
+            self.temp_dirs = None
+        if self.clones is not None:
+            for clone in self.clones:
+                clone.cleanup()
+            self.clone = None
+
+    def __del__(self):
+        self.cleanup()
