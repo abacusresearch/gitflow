@@ -121,7 +121,7 @@ def cmd_build(context):
 
 # ========== entry point
 
-def main():
+def main(argv: list = sys.argv) -> int:
     if ENABLE_PROFILER:
         import cProfile
         profiler = cProfile.Profile()
@@ -129,7 +129,7 @@ def main():
     else:
         profiler = None
 
-    args = docopt.docopt(doc=__doc__, version=const.VERSION, help=True, options_first=False)
+    args = docopt.docopt(argv=argv[1:], doc=__doc__, version=const.VERSION, help=True, options_first=False)
     context = Context(args)
 
     if context.verbose >= const.TRACE_VERBOSITY:
@@ -193,8 +193,9 @@ def main():
         # pr.dump_stats('profile.pstat')
         profiler.print_stats(sort="calls")
 
-    sys.exit(exit_code)
+    return exit_code
 
 
 if __name__ == "__main__":
-    main()
+    exit_code = main(sys.argv)
+    sys.exit(exit_code)
