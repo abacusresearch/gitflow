@@ -1477,7 +1477,7 @@ def begin(context: Context):
         work_branch_info = get_branch_info(command_context, work_branch_ref_name)
         if work_branch_info is not None:
             result.fail(os.EX_USAGE,
-                        _("The branch {branch} already exist locally or remotely.")
+                        _("The branch {branch} already exists locally or remotely.")
                         .format(branch=repr(work_branch_name)),
                         None)
 
