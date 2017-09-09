@@ -448,6 +448,11 @@ def get_command_context(context, object_arg: str,
     current_branch = repotools.git_get_current_branch(context.repo)
     affected_main_branches = None
     if object_arg is None:
+        if current_branch is None:
+            result.fail(os.EX_USAGE,
+                        _("Operation failed."),
+                        _("No object specified and not on a branch (may be an empty repository).")
+                        )
         commit = current_branch.target.obj_name
         selected_ref = current_branch
     else:
