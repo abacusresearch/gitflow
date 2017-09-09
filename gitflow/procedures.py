@@ -1598,7 +1598,7 @@ def end(context: Context):
     arg_work_branch.type = context.args['<type>']
     arg_work_branch.name = context.args['<name>']
 
-    if arg_work_branch.prefix is not None or arg_work_branch.type is not None or arg_work_branch.name is not None:
+    if arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None:
         if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
             result.fail(os.EX_USAGE,
                         _("Invalid branch super type: {supertype}.")
@@ -1606,7 +1606,7 @@ def end(context: Context):
                         None)
 
     else:
-        work_branch = None
+        arg_work_branch = None
 
     ref_work_branch = WorkBranch()
     selected_ref_match = context.parsed_config.work_branch_matcher.fullmatch(command_context.selected_ref.name)
@@ -1642,20 +1642,39 @@ def end(context: Context):
                                        base_command_context.selected_ref)
 
     base_branch_ref, base_branch_class = select_ref(result,
-                                                base_branch_info,
-                                                BranchSelection.BRANCH_PREFER_LOCAL)
+                                                    base_branch_info,
+                                                    BranchSelection.BRANCH_PREFER_LOCAL)
     if not base_command_context.selected_explicitly:
         if work_branch.prefix == const.BRANCH_PREFIX_DEV:
             fixed_base_branch_info = get_branch_info(base_command_context,
-                                                     'refs/heads/' + context.parsed_config.release_branch_base)
+                                                     repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
+                                                                               context.parsed_config.release_branch_base))
             fixed_base_branch, fixed_destination_branch_class = select_ref(result,
                                                                            fixed_base_branch_info,
                                                                            BranchSelection.BRANCH_PREFER_LOCAL)
 
             base_branch_ref, base_branch_class = fixed_base_branch, fixed_destination_branch_class
         elif work_branch.prefix == const.BRANCH_PREFIX_PROD:
-            # TODO find merge base
-            pass
+            # discover closest merge base in release branches
+
+            release_branches = repotools.git_list_refs(context.repo,
+                                                       repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                                 context.parsed_config.remote_name,
+                                                                                 'release'))
+            release_branches = list(release_branches)
+            release_branches.sort(reverse=True, key=utils.cmp_to_key(lambda ref_a, ref_b: version.compare_version_info(
+                context.parsed_config.release_branch_matcher.format(ref_a),
+                context.parsed_config.release_branch_matcher.format(ref_b)
+            )))
+            for release_branch_ref in release_branches:
+                merge_base = repotools.git_merge_base(context.repo, base_branch_ref, work_branch_ref.name)
+                if merge_base is not None:
+                    base_branch_info = get_branch_info(base_command_context, release_branch_ref)
+
+                    base_branch_ref, base_branch_class = select_ref(result,
+                                                                    base_branch_info,
+                                                                    BranchSelection.BRANCH_PREFER_LOCAL)
+                    break
 
     if allowed_base_branch_class != base_branch_class:
         result.fail(os.EX_USAGE,
@@ -1671,14 +1690,14 @@ def end(context: Context):
 
     if context.verbose:
         cli.print("branch_name: " + command_context.selected_ref.name)
-        cli.print("work_branch_name: " + work_branch.name)
+        cli.print("work_branch_name: " + work_branch_ref.name)
         cli.print("base_branch_name: " + base_branch_ref.name)
 
     # check, if already merged
-    merge_base = repotools.git_merge_base(context.repo, base_branch_ref, work_branch.local_ref_name())
+    merge_base = repotools.git_merge_base(context.repo, base_branch_ref, work_branch_ref.name)
     if work_branch_ref.obj_name == merge_base:
         cli.print(_("Branch {branch} is already merged.")
-                  .format(branch=repr(work_branch.name)))
+                  .format(branch=repr(work_branch_ref.name)))
         return result
 
     # check for staged changes
@@ -1705,7 +1724,8 @@ def end(context: Context):
                     ['merge', '--no-ff', work_branch_ref],
                     _("Failed to merge work branch."
                       "Rebase {work_branch} on {base_branch} and try again")
-                    .format(work_branch=repr(work_branch_ref.local_branch_name), base_branch=repr(base_branch_ref.local_branch_name))
+                    .format(work_branch=repr(work_branch_ref.local_branch_name),
+                            base_branch=repr(base_branch_ref.local_branch_name))
                     )
 
         git_or_fail(context, result,

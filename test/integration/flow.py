@@ -16,7 +16,7 @@ class TestFlow:
     git_working_copy: str
 
     def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-Bvv'] + [*args])
+        return __main__.main([__name__, '-B'] + [*args])
 
     def git(self, *args) -> int:
         proc = subprocess.Popen(args=['git'] + [*args])
@@ -413,11 +413,52 @@ class TestFlow:
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/release/1.0')
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1',
+
+            'refs/heads/prod/fix/test-fix',
+            'refs/remotes/origin/prod/fix/test-fix'
+        ])
+
+        # hotfix 2 with implicit finish on work branch
+        exit_code = self.git_flow('start', 'prod', 'fix', 'test-fix2')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1',
+
+            'refs/heads/prod/fix/test-fix',
+            'refs/remotes/origin/prod/fix/test-fix',
+
+            'refs/heads/prod/fix/test-fix2'
+        ])
+
+        self.assert_head('refs/heads/prod/fix/test-fix2')
+
+        for _ in itertools.repeat(None, 3):
+            self.commit()
+        self.push('-u')
+        exit_code = self.git_flow('finish')
+        assert exit_code == os.EX_OK
+
+        self.assert_head('refs/heads/release/1.0')
+
+        # new feature
 
         self.checkout('master')
         self.assert_head('refs/heads/master')
 
-        # new feature
         exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 
@@ -440,6 +481,10 @@ class TestFlow:
 
             'refs/heads/prod/fix/test-fix',
             'refs/remotes/origin/prod/fix/test-fix',
+
+            'refs/heads/prod/fix/test-fix2',
+            'refs/remotes/origin/prod/fix/test-fix2',
+
             'refs/heads/dev/feature/test-feature',
             'refs/remotes/origin/dev/feature/test-feature',
         ])
@@ -463,6 +508,10 @@ class TestFlow:
 
             'refs/heads/prod/fix/test-fix',
             'refs/remotes/origin/prod/fix/test-fix',
+
+            'refs/heads/prod/fix/test-fix2',
+            'refs/remotes/origin/prod/fix/test-fix2',
+
             'refs/heads/dev/feature/test-feature',
             'refs/remotes/origin/dev/feature/test-feature',
         ])
