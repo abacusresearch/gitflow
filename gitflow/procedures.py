@@ -361,16 +361,15 @@ def create_shared_clone_repository(context):
     # if context.verbose:
     cli.print("directory for shared clone: " + tempdir_path)
     clone_dir_mode = 0o700
-    if not os.path.exists(tempdir_path):
-        os.mkdir(path=tempdir_path, mode=clone_dir_mode)
-    else:
+    if os.path.exists(tempdir_path):
         if not os.path.isdir(tempdir_path):
             result.fail(os.EX_DATAERR,
                         _("Failed to clone repo."),
                         _("The temporary target directory exists, but is not a directory.")
                         )
         else:
-            os.chmod(path=tempdir_path, mode=clone_dir_mode)
+            shutil.rmtree(tempdir_path)
+    os.mkdir(path=tempdir_path, mode=clone_dir_mode)
 
     if context.parsed_config.push_to_local:
         proc = repotools.git(context.repo, 'clone', '--shared',
@@ -388,7 +387,6 @@ def create_shared_clone_repository(context):
                     _("Failed to clone repo."),
                     _("An unexpected error occurred.")
                     )
-        shutil.rmtree(tempdir_path)
 
     clone_context = Context.create({
         '--root': tempdir_path,
