@@ -348,6 +348,14 @@ def create_shared_clone_repository(context):
     """
     result = Result()
 
+    remote = repotools.git_get_remote(context.repo, context.parsed_config.remote_name)
+    if remote is None:
+        result.fail(os.EX_DATAERR,
+                    _("Failed to clone repo."),
+                    _("The remote {remote} does not exist.")
+                    .format(remote=repr(context.parsed_config.remote_name))
+                    )
+
     tempdir_path = os.path.join(os.path.dirname(context.repo.dir),
                                 '.' + os.path.basename(context.repo.dir) + ".gitflow-clone")
     # if context.verbose:
@@ -370,7 +378,6 @@ def create_shared_clone_repository(context):
                              '.',
                              tempdir_path)
     else:
-        remote = repotools.git_get_remote(context.repo, context.parsed_config.remote_name)
         proc = repotools.git(context.repo, 'clone', '--reference', '.',
                              '--branch', context.parsed_config.release_branch_base,
                              remote.url,
@@ -1286,7 +1293,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None),
         for_modification=True,
-        with_upstream=not context.parsed_config.push_to_local
+        with_upstream=False  # not context.parsed_config.push_to_local
     )
     result.add_subresult(context_result)
     command_context = context_result.value
