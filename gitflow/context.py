@@ -75,7 +75,7 @@ class Context(object):
         pass
 
     @staticmethod
-    def create(args: dict, result_out: Result):
+    def create(args: dict, result_out: Result) -> 'Context':
         context = Context()
         context.parsed_config: Config = Config()
 
