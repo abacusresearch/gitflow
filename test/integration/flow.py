@@ -314,7 +314,7 @@ class TestFlow:
     def test_begin_end_dev_feature(self):
         self.assert_head('refs/heads/master')
 
-        exit_code = self.git_flow('begin', 'dev', 'feature', 'test-feature')
+        exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/dev/feature/test-feature')
@@ -322,7 +322,7 @@ class TestFlow:
         for _ in itertools.repeat(None, 3):
             self.commit()
         self.push('-u', 'origin', 'dev/feature/test-feature')
-        exit_code = self.git_flow('end', 'dev', 'feature', 'test-feature')
+        exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/master')
@@ -346,7 +346,7 @@ class TestFlow:
         self.checkout('release/1.0')
         self.assert_head('refs/heads/release/1.0')
 
-        exit_code = self.git_flow('begin', 'prod', 'fix', 'test-fix')
+        exit_code = self.git_flow('start', 'prod', 'fix', 'test-fix')
         assert exit_code == os.EX_OK
         self.assert_refs([
             'refs/heads/master',
@@ -365,7 +365,7 @@ class TestFlow:
         for _ in itertools.repeat(None, 3):
             self.commit()
         self.push('-u')
-        exit_code = self.git_flow('end', 'prod', 'fix', 'test-fix', '1.0')
+        exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/release/1.0')
@@ -390,7 +390,7 @@ class TestFlow:
         self.assert_head('refs/heads/release/1.0')
 
         # hotfix
-        exit_code = self.git_flow('begin', 'prod', 'fix', 'test-fix')
+        exit_code = self.git_flow('start', 'prod', 'fix', 'test-fix')
         assert exit_code == os.EX_OK
         self.assert_refs([
             'refs/heads/master',
@@ -409,7 +409,7 @@ class TestFlow:
         for _ in itertools.repeat(None, 3):
             self.commit()
         self.push('-u')
-        exit_code = self.git_flow('end', 'prod', 'fix', 'test-fix', '1.0')
+        exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/release/1.0')
@@ -418,7 +418,7 @@ class TestFlow:
         self.assert_head('refs/heads/master')
 
         # new feature
-        exit_code = self.git_flow('begin', 'dev', 'feature', 'test-feature')
+        exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/dev/feature/test-feature')
@@ -426,7 +426,7 @@ class TestFlow:
         for _ in itertools.repeat(None, 3):
             self.commit()
         self.push('-u')
-        exit_code = self.git_flow('end', 'dev', 'feature', 'test-feature')
+        exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 
         self.assert_refs([

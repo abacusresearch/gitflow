@@ -8,13 +8,13 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow bump [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
+ flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow discontinue [-d|--dry-run] [-y|--assume-yes] <object>
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow begin [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work_branch>) [<base-object>]
+ flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work_branch>) [<base-object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow end [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work_branch>) [<dest-object>]]
+ flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work_branch>) [<dest-object>]]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- [<git-arg>]]...
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
@@ -66,11 +66,6 @@ ENABLE_PROFILER = False
 # ========== commands
 # mapped by cmd_<name>
 
-def cmd_bump(context):
-    return procedures.create_version(context,
-                                     version.version_set(context.parsed_config.version, context.args['<version>']))
-
-
 def cmd_bump_major(context):
     return procedures.create_version(context, version.version_bump_major)
 
@@ -95,15 +90,20 @@ def cmd_bump_to_release(context):
     return procedures.create_version(context, version.version_bump_to_release)
 
 
+def cmd_bump_to(context):
+    return procedures.create_version(context,
+                                     version.version_set(context.parsed_config.version, context.args['<version>']))
+
+
 def cmd_discontinue(context):
     return procedures.discontinue_version(context)
 
 
-def cmd_begin(context):
+def cmd_start(context):
     return procedures.begin(context)
 
 
-def cmd_end(context):
+def cmd_finish(context):
     return procedures.end(context)
 
 
@@ -153,10 +153,10 @@ def main(argv: list = sys.argv) -> int:
                 cmd_bump_prerelease_type,
                 cmd_bump_prerelease,
                 cmd_bump_to_release,
-                cmd_bump,
+                cmd_bump_to,
                 cmd_discontinue,
-                cmd_begin,
-                cmd_end,
+                cmd_start,
+                cmd_finish,
                 cmd_log,
                 cmd_build,
             ], context.args)
