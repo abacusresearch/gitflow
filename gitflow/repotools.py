@@ -76,22 +76,26 @@ class Ref(Object):
         return self.local_branch_name or self.local_tag_name or self.remote_branch_name
 
 
-def ref_target(ref: Union[Object, str] or Object):
+def ref_target(ref: Union[Object, str, list] or Object):
     if isinstance(ref, str):
         return ref
-    if isinstance(ref, Ref):
+    elif isinstance(ref, Ref):
         return ref.target.obj_name
-    if isinstance(ref, Object):
+    elif isinstance(ref, Object):
         return ref.obj_name
+    elif isinstance(ref, list):
+        return utils.split_join('/', False, False, *ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
 
-def ref_name(ref: Union[Ref, str] or Object):
+def ref_name(ref: Union[Ref, str, list] or Object):
     if isinstance(ref, str):
         return ref
-    if isinstance(ref, Ref):
+    elif isinstance(ref, Ref):
         return ref.name
+    elif isinstance(ref, list):
+        return utils.split_join('/', False, False, *ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
