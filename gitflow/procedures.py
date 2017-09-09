@@ -52,7 +52,7 @@ class BranchInfo(object):
     upstream_class: const.BranchClass = None
 
 
-def get_target_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
+def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
         -> Tuple[repotools.Ref, const.BranchClass]:
     if branch_info.local is not None and branch_info.upstream is not None:
         if branch_info.local_class != branch_info.upstream_class:
@@ -72,7 +72,7 @@ def get_target_ref(result_out: Result, branch_info: BranchInfo, selection: Branc
     elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
         candidate = branch_info.local
         candidate_class = branch_info.local_class
-    if selection == BranchSelection.BRANCH_PREFER_REMOTE:
+    elif selection == BranchSelection.BRANCH_PREFER_REMOTE:
         candidate = branch_info.upstream or branch_info.local
         candidate_class = branch_info.upstream_class or branch_info.local_class
     elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
@@ -1457,14 +1457,14 @@ def begin(context: Context):
 
     allowed_base_branch_class = const.BRANCHING[work_branch_class]
 
-    base_branch, base_branch_class = get_target_ref(result, command_context.selected_branch,
-                                                    BranchSelection.BRANCH_PREFER_LOCAL)
+    base_branch, base_branch_class = select_ref(result, command_context.selected_branch,
+                                                BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
         fixed_base_branch_info = get_branch_info(command_context,
                                                  'refs/heads/' + context.parsed_config.release_branch_base)
-        fixed_base_branch, fixed_destination_branch_class = get_target_ref(result,
-                                                                           fixed_base_branch_info,
-                                                                           BranchSelection.BRANCH_PREFER_LOCAL)
+        fixed_base_branch, fixed_destination_branch_class = select_ref(result,
+                                                                       fixed_base_branch_info,
+                                                                       BranchSelection.BRANCH_PREFER_LOCAL)
 
         base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
 
@@ -1546,21 +1546,21 @@ def end(context: Context):
                     .format(branch=repr(work_branch_name)),
                     None)
 
-    work_branch, work_branch_class = get_target_ref(result,
-                                                    work_branch_info,
-                                                    BranchSelection.BRANCH_PREFER_LOCAL)
+    work_branch, work_branch_class = select_ref(result,
+                                                work_branch_info,
+                                                BranchSelection.BRANCH_PREFER_LOCAL)
 
     allowed_base_branch_class = const.BRANCHING[work_branch_class]
 
-    base_branch, base_branch_class = get_target_ref(result, command_context.selected_branch,
-                                                    BranchSelection.BRANCH_PREFER_LOCAL)
+    base_branch, base_branch_class = select_ref(result, command_context.selected_branch,
+                                                BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly:
         if branch_supertype == const.BRANCH_PREFIX_DEV:
             fixed_base_branch_info = get_branch_info(command_context,
                                                      'refs/heads/' + context.parsed_config.release_branch_base)
-            fixed_base_branch, fixed_destination_branch_class = get_target_ref(result,
-                                                                               fixed_base_branch_info,
-                                                                               BranchSelection.BRANCH_PREFER_LOCAL)
+            fixed_base_branch, fixed_destination_branch_class = select_ref(result,
+                                                                           fixed_base_branch_info,
+                                                                           BranchSelection.BRANCH_PREFER_LOCAL)
 
             base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
         elif branch_supertype == const.BRANCH_PREFIX_PROD:
