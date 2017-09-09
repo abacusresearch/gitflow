@@ -112,6 +112,9 @@ class TestFlow:
         ])
 
     def teardown_method(self, method):
+        exit_code = self.git_flow('status')
+        assert exit_code == os.EX_OK
+
         self.tempdir.cleanup()
         os.chdir(self.orig_cwd)
 
