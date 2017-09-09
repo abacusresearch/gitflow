@@ -1662,9 +1662,9 @@ def end(context: Context):
                                                                                  context.parsed_config.remote_name,
                                                                                  'release'))
             release_branches = list(release_branches)
-            release_branches.sort(reverse=True, key=utils.cmp_to_key(lambda ref_a, ref_b: version.compare_version_info(
-                context.parsed_config.release_branch_matcher.format(ref_a),
-                context.parsed_config.release_branch_matcher.format(ref_b)
+            release_branches.sort(reverse=True, key=utils.cmp_to_key(lambda ref_a, ref_b: semver.compare(
+                context.parsed_config.release_branch_matcher.format(ref_a.name),
+                context.parsed_config.release_branch_matcher.format(ref_b.name)
             )))
             for release_branch_ref in release_branches:
                 merge_base = repotools.git_merge_base(context.repo, base_branch_ref, work_branch_ref.name)
@@ -1715,23 +1715,23 @@ def end(context: Context):
     if not context.dry_run and not result.has_errors():
         # run merge
         git_or_fail(context, result,
-                    ['checkout', base_branch_ref.local_branch_name],
+                    ['checkout', base_branch_ref.short_name],
                     _("Failed to checkout branch {branch_name}.")
-                    .format(branch_name=repr(base_branch_ref.local_branch_name))
+                    .format(branch_name=repr(base_branch_ref.short_name))
                     )
 
         git_or_fail(context, result,
                     ['merge', '--no-ff', work_branch_ref],
                     _("Failed to merge work branch."
                       "Rebase {work_branch} on {base_branch} and try again")
-                    .format(work_branch=repr(work_branch_ref.local_branch_name),
-                            base_branch=repr(base_branch_ref.local_branch_name))
+                    .format(work_branch=repr(work_branch_ref.short_name),
+                            base_branch=repr(base_branch_ref.short_name))
                     )
 
         git_or_fail(context, result,
-                    ['push', context.parsed_config.remote_name, base_branch_ref],
+                    ['push', context.parsed_config.remote_name, base_branch_ref.short_name],
                     _("Failed to push branch {branch_name}.")
-                    .format(branch_name=repr(base_branch_ref.local_branch_name))
+                    .format(branch_name=repr(base_branch_ref.short_name))
                     )
 
     return result
