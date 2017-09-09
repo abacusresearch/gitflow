@@ -547,15 +547,26 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                     .format(branch=repr(context.parsed_config.release_branch_base))
                     )
 
-    if context.parsed_config.tie_sequential_version_to_semantic_version:
+    existing_release_branches = list(repotools.git_list_refs(context.repo, repotools.ref_name([
+        const.REMOTES_PREFIX,
+        context.parsed_config.remote_name,
+        'release'])))
+    if context.parsed_config.tie_sequential_version_to_semantic_version \
+            and len(existing_release_branches):
         prompt_result = prompt_for_confirmation(
             context=context,
             fail_title=_("Failed to create release branch based on {branch} in batch mode.")
                 .format(branch=repr(command_context.selected_ref.name)),
             message=_("This operation disables version increments except for pre-release increments "
-                      "on all existing branches.")
+                      "on all existing branches.\n"
+                      "Affected branches are:\n"
+                      "{listing}")
+                .format(listing=os.linesep.join(repr(branch.name) for branch in existing_release_branches))
             if not context.parsed_config.commit_version_property
-            else _("This operation disables version increments on all existing branches."),
+            else _("This operation disables version increments on all existing branches.\n"
+                   "Affected branches are:\n"
+                   "{listing}")
+                .format(listing=os.linesep.join(repr(branch.name) for branch in existing_release_branches)),
             prompt=_("Continue?"),
         )
         result.add_subresult(prompt_result)
