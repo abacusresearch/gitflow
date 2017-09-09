@@ -383,7 +383,7 @@ def create_shared_clone_repository(context):
                     )
         shutil.rmtree(tempdir_path)
 
-    clone_context = Context({
+    clone_context = Context.create({
         '--root': tempdir_path,
 
         '--config': context.args['--config'],  # no override here
@@ -393,7 +393,7 @@ def create_shared_clone_repository(context):
 
         '--verbose': context.verbose,
         '--pretty': context.pretty,
-    })
+    }, result)
 
     if clone_context.temp_dirs is None:
         clone_context.temp_dirs = list()
@@ -403,7 +403,10 @@ def create_shared_clone_repository(context):
         context.clones = list()
     context.clones.append(clone_context)
 
-    result.value = clone_context
+    if not result.has_errors():
+        result.value = clone_context
+    else:
+        context.cleanup()
     return result
 
 

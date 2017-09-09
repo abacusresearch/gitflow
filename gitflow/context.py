@@ -5,6 +5,7 @@ import shutil
 import semver
 
 from gitflow import cli, const, filesystem, repotools, _
+from gitflow.common import Result
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
 
@@ -70,140 +71,150 @@ class Context(object):
     temp_dirs: list = None
     clones: list = None
 
-    def __init__(self, args):
-        self.parsed_config: Config = Config()
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def create(args: dict, result_out: Result):
+        context = Context()
+        context.parsed_config: Config = Config()
 
         if args is not None:
-            self.args = args
+            context.args = args
 
-            self.batch = self.args['--batch']
-            self.assume_yes = self.args.get('--assume-yes')
-            self.dry_run = self.args.get('--dry-run')
-            self.verbose = self.args['--verbose']
-            self.pretty = self.args['--pretty']
+            context.batch = context.args['--batch']
+            context.assume_yes = context.args.get('--assume-yes')
+            context.dry_run = context.args.get('--dry-run')
+            context.verbose = context.args['--verbose']
+            context.pretty = context.args['--pretty']
         else:
-            self.args = dict()
+            context.args = dict()
 
         # configure CLI
-        cli.set_allow_color(not self.batch)
+        cli.set_allow_color(not context.batch)
 
         # initialize repo context and attempt to load the config file
-        if '--root' in self.args and self.args['--root'] is not None:
-            self.root = self.args['--root']
+        if '--root' in context.args and context.args['--root'] is not None:
+            context.root = context.args['--root']
 
-            self.__repo = RepoContext()
-            self.__repo.dir = self.root
-            self.__repo.verbose = self.verbose
+            context.__repo = RepoContext()
+            context.__repo.dir = context.root
+            context.__repo.verbose = context.verbose
 
-            git_version = repotools.git_version(self.__repo)
+            git_version = repotools.git_version(context.__repo)
             if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
-                cli.fail(os.EX_UNAVAILABLE,
-                         _("git {required_version} or newer required, got {actual_version}.")
-                         .format(required_version=repr(const.MIN_GIT_VERSION, actual_version=repr(git_version)))
-                         )
+                result_out.fail(os.EX_UNAVAILABLE,
+                                _("git {required_version} or newer required, got {actual_version}.")
+                                .format(required_version=repr(const.MIN_GIT_VERSION, actual_version=repr(git_version))),
+                                None
+                                )
 
-            root = repotools.git_rev_parse(self.__repo, '--show-toplevel')
+            root = repotools.git_rev_parse(context.__repo, '--show-toplevel')
             # None when invalid or bare
             if root is not None:
-                self.__repo.dir = root
+                context.__repo.dir = root
 
-            gitflow_config_file = os.path.join(self.__repo.dir, self.args['--config'])
-            if self.verbose >= const.TRACE_VERBOSITY:
+            gitflow_config_file = os.path.join(context.__repo.dir, context.args['--config'])
+            if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("gitflow_config_file: " + gitflow_config_file)
 
             if not os.path.isfile(gitflow_config_file):
-                cli.fail(os.EX_DATAERR,
-                         _("gitflow_config_file does not exist or is not a regular file: {path}.")
-                         .format(path=repr(gitflow_config_file))
-                         )
+                result_out.fail(os.EX_DATAERR,
+                                _("gitflow_config_file does not exist or is not a regular file: {path}.")
+                                .format(path=repr(gitflow_config_file)),
+                                None
+                                )
 
-            self.config = filesystem.JavaPropertyFile(gitflow_config_file).load()
+            context.config = filesystem.JavaPropertyFile(gitflow_config_file).load()
         else:
-            self.config = dict()
+            context.config = dict()
 
         # project properties config
 
-        self.parsed_config.property_file = self.config.get(const.CONFIG_VERSION_PROPERTY_FILE)
-        if self.parsed_config.property_file is not None:
-            property_file = os.path.join(self.root, self.parsed_config.property_file)
+        context.parsed_config.property_file = context.config.get(const.CONFIG_VERSION_PROPERTY_FILE)
+        if context.parsed_config.property_file is not None:
+            property_file = os.path.join(context.root, context.parsed_config.property_file)
 
-        if self.parsed_config.property_file is not None:
-            if self.parsed_config.property_file.endswith(".properties"):
-                self.__property_store = filesystem.JavaPropertyFile(self.parsed_config.property_file)
+        if context.parsed_config.property_file is not None:
+            if context.parsed_config.property_file.endswith(".properties"):
+                context.__property_store = filesystem.JavaPropertyFile(context.parsed_config.property_file)
             else:
-                cli.fail(os.EX_DATAERR,
-                         _("property file not supported: {path}\n"
-                           "Currently supported:\n"
-                           "{listing}")
-                         .format(path=repr(self.parsed_config.property_file),
-                                 listing='\n'.join(' - ' + type for type in ['*.properties']))
-                         )
+                result_out.fail(os.EX_DATAERR,
+                                _("property file not supported: {path}\n"
+                                  "Currently supported:\n"
+                                  "{listing}")
+                                .format(path=repr(context.parsed_config.property_file),
+                                        listing='\n'.join(' - ' + type for type in ['*.properties'])),
+                                None
+                                )
 
         # version config
 
-        qualifiers = self.config.get(const.CONFIG_PRE_RELEASE_VERSION_QUALIFIERS)
+        qualifiers = context.config.get(const.CONFIG_PRE_RELEASE_VERSION_QUALIFIERS)
         if qualifiers is None:
             qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
         qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
         if qualifiers != sorted(qualifiers):
-            cli.fail(
+            result_out.fail(
                 os.EX_DATAERR,
                 "Configuration failed.",
                 "Pre-release qualifiers are not specified in ascending order: "
                 + str(sorted(qualifiers)))
-        self.parsed_config.version_config = VersionConfig()
-        self.parsed_config.version_config.qualifiers = qualifiers
+        context.parsed_config.version_config = VersionConfig()
+        context.parsed_config.version_config.qualifiers = qualifiers
 
         # branch config
 
-        self.parsed_config.release_branch_base = self.config.get(const.CONFIG_RELEASE_BRANCH_BASE,
-                                                                 const.DEFAULT_RELEASE_BRANCH_BASE)
+        context.parsed_config.release_branch_base = context.config.get(const.CONFIG_RELEASE_BRANCH_BASE,
+                                                                       const.DEFAULT_RELEASE_BRANCH_BASE)
 
-        self.parsed_config.release_base_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + self.parsed_config.remote_name + '/'],
+        context.parsed_config.release_base_branch_matcher = VersionMatcher(
+            ['refs/heads/', 'refs/remotes/' + context.parsed_config.remote_name + '/'],
             None,
-            re.escape(self.parsed_config.release_branch_base),
+            re.escape(context.parsed_config.release_branch_base),
         )
 
-        self.parsed_config.release_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + self.parsed_config.remote_name + '/'],
+        context.parsed_config.release_branch_matcher = VersionMatcher(
+            ['refs/heads/', 'refs/remotes/' + context.parsed_config.remote_name + '/'],
             'release/',
-            self.config.get(
+            context.config.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
         )
 
-        self.parsed_config.work_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + self.parsed_config.remote_name + '/'],
+        context.parsed_config.work_branch_matcher = VersionMatcher(
+            ['refs/heads/', 'refs/remotes/' + context.parsed_config.remote_name + '/'],
             [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
-            self.config.get(
+            context.config.get(
                 const.CONFIG_WORK_BRANCH_PATTERN,
                 const.DEFAULT_WORK_BRANCH_PATTERN),
         )
 
-        self.parsed_config.version_tag_matcher = VersionMatcher(
+        context.parsed_config.version_tag_matcher = VersionMatcher(
             ['refs/tags/'],
             'version/',
-            self.config.get(
+            context.config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
                 const.DEFAULT_VERSION_TAG_PATTERN),
         )
 
-        self.parsed_config.discontinuation_tag_matcher = VersionMatcher(
+        context.parsed_config.discontinuation_tag_matcher = VersionMatcher(
             ['refs/tags/'],
             'discontinued/',
-            self.config.get(
+            context.config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
         )
 
-        self.parsed_config.sequential_version_tag_matcher = VersionMatcher(
+        context.parsed_config.sequential_version_tag_matcher = VersionMatcher(
             ['refs/tags/'],
             'sequential_version/',
-            self.config.get(
+            context.config.get(
                 const.CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN,
                 const.DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN),
             '{unique_code}')
+
+        return context
 
     @property
     def repo(self):
@@ -219,9 +230,9 @@ class Context(object):
         if self.__property_store:
             return self.__property_store.store(properties)
         else:
-            cli.fail(os.EX_SOFTWARE,
-                     _("Failed to save properties."
-                       "Missing property store."))
+            result_out.fail(os.EX_SOFTWARE,
+                            _("Failed to save properties."
+                              "Missing property store."))
 
     def get_release_branches(self):
         release_branches = list(filter(

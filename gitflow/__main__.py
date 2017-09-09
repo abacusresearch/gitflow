@@ -53,7 +53,7 @@ import docopt
 from gitflow import cli, procedures
 from gitflow import const
 from gitflow import version
-from gitflow.common import GitFlowException
+from gitflow.common import GitFlowException, Result
 from gitflow.context import Context
 
 # project_env = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
@@ -129,53 +129,64 @@ def main(argv: list = sys.argv) -> int:
     else:
         profiler = None
 
+    result = Result()
+
     args = docopt.docopt(argv=argv[1:], doc=__doc__, version=const.VERSION, help=True, options_first=False)
-    context = Context(args)
     try:
-
-        if context.verbose >= const.TRACE_VERBOSITY:
-            cli.print("cwd: " + os.getcwd())
-
-        if context.verbose >= const.TRACE_VERBOSITY:
-            cli.print("Python version:\n" + sys.version + "\n")
-
-        command_func = cli.get_cmd([
-            cmd_status,
-            cmd_bump_major,
-            cmd_bump_minor,
-            cmd_bump_patch,
-            cmd_bump_prerelease_type,
-            cmd_bump_prerelease,
-            cmd_bump_to_release,
-            cmd_bump,
-            cmd_discontinue,
-            cmd_begin,
-            cmd_end,
-            cmd_log,
-            cmd_build,
-        ], context.args)
-
-        if command_func is None:
-            cli.fail(os.EX_SOFTWARE, "unimplemented command")
-
-        if context.verbose >= const.TRACE_VERBOSITY:
-            cli.print("command: " + cli.if_none(command_func))
-
+        context = Context.create(args, result)
+    except GitFlowException as e:
+        context = None
+        pass  # errors are in result
+    if context is not None:
         try:
-            result = command_func(context)
-        except GitFlowException as e:
-            result = e.result
+            if context.verbose >= const.TRACE_VERBOSITY:
+                cli.print("cwd: " + os.getcwd())
 
-        exit_code = os.EX_OK
-        if len(result.errors):
-            sys.stderr.flush()
-            sys.stdout.flush()
+            if context.verbose >= const.TRACE_VERBOSITY:
+                cli.print("Python version:\n" + sys.version + "\n")
 
-            for error in result.errors:
-                if error.exit_code != os.EX_OK and exit_code != os.EX_SOFTWARE:
-                    exit_code = error.exit_code
-                cli.eprint('\n'.join(filter(None, [error.message, error.reason])))
+            command_func = cli.get_cmd([
+                cmd_status,
+                cmd_bump_major,
+                cmd_bump_minor,
+                cmd_bump_patch,
+                cmd_bump_prerelease_type,
+                cmd_bump_prerelease,
+                cmd_bump_to_release,
+                cmd_bump,
+                cmd_discontinue,
+                cmd_begin,
+                cmd_end,
+                cmd_log,
+                cmd_build,
+            ], context.args)
 
+            if command_func is None:
+                cli.fail(os.EX_SOFTWARE, "unimplemented command")
+
+            if context.verbose >= const.TRACE_VERBOSITY:
+                cli.print("command: " + cli.if_none(command_func))
+
+            try:
+                command_result = command_func(context)
+            except GitFlowException as e:
+                command_result = e.result
+            result.errors.extend(command_result.errors)
+        finally:
+            context.cleanup()
+
+    exit_code = os.EX_OK
+    if len(result.errors):
+        sys.stderr.flush()
+        sys.stdout.flush()
+
+        for error in result.errors:
+            if error.exit_code != os.EX_OK and exit_code != os.EX_SOFTWARE:
+                exit_code = error.exit_code
+            cli.eprint('\n'.join(filter(None, [error.message, error.reason])))
+
+    # print dry run status, if possible
+    if context is not None:
         if exit_code == os.EX_OK:
             if context.dry_run:
                 cli.print('')
@@ -189,12 +200,10 @@ def main(argv: list = sys.argv) -> int:
             else:
                 pass
 
-        if profiler is not None:
-            profiler.disable()
-            # pr.dump_stats('profile.pstat')
-            profiler.print_stats(sort="calls")
-    finally:
-        context.cleanup()
+    if profiler is not None:
+        profiler.disable()
+        # pr.dump_stats('profile.pstat')
+        profiler.print_stats(sort="calls")
 
     return exit_code
 
