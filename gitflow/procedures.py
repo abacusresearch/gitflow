@@ -1249,10 +1249,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
             git_or_fail(context, result, ['checkout', original_current_branch.short_name])
 
-        current_branch = repotools.git_get_current_branch(context.repo)
-        cli.print(_("You are now on {branch}.")
-                  .format(branch=repr(current_branch.short_name)))
-
     return result
 
 
@@ -1545,10 +1541,6 @@ def begin(context: Context):
                     .format(branch_name=work_branch_name)
                     )
 
-        current_branch = repotools.git_get_current_branch(context.repo)
-        cli.print(_("You are now on {branch}.")
-                  .format(branch=repr(current_branch.short_name)))
-
     return result
 
 
@@ -1653,10 +1645,6 @@ def end(context: Context):
                     _("Failed to checkout branch {branch_name}.")
                     .format(branch_name=repr(base_branch.name))
                     )
-
-        current_branch = repotools.git_get_current_branch(context.repo)
-        cli.print(_("You are now on {branch}.")
-                  .format(branch=repr(current_branch.short_name)))
 
         git_or_fail(context, result,
                     ['merge', '--no-ff', work_branch],

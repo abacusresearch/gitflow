@@ -50,7 +50,7 @@ import sys
 
 import docopt
 
-from gitflow import cli, procedures
+from gitflow import cli, procedures, repotools, _
 from gitflow import const
 from gitflow import version
 from gitflow.common import GitFlowException, Result
@@ -167,11 +167,19 @@ def main(argv: list = sys.argv) -> int:
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("command: " + cli.if_none(command_func))
 
+            start_branch = repotools.git_get_current_branch(context.repo)
+
             try:
                 command_result = command_func(context)
             except GitFlowException as e:
                 command_result = e.result
             result.errors.extend(command_result.errors)
+
+            current_branch = repotools.git_get_current_branch(context.repo)
+            if ((current_branch is None) != (start_branch is None)) \
+                    or current_branch.name != start_branch.name:
+                cli.print(_("You are now on {branch}.")
+                          .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
         finally:
             context.cleanup()
 
