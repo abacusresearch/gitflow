@@ -1737,6 +1737,8 @@ def status(context):
                 status_local_color = colors.partial(colors.color, fg='blue', style='bold')
                 status_remote_color = colors.partial(colors.color, fg='green', style='bold')
 
+            error_color = colors.partial(colors.color, fg='white', bg='red', style='bold')
+
             cli.fcwrite(sys.stdout, status_color, "version: " + branch_version_string + ' [')
             if branch_info.local is not None:
                 local_branch_color = status_local_color
@@ -1744,7 +1746,7 @@ def status(context):
                     result.error(os.EX_DATAERR,
                                  _("Local and upstream branch have a mismatching short name."),
                                  None)
-                    local_branch_color = status_error_color
+                    local_branch_color = error_color
                 if context.verbose:
                     cli.fcwrite(sys.stdout, local_branch_color, branch_info.local.name)
                 else:
