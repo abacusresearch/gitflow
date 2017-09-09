@@ -437,9 +437,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
     return result
 
 
-def get_command_context(context, object_arg: str,
-                        for_modification: bool, with_upstream: bool,
-                        fail_message: str = _("Failed to resolve target branch")) -> Result:
+def get_command_context(context, object_arg: str) -> Result:
     result = Result()
 
     command_context = CommandContext()
@@ -520,46 +518,8 @@ def get_command_context(context, object_arg: str,
                   .format(name=repr(selected_ref.name), commit=selected_ref.target.obj_name))
         cli.print(_("Target commit: {commit}")
                   .format(commit=commit))
-    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, selected_ref)
-    if len(discontinuation_tags):
-        result.fail(os.EX_USAGE,
-                    fail_message,
-                    _("{branch} is discontinued.")
-                    .format(branch=repr(selected_ref.name)))
 
     branch_info = get_branch_info(command_context, selected_ref)
-    if selected_ref.local_branch_name is not None:
-        # check, whether the  selected branch/commit is on remote
-
-        if with_upstream and branch_info.upstream is None:
-            result.fail(os.EX_USAGE,
-                        fail_message,
-                        _("{branch} does not have an upstream branch.")
-                        .format(branch=repr(selected_ref.name)))
-
-        # if branch_info.upstream.short_name != selected_ref.short_name:
-        #     result.fail(os.EX_USAGE,
-        #                 _("Version creation failed."),
-        #                 _("{branch} has an upstream branch with mismatching short name: {remote_branch}.")
-        #                 .format(branch=repr(selected_ref.name),
-        #                         remote_branch=repr(branch_info.upstream.name))
-        #                 )
-
-        if branch_info.upstream is not None:
-            push_merge_base = repotools.git_merge_base(context.repo, commit, branch_info.upstream)
-            if push_merge_base is None:
-                result.fail(os.EX_USAGE,
-                            fail_message,
-                            _("{branch} does not have a common base with its upstream branch: {remote_branch}")
-                            .format(branch=repr(selected_ref.name),
-                                    remote_branch=repr(branch_info.upstream.name)))
-            elif push_merge_base != commit:
-                result.fail(os.EX_USAGE,
-                            fail_message,
-                            _("{branch} is not in sync with its upstream branch.\n"
-                              "Push your changes and try again.")
-                            .format(branch=repr(selected_ref.name),
-                                    remote_branch=repr(branch_info.upstream.name)))
 
     command_context.selected_ref = selected_ref
     command_context.selected_commit = commit
@@ -1285,16 +1245,71 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     return result
 
 
+def check_requirements(result_out: Result,
+                       command_context: CommandContext,
+                       for_modification: bool,
+                       with_upstream: bool,
+                       in_sync_with_upstream: bool,
+                       fail_message: str):
+    if command_context.selected_ref.local_branch_name is not None:
+        # check, whether the  selected branch/commit is on remote
+
+        if with_upstream and command_context.selected_branch.upstream is None:
+            result_out.fail(os.EX_USAGE,
+                            fail_message,
+                            _("{branch} does not have an upstream branch.")
+                            .format(branch=repr(command_context.selected_ref.name)))
+
+        # if branch_info.upstream.short_name != selected_ref.short_name:
+        #     result.fail(os.EX_USAGE,
+        #                 _("Version creation failed."),
+        #                 _("{branch} has an upstream branch with mismatching short name: {remote_branch}.")
+        #                 .format(branch=repr(selected_ref.name),
+        #                         remote_branch=repr(branch_info.upstream.name))
+        #                 )
+
+        if in_sync_with_upstream and command_context.selected_branch.upstream is not None:
+            push_merge_base = repotools.git_merge_base(command_context.context.repo, command_context.selected_commit,
+                                                       command_context.selected_branch.upstream)
+            if push_merge_base is None:
+                result_out.fail(os.EX_USAGE,
+                                fail_message,
+                                _("{branch} does not have a common base with its upstream branch: {remote_branch}")
+                                .format(branch=repr(command_context.selected_ref.name),
+                                        remote_branch=repr(command_context.selected_branch.upstream.name)))
+            elif push_merge_base != command_context.selected_commit:
+                result_out.fail(os.EX_USAGE,
+                                fail_message,
+                                _("{branch} is not in sync with its upstream branch.\n"
+                                  "Push your changes and try again.")
+                                .format(branch=repr(command_context.selected_ref.name),
+                                        remote_branch=repr(command_context.selected_branch.upstream.name)))
+
+    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context,
+                                                                              command_context.selected_ref)
+    if for_modification and len(discontinuation_tags):
+        result_out.fail(os.EX_USAGE,
+                        fail_message,
+                        _("{branch} is discontinued.")
+                        .format(branch=repr(command_context.selected_ref.name)))
+
+
 def create_version(context: Context, operation: Callable[[VersionConfig, str], str]):
     result = Result()
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<object>', None),
-        for_modification=True,
-        with_upstream=False  # not context.parsed_config.push_to_local
+        object_arg=utils.get_or_default(context.args, '<object>', None)
     )
     result.add_subresult(context_result)
     command_context = context_result.value
+
+    check_requirements(result_out=result,
+                       command_context=command_context,
+                       for_modification=True,
+                       with_upstream=True,  # not context.parsed_config.push_to_local
+                       in_sync_with_upstream=True,
+                       fail_message=_("Version creation failed.")
+                       )
 
     # determine the type of operation to be performed and run according subroutines
     if operation == version.version_bump_major \
@@ -1431,12 +1446,18 @@ def begin(context: Context):
     result = Result()
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<base-object>', None),
-        for_modification=True,
-        with_upstream=False
+        object_arg=utils.get_or_default(context.args, '<base-object>', None)
     )
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
+
+    check_requirements(result_out=result,
+                       command_context=command_context,
+                       for_modification=True,
+                       with_upstream=True,  # not context.parsed_config.push_to_local
+                       in_sync_with_upstream=True,
+                       fail_message=_("Version creation failed.")
+                       )
 
     branch_supertype = context.args['<supertype>']
     branch_type = context.args['<type>']
@@ -1524,12 +1545,18 @@ def end(context: Context):
     result = Result()
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<dest-object>', None),
-        for_modification=True,
-        with_upstream=False
+        object_arg=utils.get_or_default(context.args, '<dest-object>', None)
     )
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
+
+    check_requirements(result_out=result,
+                       command_context=command_context,
+                       for_modification=True,
+                       with_upstream=True,  # not context.parsed_config.push_to_local
+                       in_sync_with_upstream=True,
+                       fail_message=_("Version creation failed.")
+                       )
 
     branch_supertype = context.args['<supertype>']
     branch_type = context.args['<type>']
@@ -1863,12 +1890,18 @@ def build(context):
 
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<object>', None),
-        for_modification=False,
-        with_upstream=True
+        object_arg=utils.get_or_default(context.args, '<object>', None)
     )
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
+
+    check_requirements(result_out=result,
+                       command_context=command_context,
+                       for_modification=True,
+                       with_upstream=True,  # not context.parsed_config.push_to_local
+                       in_sync_with_upstream=True,
+                       fail_message=_("Build failed.")
+                       )
 
     remote = repotools.git_get_remote(context.repo, context.parsed_config.remote_name)
     if remote is None:
