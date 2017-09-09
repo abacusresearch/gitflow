@@ -39,6 +39,16 @@ class Object(object):
     def __hash__(self):
         return hash(self.obj_name)
 
+    def __repr__(self):
+        if isinstance(self, Ref):
+            target = self.target
+            return ref_name(self) + ' => ' + (ref_name(target) if target != self else target.obj_name)
+        else:
+            return ref_name(self)
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class Ref(Object):
     name = None
