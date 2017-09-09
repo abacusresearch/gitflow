@@ -14,7 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Union, Callable, Tuple
+from typing import Union, Callable
 
 import colors
 import semver
@@ -53,7 +53,7 @@ class BranchInfo(object):
 
 
 def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
-        -> Tuple[repotools.Ref, const.BranchClass]:
+        -> [repotools.Ref, const.BranchClass]:
     if branch_info.local is not None and branch_info.upstream is not None:
         if branch_info.local_class != branch_info.upstream_class:
             result_out.error(os.EX_DATAERR,
@@ -82,6 +82,7 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
 
 
 class CommandContext(object):
+    object_arg: str = None
     context: Context = None
 
     selected_ref: repotools.Ref = None
@@ -442,6 +443,7 @@ def get_command_context(context, object_arg: str) -> Result:
 
     command_context = CommandContext()
 
+    command_context.object_arg = object_arg
     command_context.context = context
     command_context.upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
     command_context.downstreams = {v: k for k, v in command_context.upstreams.items()}
@@ -1449,6 +1451,27 @@ def discontinue_version(context: Context):
     return result
 
 
+class WorkBranch(object):
+    prefix: str
+    type: str
+    name: str
+
+    def branch_name(self):
+        return repotools.create_ref_name(self.prefix, self.type, self.name)
+
+    def local_ref_name(self):
+        return repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, self.prefix, self.type, self.name)
+
+    def remote_ref_name(self, remote: str):
+        return repotools.create_ref_name(const.REMOTES_PREFIX, remote, self.prefix, self.type, self.name)
+
+    def __repr__(self):
+        return self.branch_name()
+
+    def __str__(self):
+        return self.branch_name()
+
+
 def begin(context: Context):
     result = Result()
     context_result = get_command_context(
@@ -1548,10 +1571,17 @@ def end(context: Context):
     result = Result()
     context_result = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<dest-object>', None)
+        object_arg=utils.get_or_default(context.args, '<work-branch>', None)
     )
     result.add_subresult(context_result)
     command_context: CommandContext = context_result.value
+
+    base_context_result = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<base-branch>', None)
+    )
+    result.add_subresult(base_context_result)
+    base_command_context: CommandContext = base_context_result.value
 
     check_requirements(result_out=result,
                        command_context=command_context,
@@ -1561,55 +1591,80 @@ def end(context: Context):
                        fail_message=_("Version creation failed.")
                        )
 
-    branch_supertype = context.args['<supertype>']
-    branch_type = context.args['<type>']
-    branch_short_name = context.args['<name>']
+    work_branch = None
 
-    if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
-        result.fail(os.EX_USAGE,
-                    _("Invalid branch super type: {supertype}.")
-                    .format(supertype=repr(branch_supertype)),
-                    None)
+    arg_work_branch = WorkBranch()
+    arg_work_branch.prefix = context.args['<supertype>']
+    arg_work_branch.type = context.args['<type>']
+    arg_work_branch.name = context.args['<name>']
 
-    work_branch_name = utils.split_join('/', False, False, branch_supertype, branch_type, branch_short_name)
-    work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
+    if arg_work_branch.prefix is not None or arg_work_branch.type is not None or arg_work_branch.name is not None:
+        if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
+            result.fail(os.EX_USAGE,
+                        _("Invalid branch super type: {supertype}.")
+                        .format(supertype=repr(arg_work_branch.prefix)),
+                        None)
 
-    work_branch_info = get_branch_info(command_context, work_branch_ref_name)
+    else:
+        work_branch = None
+
+    ref_work_branch = WorkBranch()
+    selected_ref_match = context.parsed_config.work_branch_matcher.fullmatch(command_context.selected_ref.name)
+    if selected_ref_match is not None:
+        ref_work_branch.prefix = selected_ref_match.group('prefix')
+        ref_work_branch.type = selected_ref_match.group('type')
+        ref_work_branch.name = selected_ref_match.group('name')
+    else:
+        ref_work_branch = None
+
+        if command_context.selected_explicitly:
+            result.fail(os.EX_USAGE,
+                        _("The ref {branch} does not refer to a work branch.")
+                        .format(branch=repr(command_context.selected_ref.name)),
+                        None)
+
+    work_branch = ref_work_branch or arg_work_branch
+
+    work_branch_info = get_branch_info(command_context, work_branch.local_ref_name())
     if work_branch_info is None:
         result.fail(os.EX_USAGE,
                     _("The branch {branch} does neither exist locally nor remotely.")
-                    .format(branch=repr(work_branch_name)),
+                    .format(branch=repr(work_branch.branch_name())),
                     None)
 
-    work_branch, work_branch_class = select_ref(result,
-                                                work_branch_info,
-                                                BranchSelection.BRANCH_PREFER_LOCAL)
+    work_branch_ref, work_branch_class = select_ref(result,
+                                                    work_branch_info,
+                                                    BranchSelection.BRANCH_PREFER_LOCAL)
 
     allowed_base_branch_class = const.BRANCHING[work_branch_class]
 
-    base_branch, base_branch_class = select_ref(result, command_context.selected_branch,
+    base_branch_info = get_branch_info(base_command_context,
+                                       base_command_context.selected_ref)
+
+    base_branch_ref, base_branch_class = select_ref(result,
+                                                base_branch_info,
                                                 BranchSelection.BRANCH_PREFER_LOCAL)
-    if not command_context.selected_explicitly:
-        if branch_supertype == const.BRANCH_PREFIX_DEV:
-            fixed_base_branch_info = get_branch_info(command_context,
+    if not base_command_context.selected_explicitly:
+        if work_branch.prefix == const.BRANCH_PREFIX_DEV:
+            fixed_base_branch_info = get_branch_info(base_command_context,
                                                      'refs/heads/' + context.parsed_config.release_branch_base)
             fixed_base_branch, fixed_destination_branch_class = select_ref(result,
                                                                            fixed_base_branch_info,
                                                                            BranchSelection.BRANCH_PREFER_LOCAL)
 
-            base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
-        elif branch_supertype == const.BRANCH_PREFIX_PROD:
+            base_branch_ref, base_branch_class = fixed_base_branch, fixed_destination_branch_class
+        elif work_branch.prefix == const.BRANCH_PREFIX_PROD:
             # TODO find merge base
             pass
 
     if allowed_base_branch_class != base_branch_class:
         result.fail(os.EX_USAGE,
                     _("The branch {branch} is not a valid base for {supertype} branches.")
-                    .format(branch=repr(base_branch.name),
-                            supertype=repr(branch_supertype)),
+                    .format(branch=repr(base_branch_ref.name),
+                            supertype=repr(work_branch.prefix)),
                     None)
 
-    if base_branch is None:
+    if base_branch_ref is None:
         result.fail(os.EX_USAGE,
                     _("Base branch undetermined."),
                     None)
@@ -1617,11 +1672,11 @@ def end(context: Context):
     if context.verbose:
         cli.print("branch_name: " + command_context.selected_ref.name)
         cli.print("work_branch_name: " + work_branch.name)
-        cli.print("base_branch_name: " + base_branch.name)
+        cli.print("base_branch_name: " + base_branch_ref.name)
 
     # check, if already merged
-    merge_base = repotools.git_merge_base(context.repo, base_branch, work_branch_ref_name)
-    if work_branch.obj_name == merge_base:
+    merge_base = repotools.git_merge_base(context.repo, base_branch_ref, work_branch.local_ref_name())
+    if work_branch_ref.obj_name == merge_base:
         cli.print(_("Branch {branch} is already merged.")
                   .format(branch=repr(work_branch.name)))
         return result
@@ -1641,22 +1696,22 @@ def end(context: Context):
     if not context.dry_run and not result.has_errors():
         # run merge
         git_or_fail(context, result,
-                    ['checkout', base_branch.short_name],
+                    ['checkout', base_branch_ref.local_branch_name],
                     _("Failed to checkout branch {branch_name}.")
-                    .format(branch_name=repr(base_branch.name))
+                    .format(branch_name=repr(base_branch_ref.local_branch_name))
                     )
 
         git_or_fail(context, result,
-                    ['merge', '--no-ff', work_branch],
+                    ['merge', '--no-ff', work_branch_ref],
                     _("Failed to merge work branch."
                       "Rebase {work_branch} on {base_branch} and try again")
-                    .format(work_branch=repr(work_branch.name), base_branch=repr(base_branch.name))
+                    .format(work_branch=repr(work_branch_ref.local_branch_name), base_branch=repr(base_branch_ref.local_branch_name))
                     )
 
         git_or_fail(context, result,
-                    ['push', context.parsed_config.remote_name, base_branch],
+                    ['push', context.parsed_config.remote_name, base_branch_ref],
                     _("Failed to push branch {branch_name}.")
-                    .format(branch_name=repr(base_branch.name))
+                    .format(branch_name=repr(base_branch_ref.local_branch_name))
                     )
 
     return result

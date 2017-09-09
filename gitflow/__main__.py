@@ -12,9 +12,9 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow discontinue [-d|--dry-run] [-y|--assume-yes] <object>
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work_branch>) [<base-object>]
+ flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-branch>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work_branch>) [<dest-object>]]
+ flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-branch>]]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- [<git-arg>]]...
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]

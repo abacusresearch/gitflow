@@ -100,6 +100,10 @@ def ref_name(ref: Union[Ref, str, list] or Object):
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
 
+def create_ref_name(*strings: str):
+    return utils.split_join('/', False, False, *strings)
+
+
 def git(context: RepoContext, *args) -> subprocess.Popen:
     command = [context.git]
     if context.dir is not None:
