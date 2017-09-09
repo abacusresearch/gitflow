@@ -217,6 +217,52 @@ class TestFlow:
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
+        exit_code = self.git_flow('bump-prerelease-type', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1',
+            'refs/tags/version/1.0.0-beta.1',
+            'refs/tags/version/1.0.0-rc.1'
+        ])
+
+    def test_bump_to_release(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.checkout('release/1.0')
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+
+        exit_code = self.git_flow('bump-prerelease-type', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1',
+            'refs/tags/version/1.0.0-beta.1'
+        ])
+        exit_code = self.git_flow('bump-to-release', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1',
+            'refs/tags/version/1.0.0-beta.1',
+            'refs/tags/version/1.0.0'
+        ])
 
     def test_bump_prerelease(self):
         exit_code = self.git_flow('bump-major', '--assume-yes')
