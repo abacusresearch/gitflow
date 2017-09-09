@@ -1739,10 +1739,16 @@ def status(context):
 
             cli.fcwrite(sys.stdout, status_color, "version: " + branch_version_string + ' [')
             if branch_info.local is not None:
+                local_branch_color = status_local_color
+                if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
+                    result.error(os.EX_DATAERR,
+                                 _("Local and upstream branch have a mismatching short name."),
+                                 None)
+                    local_branch_color = status_error_color
                 if context.verbose:
-                    cli.fcwrite(sys.stdout, status_local_color, branch_info.local.name)
+                    cli.fcwrite(sys.stdout, local_branch_color, branch_info.local.name)
                 else:
-                    cli.fcwrite(sys.stdout, status_local_color, branch_info.local.short_name)
+                    cli.fcwrite(sys.stdout, local_branch_color, branch_info.local.short_name)
             if branch_info.upstream is not None:
                 if branch_info.local is not None:
                     cli.fcwrite(sys.stdout, status_color, ' => ')
