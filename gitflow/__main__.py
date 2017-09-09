@@ -122,8 +122,6 @@ def cmd_build(context):
 # ========== entry point
 
 def main(argv: list = sys.argv) -> int:
-    exit_code = os.EX_SOFTWARE
-
     if ENABLE_PROFILER:
         import cProfile
         profiler = cProfile.Profile()
@@ -202,5 +200,5 @@ def main(argv: list = sys.argv) -> int:
 
 
 if __name__ == "__main__":
-    exit_code = main(sys.argv)
-    sys.exit(exit_code)
+    __exit_code = main(sys.argv)
+    sys.exit(__exit_code)
