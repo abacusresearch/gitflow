@@ -176,8 +176,7 @@ def main(argv: list = sys.argv) -> int:
             result.errors.extend(command_result.errors)
 
             current_branch = repotools.git_get_current_branch(context.repo)
-            if ((current_branch is None) != (start_branch is None)) \
-                    or current_branch.name != start_branch.name:
+            if current_branch != start_branch:
                 cli.print(_("You are now on {branch}.")
                           .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
         finally:
