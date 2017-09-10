@@ -314,6 +314,36 @@ class TestFlow:
             'refs/tags/version/1.0.0-alpha.2'
         ])
 
+    def test_discontinue(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            # 'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+
+        exit_code = self.git_flow('discontinue', '--assume-yes', '1.0')
+        assert exit_code == os.EX_OK
+        exit_code = self.git_flow('discontinue', '--assume-yes', '1.0')
+        assert exit_code == os.EX_USAGE
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            # 'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/discontinued/1.0',
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+
     def test_begin_end_dev_feature(self):
         self.assert_head('refs/heads/master')
 
