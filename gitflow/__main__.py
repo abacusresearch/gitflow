@@ -10,7 +10,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow discontinue [-d|--dry-run] [-y|--assume-yes] <object>
+ flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-branch>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]

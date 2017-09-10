@@ -1409,22 +1409,34 @@ def discontinue_version(context: Context):
 
     object_arg = context.args['<object>']
 
-    selected_branch = get_branch_by_branch_name_or_version_tag(context, object_arg, BranchSelection.BRANCH_PREFER_LOCAL)
+    reintegrate = cli.get_boolean_opt(context.args, '--reintegrate')
 
-    if selected_branch is None:
+    context_result = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<object>', None)
+    )
+    result.add_subresult(context_result)
+    command_context = context_result.value
+
+    base_branch_ref = repotools.get_branch_by_name(context.repo, context.parsed_config.release_branch_base,
+                                                   BranchSelection.BRANCH_PREFER_LOCAL)
+
+    release_branch = command_context.selected_ref
+
+    if release_branch is None:
         result.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
                     _("Failed to resolve an object for token {object}.")
                     .format(object=repr(object_arg))
                     )
 
-    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, selected_branch)
+    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, release_branch)
 
     if discontinuation_tag_name is None:
         result.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
                     _("{branch} cannot be discontinued.")
-                    .format(branch=repr(selected_branch.name))
+                    .format(branch=repr(release_branch.name))
                     )
 
     if context.verbose:
@@ -1437,49 +1449,98 @@ def discontinue_version(context: Context):
         result.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
                     _("The branch {branch} is already discontinued.")
-                    .format(branch=repr(selected_branch.name))
+                    .format(branch=repr(release_branch.name))
                     )
     # show info and prompt for confirmation
-    print("discontinued_branch : " + cli.if_none(selected_branch.name))
+    print("discontinued_branch : " + cli.if_none(release_branch.name))
 
-    prompt_result = prompt_for_confirmation(
-        context=context,
-        fail_title=_("Failed to discontinue {branch} in batch mode.")
-            .format(branch=repr(selected_branch.name)),
-        message=_("The discontinuation tag is about to be pushed."),
-        prompt=_("Continue?"),
-    )
-    result.add_subresult(prompt_result)
-    if result.has_errors() or not prompt_result.value:
-        return result
+    if reintegrate is None:
+        prompt_result = prompt_for_confirmation(
+            context=context,
+            fail_title=_("Failed to determine merge mode for {branch} in batch mode."),
+            message=_("Branches may be reintegrated upon discontinuation."),
+            prompt=_("Do you want to reintegrate {branch} into {base_branch}?")
+                .format(branch=repr(release_branch.short_name),
+                        base_branch=repr(base_branch_ref.short_name)),
+        )
+        result.add_subresult(prompt_result)
+        if result.has_errors():
+            return result
 
-    push_command = ['push', '--atomic']
-    if context.dry_run:
-        push_command.append('--dry-run')
-    if context.verbose:
-        push_command.append('--verbose')
-    push_command.append('origin')
+        reintegrate = prompt_result.value
 
-    push_command.append('--force-with-lease=refs/tags/' + discontinuation_tag_name + ':')
-    push_command.append(selected_branch.obj_name + ':' + 'refs/tags/' + discontinuation_tag_name)
+    if not result.has_errors():
+        # run merge on local clone
 
-    repotools.git(context.repo, *push_command)
+        clone_result = create_shared_clone_repository(context)
+        result.add_subresult(clone_result)
+        if result.has_errors():
+            return result
 
-    proc = repotools.git(context.repo, 'pull', '--ff-only', context.parsed_config.remote_name)
-    proc.wait()
-    if proc.returncode != os.EX_OK:
-        result.warn(
-            _("Failed to fast forward from {remote}")
-                .format(remote=context.parsed_config.remote_name),
-            None)
+        clone_context: Context = clone_result.value
 
-    proc = repotools.git(context.repo, 'pull', '--ff-only', '--tags', context.parsed_config.remote_name)
-    proc.wait()
-    if proc.returncode != os.EX_OK:
-        result.warn(
-            _("Failed to fast forward from {remote}")
-                .format(remote=context.parsed_config.remote_name),
-            None)
+        changes = list()
+
+        if reintegrate:
+            git_or_fail(clone_context, result,
+                        ['checkout', base_branch_ref.short_name],
+                        _("Failed to checkout branch {branch_name}.")
+                        .format(branch_name=repr(base_branch_ref.short_name))
+                        )
+
+            git_or_fail(clone_context, result,
+                        ['merge', '--no-ff', repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                       context.parsed_config.remote_name,
+                                                                       release_branch.short_name)],
+                        _("Failed to merge work branch."
+                          "Rebase {work_branch} on {base_branch} and try again")
+                        .format(work_branch=repr(release_branch.short_name),
+                                base_branch=repr(base_branch_ref.short_name))
+                        )
+            changes.append(_("{branch} reintegrated into {base_branch}")
+                           .format(branch=repr(release_branch.name), base_branch=repr(base_branch_ref.name)))
+
+        changes.append(_("Discontinuation tag"))
+        prompt_result = prompt_for_confirmation(
+            context=context,
+            fail_title=_("Failed to discontinue {branch} in batch mode.")
+                .format(branch=repr(release_branch.name)),
+            message=(" - " + (os.linesep + " - ").join([_("Changes to be pushed:")] + changes)),
+            prompt=_("Continue?"),
+        )
+        result.add_subresult(prompt_result)
+        if result.has_errors() or not prompt_result.value:
+            return result
+
+        push_command = ['push', '--atomic']
+        if context.dry_run:
+            push_command.append('--dry-run')
+        if context.verbose:
+            push_command.append('--verbose')
+        push_command.append('origin')
+
+        push_command.append(base_branch_ref.name + ':' + 'refs/heads/' + base_branch_ref.short_name)
+        push_command.append('--force-with-lease=refs/tags/' + discontinuation_tag_name + ':')
+        push_command.append(release_branch.obj_name + ':' + 'refs/tags/' + discontinuation_tag_name)
+
+        git_or_fail(clone_context, result, push_command)
+
+        # attempt a fast forward pull
+        proc = repotools.git(context.repo, 'pull', '--ff-only', context.parsed_config.remote_name)
+        proc.wait()
+        if proc.returncode != os.EX_OK:
+            result.warn(
+                _("Failed to fast forward from {remote}")
+                    .format(remote=context.parsed_config.remote_name),
+                None)
+
+        proc = repotools.git(context.repo, 'pull', '--ff-only', '--tags', context.parsed_config.remote_name)
+        proc.wait()
+        if proc.returncode != os.EX_OK:
+            result.warn(
+                _("Failed to fast forward from {remote}")
+                    .format(remote=context.parsed_config.remote_name),
+                None)
 
     return result
 
