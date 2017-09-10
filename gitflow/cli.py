@@ -83,7 +83,7 @@ def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
 
-def get_cmd(command_funcs, args):
+def get_cmd_for_subcommand(command_funcs, args, prefix: str):
     """
     :param command_funcs: a list of functions prefixed with 'cmd_'.
     Pattern: cmd_<command_name>, '_' in <command_name> translate to '-'.
@@ -95,11 +95,32 @@ def get_cmd(command_funcs, args):
             fail(os.EX_SOFTWARE, "internal error")
 
         func_name = str.lower(func.__name__)
-        if not func_name.startswith('cmd_'):
+        if not func_name.startswith(prefix):
             fail(os.EX_SOFTWARE, "internal error")
-        func_name = func_name[4:None]
+        func_name = func_name[len(prefix):None]
         command_name = str.lower(func_name.replace('_', '-'))
         if args[command_name]:
+            return func
+    return None
+
+
+def get_cmd(command_funcs, name: str, prefix: str):
+    """
+    :param command_funcs: a list of functions prefixed with 'cmd_'.
+    Pattern: cmd_<command_name>, '_' in <command_name> translate to '-'.
+    :param args: command line arguments
+    :return: the first function present in args.
+    """
+    for func in command_funcs:
+        if not isinstance(func, types.FunctionType):
+            fail(os.EX_SOFTWARE, "internal error")
+
+        func_name = str.lower(func.__name__)
+        if not func_name.startswith(prefix):
+            fail(os.EX_SOFTWARE, "internal error")
+        func_name = func_name[len(prefix):None]
+        command_name = str.lower(func_name.replace('_', '-'))
+        if name == command_name:
             return func
     return None
 

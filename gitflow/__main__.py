@@ -22,6 +22,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (-h|--help)
  flow --version
+ flow --hook=<hook-name> [<hook-args>]...
 
 Options:
  -h --help              Shows this screen.
@@ -43,6 +44,9 @@ Output Options:
                         This option can be specified twice to enable the output of underlying commands.
  -p --pretty            Enables formatted and colored output.
 
+Hook Options:
+--hook=<hook-name>      Sets the hook type. For use in Git hooks only.
+
 """
 
 import os
@@ -50,7 +54,7 @@ import sys
 
 import docopt
 
-from gitflow import cli, procedures, repotools, _
+from gitflow import cli, procedures, repotools, _, hooks
 from gitflow import const
 from gitflow import version
 from gitflow.common import GitFlowException, Result
@@ -119,6 +123,17 @@ def cmd_build(context):
     return procedures.build(context)
 
 
+# ========== hooks
+# mapped by hook_<name>
+
+def hook_pre_commit(context):
+    return hooks.pre_commit(context)
+
+
+def hook_pre_push(context):
+    return hooks.pre_push(context)
+
+
 # ========== entry point
 
 def main(argv: list = sys.argv) -> int:
@@ -145,40 +160,55 @@ def main(argv: list = sys.argv) -> int:
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("Python version:\n" + sys.version + "\n")
 
-            command_func = cli.get_cmd([
-                cmd_status,
-                cmd_bump_major,
-                cmd_bump_minor,
-                cmd_bump_patch,
-                cmd_bump_prerelease_type,
-                cmd_bump_prerelease,
-                cmd_bump_to_release,
-                cmd_bump_to,
-                cmd_discontinue,
-                cmd_start,
-                cmd_finish,
-                cmd_log,
-                cmd_build,
-            ], context.args)
+            if args['--hook'] is not None:
+                if context.verbose >= const.TRACE_VERBOSITY:
+                    cli.print('hook=' + args['--hook'])
 
-            if command_func is None:
-                cli.fail(os.EX_SOFTWARE, "unimplemented command")
+                hook_func = cli.get_cmd([
+                    hook_pre_commit,
+                    hook_pre_push,
+                ], args['--hook'], 'hook_')
 
-            if context.verbose >= const.TRACE_VERBOSITY:
-                cli.print("command: " + cli.if_none(command_func))
+                try:
+                    hook_result = hook_func(context)
+                except GitFlowException as e:
+                    hook_result = e.result
+                result.errors.extend(hook_result.errors)
+            else:
+                command_func = cli.get_cmd_for_subcommand([
+                    cmd_status,
+                    cmd_bump_major,
+                    cmd_bump_minor,
+                    cmd_bump_patch,
+                    cmd_bump_prerelease_type,
+                    cmd_bump_prerelease,
+                    cmd_bump_to_release,
+                    cmd_bump_to,
+                    cmd_discontinue,
+                    cmd_start,
+                    cmd_finish,
+                    cmd_log,
+                    cmd_build,
+                ], context.args, 'cmd_')
 
-            start_branch = repotools.git_get_current_branch(context.repo)
+                if command_func is None:
+                    cli.fail(os.EX_SOFTWARE, "unimplemented invocation")
 
-            try:
-                command_result = command_func(context)
-            except GitFlowException as e:
-                command_result = e.result
-            result.errors.extend(command_result.errors)
+                if context.verbose >= const.TRACE_VERBOSITY:
+                    cli.print("command: " + cli.if_none(command_func))
 
-            current_branch = repotools.git_get_current_branch(context.repo)
-            if current_branch != start_branch:
-                cli.print(_("You are now on {branch}.")
-                          .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
+                start_branch = repotools.git_get_current_branch(context.repo)
+
+                try:
+                    command_result = command_func(context)
+                except GitFlowException as e:
+                    command_result = e.result
+                result.errors.extend(command_result.errors)
+
+                current_branch = repotools.git_get_current_branch(context.repo)
+                if current_branch != start_branch:
+                    cli.print(_("You are now on {branch}.")
+                              .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
         finally:
             context.cleanup()
 

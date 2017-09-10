@@ -29,12 +29,13 @@ class Result(object):
     def warn(self, message, reason):
         self.errors.append(Error(os.EX_OK, message, reason))
 
-    def error(self, exit_code, message, reason):
+    def error(self, exit_code, message, reason, throw: bool = False):
         self.errors.append(Error(exit_code, message, reason))
+        if throw:
+            self.abort()
 
     def fail(self, exit_code, message, reason):
-        self.error(exit_code, message, reason)
-        self.abort()
+        self.error(exit_code, message, reason, True)
 
     def add_subresult(self, subresult):
         if subresult == self:
