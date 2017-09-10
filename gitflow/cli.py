@@ -135,3 +135,24 @@ def query_yes_no(output_stream, question, default="yes"):
         else:
             output_stream.write("Please respond with 'yes' or 'no' "
                                 "(or 'y' or 'n').\n")
+
+
+def get_boolean_opt(args: dict, option: str) -> [bool, None]:
+    """
+    Follows the --option/--no-option convention
+    :param args:
+    :param option:
+    :return: True, False or None, if neither of the option pair is set
+    """
+    tokens = option.split('--')
+    if len(tokens) != 2 or len(tokens[0]) != 0:
+        raise ValueError()
+    value = args[option]
+    disable_value = args['--no-' + tokens[1]]
+
+    if disable_value:
+        return False
+    elif value:
+        return value
+    else:
+        return None
