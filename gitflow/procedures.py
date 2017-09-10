@@ -2012,7 +2012,7 @@ def build(context):
     if os.path.exists(build_repo_path):
         shutil.rmtree(build_repo_path)
 
-    repo = repotools.git_clone(context.repo, build_repo_path, remote, command_context.selected_ref)
+    repo = repotools.git_export(context.repo, build_repo_path, command_context.selected_ref)
     if repo is None:
         result.fail(os.EX_IOERR,
                     _("Failed to clone {remote}.")
