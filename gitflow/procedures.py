@@ -1420,6 +1420,13 @@ def discontinue_version(context: Context):
 
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, selected_branch)
 
+    if discontinuation_tag_name is None:
+        result.fail(os.EX_USAGE,
+                    _("Branch discontinuation failed."),
+                    _("{branch} cannot be discontinued.")
+                    .format(branch=repr(selected_branch.name))
+                    )
+
     if context.verbose:
         cli.print("discontinuation tags:")
         for discontinuation_tag in discontinuation_tags:
