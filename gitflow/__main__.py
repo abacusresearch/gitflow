@@ -54,7 +54,7 @@ import sys
 
 import docopt
 
-from gitflow import cli, procedures, repotools, _
+from gitflow import cli, procedures, repotools, _, hooks
 from gitflow import const
 from gitflow import version
 from gitflow.common import GitFlowException, Result
@@ -123,6 +123,13 @@ def cmd_build(context):
     return procedures.build(context)
 
 
+# ========== hooks
+# mapped by hook_<name>
+
+def hook_pre_commit(context):
+    return hooks.pre_commit(context)
+
+
 # ========== entry point
 
 def main(argv: list = sys.argv) -> int:
@@ -150,8 +157,18 @@ def main(argv: list = sys.argv) -> int:
                 cli.print("Python version:\n" + sys.version + "\n")
 
             if args['--hook'] is not None:
-                cli.print('hook=' + args['--hook'])
-                return os.EX_OK
+                if context.verbose >= const.TRACE_VERBOSITY:
+                    cli.print('hook=' + args['--hook'])
+
+                hook_func = cli.get_cmd([
+                    hook_pre_commit,
+                ], {args['--hook']: True}, 'hook_')
+
+                try:
+                    command_result = hook_func(context)
+                except GitFlowException as e:
+                    command_result = e.result
+                result.errors.extend(command_result.errors)
             else:
                 command_func = cli.get_cmd([
                     cmd_status,
@@ -167,7 +184,7 @@ def main(argv: list = sys.argv) -> int:
                     cmd_finish,
                     cmd_log,
                     cmd_build,
-                ], context.args)
+                ], context.args, 'cmd_')
 
                 if command_func is None:
                     cli.fail(os.EX_SOFTWARE, "unimplemented invocation")
