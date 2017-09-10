@@ -1546,7 +1546,7 @@ def discontinue_version(context: Context):
 
         push_command.append(base_branch_ref.name + ':' + 'refs/heads/' + base_branch_ref.short_name)
         push_command.append('--force-with-lease=refs/tags/' + discontinuation_tag_name + ':')
-        push_command.append(release_branch.obj_name + ':' + 'refs/tags/' + discontinuation_tag_name)
+        push_command.append(repotools.ref_target(release_branch) + ':' + 'refs/tags/' + discontinuation_tag_name)
 
         git_or_fail(clone_context, result, push_command)
 
