@@ -114,6 +114,14 @@ class Context(object):
             if root is not None:
                 context.__repo.dir = root
 
+                if context.verbose >= const.TRACE_VERBOSITY:
+                    cli.print("--------------------------------------------------------------------------------")
+                    cli.print("refs in {repo}:".format(repo=context.__repo.dir))
+                    cli.print("--------------------------------------------------------------------------------")
+                    for ref in repotools.git_list_refs(context.__repo):
+                        cli.print(repr(ref))
+                    cli.print("--------------------------------------------------------------------------------")
+
             gitflow_config_file = os.path.join(context.__repo.dir, context.args['--config'])
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("gitflow_config_file: " + gitflow_config_file)
