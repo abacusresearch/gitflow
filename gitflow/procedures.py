@@ -121,6 +121,24 @@ def git_or_fail(context: Context, result: Result, command: list,
                         )
 
 
+def fetch_all_and_ff(context: Context, result_out: Result, remote: [repotools.Remote, str]):
+    # attempt a complete fetch and a fast forward on the current branch
+    remote_name = remote.name if isinstance(remote, repotools.Remote) else remote
+    proc = repotools.git(context.repo, 'fetch', '--tags', remote_name)
+    proc.wait()
+    if proc.returncode != os.EX_OK:
+        result_out.warn(
+            _("Failed to fetch from {remote}")
+                .format(repr(remote_name)),
+            None)
+    proc = repotools.git(context.repo, 'merge', '--ff-only')
+    proc.wait()
+    if proc.returncode != os.EX_OK:
+        result_out.warn(
+            _("Failed to fast forward"),
+            None)
+
+
 def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
     ref_name = repotools.ref_name(ref)
 
@@ -1397,27 +1415,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
     if not result.has_errors() \
             and context.parsed_config.pull_after_bump \
             and not context.parsed_config.push_to_local:
-        proc = repotools.git(context.repo, 'fetch', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.fail(os.EX_UNAVAILABLE,
-                        _("Failed to fetch from {remote}")
-                        .format(remote=context.parsed_config.remote_name),
-                        None)
-        proc = repotools.git(context.repo, 'fetch', '--tags', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.fail(os.EX_UNAVAILABLE,
-                        _("Failed to fetch from {remote}")
-                        .format(remote=context.parsed_config.remote_name),
-                        None)
-        proc = repotools.git(context.repo, 'pull', '--ff-only', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.warn(
-                _("Failed to fast forward from {remote}")
-                    .format(remote=command_context.current_branch.name),
-                None)
+        fetch_all_and_ff(context, result, context.parsed_config.remote_name)
 
     return result
 
@@ -1552,22 +1550,7 @@ def discontinue_version(context: Context):
 
         git_or_fail(clone_context, result, push_command)
 
-        # attempt a fast forward pull
-        proc = repotools.git(context.repo, 'pull', '--ff-only', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.warn(
-                _("Failed to fast forward from {remote}")
-                    .format(remote=context.parsed_config.remote_name),
-                None)
-
-        proc = repotools.git(context.repo, 'pull', '--ff-only', '--tags', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.warn(
-                _("Failed to fast forward from {remote}")
-                    .format(remote=context.parsed_config.remote_name),
-                None)
+        fetch_all_and_ff(context, result, context.parsed_config.remote_name)
 
     return result
 
