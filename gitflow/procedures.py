@@ -359,8 +359,6 @@ def create_shared_clone_repository(context):
 
     tempdir_path = os.path.join(os.path.dirname(context.repo.dir),
                                 '.' + os.path.basename(context.repo.dir) + ".gitflow-clone")
-    # if context.verbose:
-    cli.print("directory for shared clone: " + tempdir_path)
     clone_dir_mode = 0o700
     if os.path.exists(tempdir_path):
         if not os.path.isdir(tempdir_path):
@@ -1957,11 +1955,11 @@ def status(context):
 
                     if unique_code in unique_codes:
                         result.error(os.EX_DATAERR,
-                                    _("Invalid sequential version tag {tag}.")
-                                    .format(tag=branch_tag_ref.name),
-                                    _("The code element of version {version_string} is not unique.")
-                                    .format(version_string=version_string)
-                                    )
+                                     _("Invalid sequential version tag {tag}.")
+                                     .format(tag=branch_tag_ref.name),
+                                     _("The code element of version {version_string} is not unique.")
+                                     .format(version_string=version_string)
+                                     )
                     else:
                         unique_codes.add(unique_code)
 
@@ -1975,13 +1973,13 @@ def status(context):
                         cli.fcwriteln(sys.stdout, status_color, "    " + version_string)
                     else:
                         result.error(os.EX_DATAERR,
-                                    _("Invalid version tag {tag}.")
-                                    .format(tag=repr(branch_tag_ref.name)),
-                                    _("The major.minor part of the new version {new_version}"
-                                      " does not match the branch version {branch_version}.")
-                                    .format(new_version=repr(version_string),
-                                            branch_version=repr(branch_version_string))
-                                    )
+                                     _("Invalid version tag {tag}.")
+                                     .format(tag=repr(branch_tag_ref.name)),
+                                     _("The major.minor part of the new version {new_version}"
+                                       " does not match the branch version {branch_version}.")
+                                     .format(new_version=repr(version_string),
+                                             branch_version=repr(branch_version_string))
+                                     )
                         cli.fcwriteln(sys.stdout, status_error_color, "    " + version_string)
 
     unique_version_codes.sort(key=utils.cmp_to_key(lambda a, b: version.cmp_alnum_token(a, b)))
@@ -1990,10 +1988,10 @@ def status(context):
     for unique_code in unique_version_codes:
         if not (last_unique_code is None or unique_code > last_unique_code):
             result.error(os.EX_DATAERR,
-                        _("Version {version} breaks the sequence.")
-                        .format(version=unique_code),
-                        None
-                        )
+                         _("Version {version} breaks the sequence.")
+                         .format(version=unique_code),
+                         None
+                         )
         last_unique_code = unique_code
 
     return result
