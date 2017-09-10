@@ -703,131 +703,139 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
-        if not context.dry_run:
-            clone_result = create_shared_clone_repository(context)
-            result.add_subresult(clone_result)
-            if result.has_errors():
-                return result
+        clone_result = create_shared_clone_repository(context)
+        result.add_subresult(clone_result)
+        if result.has_errors():
+            return result
 
-            clone_context = clone_result.value
+        clone_context = clone_result.value
 
-            # create branch ref
-            git_or_fail(clone_context, result,
-                        ['update-ref', 'refs/heads/' + branch_name, command_context.selected_commit],
-                        _("Failed to push."))
+        # create branch ref
+        git_or_fail(clone_context, result,
+                    ['update-ref', 'refs/heads/' + branch_name, command_context.selected_commit],
+                    _("Failed to push."))
 
-            # # checkout base branch
-            # cloned_repo_commands = []
-            # checkout_command = ['checkout', '--force', context.parsed_config.release_branch_base]
-            # cloned_repo_commands.append(checkout_command)
-            #
-            # for command in cloned_repo_commands:
-            #     proc = repotools.git(clone_context.repo, *command)
-            #     proc.wait()
-            #     if proc.returncode != os.EX_OK:
-            #         result.fail(os.EX_DATAERR,
-            #                     _("Failed to check out release branch."),
-            #                     _("An unexpected error occurred.")
-            #                     )
-            #
-            # # run version change hooks on base branch
-            # update_result = update_project_metadata(clone_context, new_version)
-            # result.add_subresult(update_result)
-            # if (result.has_errors()):
+        # # checkout base branch
+        # cloned_repo_commands = []
+        # checkout_command = ['checkout', '--force', context.parsed_config.release_branch_base]
+        # cloned_repo_commands.append(checkout_command)
+        #
+        # for command in cloned_repo_commands:
+        #     proc = repotools.git(clone_context.repo, *command)
+        #     proc.wait()
+        #     if proc.returncode != os.EX_OK:
+        #         result.fail(os.EX_DATAERR,
+        #                     _("Failed to check out release branch."),
+        #                     _("An unexpected error occurred.")
+        #                     )
+        #
+        # # run version change hooks on base branch
+        # update_result = update_project_metadata(clone_context, new_version)
+        # result.add_subresult(update_result)
+        # if (result.has_errors()):
+        #     result.fail(os.EX_DATAERR,
+        #                 _("Version change hook run failed."),
+        #                 _("An unexpected error occurred.")
+        #                 )
+
+        has_local_commit = False
+
+        if (context.parsed_config.commit_version_property and new_version is not None) \
+                or (
+                            context.parsed_config.commit_sequential_version_property and new_sequential_version is not None):
+            # if commit != selected_ref.target.obj_name:
             #     result.fail(os.EX_DATAERR,
-            #                 _("Version change hook run failed."),
-            #                 _("An unexpected error occurred.")
+            #                 _("Failed to commit version update."),
+            #                 _("The selected commit {commit} does not represent the tip of {branch}.")
+            #                 .format(commit=commit, branch=repr(selected_ref.name))
             #                 )
 
-            has_local_commit = False
+            # run version change hooks on new release branch
+            git_or_fail(clone_context, result, ['checkout', '--force', branch_name],
+                        _("Failed to check out release branch."))
 
-            if (context.parsed_config.commit_version_property and new_version is not None) \
-                    or (
-                                context.parsed_config.commit_sequential_version_property and new_sequential_version is not None):
-                # if commit != selected_ref.target.obj_name:
-                #     result.fail(os.EX_DATAERR,
-                #                 _("Failed to commit version update."),
-                #                 _("The selected commit {commit} does not represent the tip of {branch}.")
-                #                 .format(commit=commit, branch=repr(selected_ref.name))
-                #                 )
+            commit_info = VersionUpdateCommit()
+            update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
+                                                         commit_info)
+            result.add_subresult(update_result)
+            if (result.has_errors()):
+                result.fail(os.EX_DATAERR,
+                            _("Version change hook run failed."),
+                            _("An unexpected error occurred.")
+                            )
 
-                # run version change hooks on new release branch
-                git_or_fail(clone_context, result, ['checkout', '--force', branch_name],
-                            _("Failed to check out release branch."))
+            has_local_commit = True
+        else:
+            commit_info = None
 
-                commit_info = VersionUpdateCommit()
-                update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
-                                                             commit_info)
-                result.add_subresult(update_result)
-                if (result.has_errors()):
-                    result.fail(os.EX_DATAERR,
-                                _("Version change hook run failed."),
-                                _("An unexpected error occurred.")
-                                )
+        if has_local_commit:
+            # commit changes
+            cloned_repo_commands = []
 
-                has_local_commit = True
-            else:
-                commit_info = None
+            add_command = ['add', '--all']
+            if context.verbose:
+                add_command.append('--verbose')
+            cloned_repo_commands.append(add_command)
 
-            if has_local_commit:
-                # commit changes
-                cloned_repo_commands = []
+            commit_command = ['commit', '--allow-empty']
+            if context.verbose:
+                commit_command.append('--verbose')
+            commit_command.extend(['--message', commit_info.message])
+            cloned_repo_commands.append(commit_command)
 
-                add_command = ['add', '--all']
-                if context.verbose:
-                    add_command.append('--verbose')
-                cloned_repo_commands.append(add_command)
+            for command in cloned_repo_commands:
+                git_or_fail(clone_context, result, command, _("Failed to commit."))
 
-                commit_command = ['commit', '--allow-empty']
-                if context.verbose:
-                    commit_command.append('--verbose')
-                commit_command.extend(['--message', commit_info.message])
-                cloned_repo_commands.append(commit_command)
+        object_to_tag = 'refs/heads/' + branch_name
 
-                for command in cloned_repo_commands:
-                    git_or_fail(clone_context, result, command, _("Failed to commit."))
-
-            object_to_tag = 'refs/heads/' + branch_name
-
-            # create sequential tag ref
-            if sequential_version_tag_name is not None:
-                git_or_fail(clone_context, result,
-                            ['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag],
-                            _("Failed to tag."))
-
-            # create tag ref
-            git_or_fail(clone_context, result, ['update-ref', 'refs/tags/' + tag_name, object_to_tag],
+        # create sequential tag ref
+        if sequential_version_tag_name is not None:
+            git_or_fail(clone_context, result,
+                        ['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag],
                         _("Failed to tag."))
 
-            # push atomically
-            push_command = ['push', '--atomic']
-            if context.dry_run:
-                push_command.append('--dry-run')
-            if context.verbose:
-                push_command.append('--verbose')
-            push_command.append('origin')
-            # push the base branch commit
-            # push_command.append(commit + ':' + 'refs/heads/' + selected_ref.local_branch_name)
-            # push the new branch or fail if it exists
-            push_command.extend(['--force-with-lease=refs/heads/' + branch_name + ':',
-                                 object_to_tag + ':' + 'refs/heads/' + branch_name])
-            # push the new version tag or fail if it exists
-            push_command.extend(['--force-with-lease=refs/tags/' + tag_name + ':',
-                                 'refs/tags/' + tag_name + ':' + 'refs/tags/' + tag_name])
-            # push the new sequential version tag or fail if it exists
-            if sequential_version_tag_name is not None:
-                push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
-                                     'refs/tags/' + sequential_version_tag_name + ':' + 'refs/tags/' + sequential_version_tag_name])
+        # create tag ref
+        git_or_fail(clone_context, result, ['update-ref', 'refs/tags/' + tag_name, object_to_tag],
+                    _("Failed to tag."))
 
-            git_or_fail(clone_context, result, push_command, _("Failed to push."))
+        # show info and prompt for confirmation
+        cli.print("branch              : " + cli.if_none(command_context.selected_ref.name))
+        cli.print("branch_version      : " + cli.if_none(latest_branch_version))
+        cli.print("new_branch          : " + cli.if_none(branch_name))
+        cli.print("new_version         : " + cli.if_none(new_version))
 
-        sys.stdout.flush()
-        sys.stderr.flush()
+        prompt_result = prompt_for_confirmation(
+            context=context,
+            fail_title=_("Failed to create release branch based on {branch} in batch mode.")
+                .format(branch=repr(command_context.selected_ref.name)),
+            message=_("The branch and tags are about to be pushed."),
+            prompt=_("Continue?"),
+        )
+        result.add_subresult(prompt_result)
+        if result.has_errors() or not prompt_result.value:
+            return result
 
-        print("branch              : " + cli.if_none(command_context.selected_ref.name))
-        print("branch_version      : " + cli.if_none(latest_branch_version))
-        print("new_branch          : " + cli.if_none(branch_name))
-        print("new_version         : " + cli.if_none(new_version))
+        # push atomically
+        push_command = ['push', '--atomic']
+        if context.dry_run:
+            push_command.append('--dry-run')
+        if context.verbose:
+            push_command.append('--verbose')
+        push_command.append('origin')
+        # push the base branch commit
+        # push_command.append(commit + ':' + 'refs/heads/' + selected_ref.local_branch_name)
+        # push the new branch or fail if it exists
+        push_command.extend(['--force-with-lease=refs/heads/' + branch_name + ':',
+                             object_to_tag + ':' + 'refs/heads/' + branch_name])
+        # push the new version tag or fail if it exists
+        push_command.extend(['--force-with-lease=refs/tags/' + tag_name + ':',
+                             'refs/tags/' + tag_name + ':' + 'refs/tags/' + tag_name])
+        # push the new sequential version tag or fail if it exists
+        if sequential_version_tag_name is not None:
+            push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
+                                 'refs/tags/' + sequential_version_tag_name + ':' + 'refs/tags/' + sequential_version_tag_name])
+
+        git_or_fail(clone_context, result, push_command, _("Failed to push."))
 
     return result
 
@@ -1210,6 +1218,23 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                         _("An unexpected error occurred.")
                         )
 
+        # show info and prompt for confirmation
+        print("branch              : " + cli.if_none(command_context.selected_ref.name))
+        print("branch_version      : " + cli.if_none(latest_branch_version))
+        print("new_tag             : " + cli.if_none(tag_name))
+        print("new_version         : " + cli.if_none(new_version))
+
+        prompt_result = prompt_for_confirmation(
+            context=context,
+            fail_title=_("Failed to create release tag based on {branch} in batch mode.")
+                .format(branch=repr(command_context.selected_ref.name)),
+            message=_("The tags are about to be pushed."),
+            prompt=_("Continue?"),
+        )
+        result.add_subresult(prompt_result)
+        if result.has_errors() or not prompt_result.value:
+            return result
+
         # push atomically
         push_command = ['push', '--atomic']
         if context.dry_run:
@@ -1234,14 +1259,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                         _("Failed to push."),
                         _("An unexpected error occurred.")
                         )
-
-        sys.stdout.flush()
-        sys.stderr.flush()
-
-        print("branch              : " + cli.if_none(command_context.selected_ref.name))
-        print("branch_version      : " + cli.if_none(latest_branch_version))
-        print("new_tag             : " + cli.if_none(tag_name))
-        print("new_version         : " + cli.if_none(new_version))
 
         if original_current_branch is not None:
             if context.verbose:
@@ -1414,11 +1431,19 @@ def discontinue_version(context: Context):
                     _("The branch {branch} is already discontinued.")
                     .format(branch=repr(selected_branch.name))
                     )
+    # show info and prompt for confirmation
+    print("discontinued_branch : " + cli.if_none(selected_branch.name))
 
-    # repotools.git(context.repo, 'tag',
-    #               discontinuation_tag_name,
-    #               version_branch
-    #               )
+    prompt_result = prompt_for_confirmation(
+        context=context,
+        fail_title=_("Failed to discontinue {branch} in batch mode.")
+            .format(branch=repr(selected_branch.name)),
+        message=_("The discontinuation tag is about to be pushed."),
+        prompt=_("Continue?"),
+    )
+    result.add_subresult(prompt_result)
+    if result.has_errors() or not prompt_result.value:
+        return result
 
     push_command = ['push', '--atomic']
     if context.dry_run:
