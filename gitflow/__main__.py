@@ -130,6 +130,10 @@ def hook_pre_commit(context):
     return hooks.pre_commit(context)
 
 
+def hook_pre_push(context):
+    return hooks.pre_push(context)
+
+
 # ========== entry point
 
 def main(argv: list = sys.argv) -> int:
@@ -162,15 +166,16 @@ def main(argv: list = sys.argv) -> int:
 
                 hook_func = cli.get_cmd([
                     hook_pre_commit,
-                ], {args['--hook']: True}, 'hook_')
+                    hook_pre_push,
+                ], args['--hook'], 'hook_')
 
                 try:
-                    command_result = hook_func(context)
+                    hook_result = hook_func(context)
                 except GitFlowException as e:
-                    command_result = e.result
-                result.errors.extend(command_result.errors)
+                    hook_result = e.result
+                result.errors.extend(hook_result.errors)
             else:
-                command_func = cli.get_cmd([
+                command_func = cli.get_cmd_for_subcommand([
                     cmd_status,
                     cmd_bump_major,
                     cmd_bump_minor,

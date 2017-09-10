@@ -287,7 +287,7 @@ def git_get_current_branch(context: RepoContext) -> Ref:
     return ref if ref.name is not None else None
 
 
-def git_list_refs(context: RepoContext, *args) -> list:
+def git_list_refs(context: RepoContext, *args):
     """
     :rtype: list of Ref
     """
