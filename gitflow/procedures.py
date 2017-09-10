@@ -2092,7 +2092,7 @@ def build(context):
                        modifiable=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
-                       fail_message=_("Build failed.")
+                       fail_message=_("Commit rejected.")
                        )
 
     remote = repotools.git_get_remote(context.repo, context.parsed_config.remote_name)
