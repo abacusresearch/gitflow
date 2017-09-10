@@ -1280,7 +1280,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 def check_requirements(result_out: Result,
                        command_context: CommandContext,
                        ref: repotools.Ref,
-                       for_modification: bool,
+                       modifiable: bool,
                        with_upstream: bool,
                        in_sync_with_upstream: bool,
                        fail_message: str):
@@ -1320,7 +1320,7 @@ def check_requirements(result_out: Result,
 
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context,
                                                                               ref)
-    if for_modification and len(discontinuation_tags):
+    if modifiable and len(discontinuation_tags):
         result_out.fail(os.EX_USAGE,
                         fail_message,
                         _("{branch} is discontinued.")
@@ -1339,7 +1339,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
     check_requirements(result_out=result,
                        command_context=command_context,
                        ref=command_context.selected_ref,
-                       for_modification=True,
+                       modifiable=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Version creation failed.")
@@ -1435,7 +1435,7 @@ def discontinue_version(context: Context):
     check_requirements(result_out=result,
                        command_context=command_context,
                        ref=release_branch,
-                       for_modification=True,
+                       modifiable=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Build failed.")
@@ -1594,7 +1594,7 @@ def begin(context: Context):
     check_requirements(result_out=result,
                        command_context=command_context,
                        ref=command_context.selected_ref,
-                       for_modification=True,
+                       modifiable=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Version creation failed.")
@@ -1697,7 +1697,7 @@ def end(context: Context):
     check_requirements(result_out=result,
                        command_context=command_context,
                        ref=command_context.selected_ref,
-                       for_modification=True,
+                       modifiable=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Version creation failed.")
@@ -2089,7 +2089,7 @@ def build(context):
     check_requirements(result_out=result,
                        command_context=command_context,
                        ref=command_context.selected_ref,
-                       for_modification=True,
+                       modifiable=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Build failed.")

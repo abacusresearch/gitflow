@@ -16,7 +16,7 @@ def pre_commit(context: Context) -> Result:
     procedures.check_requirements(result_out=result,
                                   command_context=command_context,
                                   ref=command_context.selected_ref,
-                                  for_modification=True,
+                                  modifiable=True,
                                   with_upstream=False,
                                   in_sync_with_upstream=False,
                                   fail_message=_("Hook failed.")
