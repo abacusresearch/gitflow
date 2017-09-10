@@ -8,8 +8,6 @@ from typing import Union, Callable
 
 from gitflow import const, utils
 
-BRANCH_PATTERN = '(?P<parent>refs/heads/|refs/remotes/(?P<remote>[^/]+)/)(?P<name>.+)'
-
 
 class RepoContext(object):
     git = 'git'
@@ -38,6 +36,16 @@ class Object(object):
 
     def __hash__(self):
         return hash(self.obj_name)
+
+    def __repr__(self):
+        if isinstance(self, Ref):
+            target = self.target
+            return ref_name(self) + ' => ' + (ref_name(target) if target != self else target.obj_name)
+        else:
+            return ref_name(self)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class Ref(Object):
@@ -69,22 +77,45 @@ class Ref(Object):
 
     @property
     def local_name(self):
-        return self.local_branch_name or self.local_tag_name or self.remote_branch_name
+        return self.local_branch_name or self.local_tag_name
 
     @property
     def short_name(self):
-        return self.local_branch_name or self.local_tag_name
+        return self.local_branch_name or self.local_tag_name or self.remote_branch_name
+
+    def __eq__(self, other):
+        return isinstance(other, Ref) and self.name == other.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
-def ref_target(ref: Union[Object, str] or Object):
+def ref_target(ref: Union[Object, str, list] or Object):
     if isinstance(ref, str):
         return ref
-    if isinstance(ref, Ref):
+    elif isinstance(ref, Ref):
         return ref.target.obj_name
-    if isinstance(ref, Object):
+    elif isinstance(ref, Object):
         return ref.obj_name
+    elif isinstance(ref, list):
+        return utils.split_join('/', False, False, *ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
+
+
+def ref_name(ref: Union[Ref, str, list] or Object):
+    if isinstance(ref, str):
+        return ref
+    elif isinstance(ref, Ref):
+        return ref.name
+    elif isinstance(ref, list):
+        return utils.split_join('/', False, False, *ref)
+    else:
+        raise ValueError('invalid type: ' + str(type(ref).__name__))
+
+
+def create_ref_name(*strings: str):
+    return utils.split_join('/', False, False, *strings)
 
 
 def git(context: RepoContext, *args) -> subprocess.Popen:
@@ -139,8 +170,27 @@ def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, bran
 
     command = ['clone', '--reference', context.dir]
     if branch is not None:
-        command.extend(['--branch', branch.local_name if isinstance(branch, Ref) else branch])
+        command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
     command.extend([remote.url, target_dir])
+
+    repo = RepoContext()
+    repo.verbose = context.verbose
+    proc = git(repo, *command)
+    proc.wait()
+
+    if proc.returncode != os.EX_OK:
+        return None
+
+    repo.dir = target_dir
+
+    return repo
+
+
+def git_export(context: RepoContext, target_dir: str, branch: Union[Ref, str] = None):
+    command = ['clone', '--depth', '1', '--shallow-submodules']
+    if branch is not None:
+        command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
+    command.extend([context.dir, target_dir])
 
     repo = RepoContext()
     repo.verbose = context.verbose
@@ -200,10 +250,10 @@ class BranchSelection(Enum):
     BRANCH_REMOTE_ONLY = 3,
 
 
-def get_branch_by_name(context: RepoContext, branch_name: str, search_mode: BranchSelection):
+def get_branch_by_name(context: RepoContext, branch_name: str, search_mode: BranchSelection) -> Ref:
     candidate = None
-    for branch in git_list_branches(context):
-        match = re.fullmatch(BRANCH_PATTERN, branch.name)
+    for branch in git_list_refs(context, *const.LOCAL_AND_REMOTE_BRANCH_PREFIXES):
+        match = re.fullmatch(const.BRANCH_PATTERN, branch.name)
 
         name = match.group('name')
         local = match.group('remote') is None
@@ -247,24 +297,31 @@ def git_list_refs(context: RepoContext, *args) -> list:
                *args)
     out, err = proc.communicate()
 
-    for ref_element in out.decode("utf-8").splitlines():
-        ref_element = ref_element.split(';')
+    if proc.returncode == os.EX_OK:
+        for ref_element in out.decode("utf-8").splitlines():
+            ref_element = ref_element.split(';')
 
-        ref = Ref()
-        ref.name = ref_element[0]
-        ref.obj_type = ref_element[1]
-        ref.obj_name = ref_element[2]
-        if len(ref_element[4]):
-            ref.dest = Object()
-            ref.dest.obj_type = ref_element[3] if len(ref_element[3]) else None
-            ref.dest.obj_name = ref_element[4] if len(ref_element[4]) else None
-        if len(ref_element[5]):
-            ref.upstream_name = ref_element[5]
-        yield ref
+            ref = Ref()
+            ref.name = ref_element[0]
+            ref.obj_type = ref_element[1]
+            ref.obj_name = ref_element[2]
+            if len(ref_element[4]):
+                ref.dest = Object()
+                ref.dest.obj_type = ref_element[3] if len(ref_element[3]) else None
+                ref.dest.obj_name = ref_element[4] if len(ref_element[4]) else None
+            if len(ref_element[5]):
+                ref.upstream_name = ref_element[5]
+            yield ref
 
 
-def get_ref_by_name(context, ref_name):
-    return next(git_list_refs(context, ref_name))
+def get_ref_by_name(context: RepoContext, ref_name):
+    refs = list(git_list_refs(context, ref_name))
+    if len(refs) == 1:
+        return refs[0]
+    elif len(refs) == 0:
+        return None
+    else:
+        raise ValueError("multiple refs")
 
 
 def git_get_upstreams(context: RepoContext, *args) -> dict:
@@ -307,14 +364,14 @@ def git_list_remote_branches(context: RepoContext, remote: str) -> list:
     """
     :rtype: list of Ref
     """
-    return git_list_refs(context, 'refs/remotes/' + remote + '/')
+    return git_list_refs(context, const.REMOTES_PREFIX + remote + '/')
 
 
 def git_list_branches(context: RepoContext) -> list:
     """
     :rtype: list of Ref
     """
-    return git_list_refs(context, 'refs/remotes/', 'refs/heads/')
+    return git_list_refs(context, *const.LOCAL_AND_REMOTE_BRANCH_PREFIXES)
 
 
 def git_get_tag_map(context: RepoContext):

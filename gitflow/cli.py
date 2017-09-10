@@ -5,6 +5,8 @@ from typing import TextIO
 
 import colors
 
+from gitflow.common import GitFlowException, Result
+
 _ERROR_COLOR = colors.partial(colors.color, fg='red')
 _WARN_COLOR = colors.partial(colors.color, fg='orange')
 
@@ -60,12 +62,15 @@ def warn(message: str):
 
 
 def fail(exit_code, *message):
+    # TODO remove
     for line in message:
         eprint(line)
     if exit_code == os.EX_OK:
         eprint("internal error")
         exit_code = os.EX_SOFTWARE
-    exit(exit_code)
+    result = Result()
+    result.error(exit_code, os.linesep.join(message), None)
+    raise GitFlowException(result)
 
 
 def if_none(obj, default=""):
@@ -111,24 +116,43 @@ def query_yes_no(output_stream, question, default="yes"):
 
     Source: https://stackoverflow.com/a/3041990
     """
-    valid = {"yes": True, "y": True, "ye": True,
-             "no": False, "n": False}
+    responses = {"yes": True, "y": True,
+                 "no": False, "n": False}
     if default is None:
         prompt = " [y/n] "
-    elif default == "yes":
+    elif responses[default.lower()]:
         prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        prompt = " [y/N] "
 
     while True:
         output_stream.write(question + prompt)
         choice = input().lower()
         if default is not None and choice == '':
-            return valid[default]
-        elif choice in valid:
-            return valid[choice]
+            return responses[default]
+        elif choice in responses:
+            return responses[choice]
         else:
             output_stream.write("Please respond with 'yes' or 'no' "
                                 "(or 'y' or 'n').\n")
+
+
+def get_boolean_opt(args: dict, option: str) -> [bool, None]:
+    """
+    Follows the --option/--no-option convention
+    :param args:
+    :param option:
+    :return: True, False or None, if neither of the option pair is set
+    """
+    tokens = option.split('--')
+    if len(tokens) != 2 or len(tokens[0]) != 0:
+        raise ValueError()
+    value = args[option]
+    disable_value = args['--no-' + tokens[1]]
+
+    if disable_value:
+        return False
+    elif value:
+        return value
+    else:
+        return None

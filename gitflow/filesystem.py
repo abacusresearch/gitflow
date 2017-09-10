@@ -1,7 +1,9 @@
 import os
 
-from gitflow import const
 from pyjavaprops.javaproperties import JavaProperties
+
+from gitflow import const
+
 
 class JavaPropertyFile(object):
     __property_file = None

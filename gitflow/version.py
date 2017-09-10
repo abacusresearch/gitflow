@@ -2,6 +2,7 @@ import itertools
 import os
 import re
 import string
+from typing import Union
 
 import semver
 
@@ -81,26 +82,36 @@ class VersionMatcher(object):
     group_prefix = None
     group_unique_code = None
 
-    ref_name_infix = None
+    ref_name_infixes: list = None
     __format = None
 
     comparator = None
     key_func = None
 
-    def __init__(self, ref_roots: list, ref_name_infix: str, pattern: str, format: str = None):
+    def __init__(self, ref_roots: list, ref_name_infixes: Union[list, str, None], pattern: str, format: str = None):
         """
         :param pattern:
-        :param ref_name_infix: the name prefix if branches and tags following the conventional parents
+        :param ref_name_infixes: the name prefixes of branches and tags following the conventional parents
         'refs/heads/', 'refs/remotes/<remote>/' and 'refs/tags/'
-        :param format: format that combines version elements to a semver version
+        :param format: format that combines version elements to a SemVer version
         """
+
+        if ref_name_infixes is not None:
+            if not isinstance(ref_name_infixes, list):
+                ref_name_infixes = [ref_name_infixes]
+            for index, ref_name_infix in enumerate(ref_name_infixes):
+                ref_name_infixes[index] = utils.split_join('/', False, True, ref_name_infix)
+        self.ref_name_infixes = ref_name_infixes
 
         full_pattern = ''
         full_pattern += '(?:'
         full_pattern += '|'.join(re.escape(utils.split_join('/', False, True, ref_root)) for ref_root in ref_roots)
         full_pattern += ')'
-        if ref_name_infix is not None:
-            full_pattern += re.escape(utils.split_join('/', False, True, ref_name_infix))
+        if ref_name_infixes is not None and len(ref_name_infixes):
+            full_pattern += '(?P<prefix>'
+            full_pattern += '|'.join(re.escape(utils.split_join('/', False, False, ref_name_infix))
+                                     for ref_name_infix in ref_name_infixes)
+            full_pattern += ')\\/'
         full_pattern += pattern
 
         self.pattern = re.compile(full_pattern)
@@ -113,8 +124,6 @@ class VersionMatcher(object):
         self.group_unique_code = self.pattern.groupindex.get('unique_code')
 
         self.__format = format
-        if len(ref_name_infix) is not None:
-            self.ref_name_infix = utils.split_join('/', False, True, ref_name_infix)
 
         self.comparator = lambda tag_ref_a, tag_ref_b: semver.compare(
             self.format(tag_ref_a.name),
