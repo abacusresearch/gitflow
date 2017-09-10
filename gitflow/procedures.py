@@ -1272,18 +1272,19 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
 def check_requirements(result_out: Result,
                        command_context: CommandContext,
+                       ref: repotools.Ref,
                        for_modification: bool,
                        with_upstream: bool,
                        in_sync_with_upstream: bool,
                        fail_message: str):
-    if command_context.selected_ref.local_branch_name is not None:
+    if ref.local_branch_name is not None:
         # check, whether the  selected branch/commit is on remote
 
         if with_upstream and command_context.selected_branch.upstream is None:
             result_out.fail(os.EX_USAGE,
                             fail_message,
                             _("{branch} does not have an upstream branch.")
-                            .format(branch=repr(command_context.selected_ref.name)))
+                            .format(branch=repr(ref.name)))
 
         # if branch_info.upstream.short_name != selected_ref.short_name:
         #     result.fail(os.EX_USAGE,
@@ -1300,23 +1301,23 @@ def check_requirements(result_out: Result,
                 result_out.fail(os.EX_USAGE,
                                 fail_message,
                                 _("{branch} does not have a common base with its upstream branch: {remote_branch}")
-                                .format(branch=repr(command_context.selected_ref.name),
+                                .format(branch=repr(ref.name),
                                         remote_branch=repr(command_context.selected_branch.upstream.name)))
             elif push_merge_base != command_context.selected_commit:
                 result_out.fail(os.EX_USAGE,
                                 fail_message,
                                 _("{branch} is not in sync with its upstream branch.\n"
                                   "Push your changes and try again.")
-                                .format(branch=repr(command_context.selected_ref.name),
+                                .format(branch=repr(ref.name),
                                         remote_branch=repr(command_context.selected_branch.upstream.name)))
 
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context,
-                                                                              command_context.selected_ref)
+                                                                              ref)
     if for_modification and len(discontinuation_tags):
         result_out.fail(os.EX_USAGE,
                         fail_message,
                         _("{branch} is discontinued.")
-                        .format(branch=repr(command_context.selected_ref.name)))
+                        .format(branch=repr(ref.name)))
 
 
 def create_version(context: Context, operation: Callable[[VersionConfig, str], str]):
@@ -1330,6 +1331,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
 
     check_requirements(result_out=result,
                        command_context=command_context,
+                       ref=command_context.selected_ref,
                        for_modification=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
@@ -1421,6 +1423,15 @@ def discontinue_version(context: Context):
 
     release_branch = command_context.selected_ref
 
+    check_requirements(result_out=result,
+                       command_context=command_context,
+                       ref=release_branch,
+                       for_modification=True,
+                       with_upstream=True,  # not context.parsed_config.push_to_local
+                       in_sync_with_upstream=True,
+                       fail_message=_("Build failed.")
+                       )
+
     if release_branch is None:
         result.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
@@ -1487,7 +1498,7 @@ def discontinue_version(context: Context):
                         )
 
             git_or_fail(clone_context, result,
-                        ['merge', '--no-ff',  release_branch.short_name],
+                        ['merge', '--no-ff', release_branch.short_name],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
                         .format(work_branch=repr(release_branch.short_name),
@@ -1573,6 +1584,7 @@ def begin(context: Context):
 
     check_requirements(result_out=result,
                        command_context=command_context,
+                       ref=command_context.selected_ref,
                        for_modification=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
@@ -1675,6 +1687,7 @@ def end(context: Context):
 
     check_requirements(result_out=result,
                        command_context=command_context,
+                       ref=command_context.selected_ref,
                        for_modification=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
@@ -2069,6 +2082,7 @@ def build(context):
 
     check_requirements(result_out=result,
                        command_context=command_context,
+                       ref=command_context.selected_ref,
                        for_modification=True,
                        with_upstream=True,  # not context.parsed_config.push_to_local
                        in_sync_with_upstream=True,
