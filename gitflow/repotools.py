@@ -8,8 +8,6 @@ from typing import Union, Callable
 
 from gitflow import const, utils
 
-BRANCH_PATTERN = '(?P<parent>refs/heads/|refs/remotes/(?P<remote>[^/]+)/)(?P<name>.+)'
-
 
 class RepoContext(object):
     git = 'git'
@@ -252,10 +250,10 @@ class BranchSelection(Enum):
     BRANCH_REMOTE_ONLY = 3,
 
 
-def get_branch_by_name(context: RepoContext, branch_name: str, search_mode: BranchSelection):
+def get_branch_by_name(context: RepoContext, branch_name: str, search_mode: BranchSelection) -> Ref:
     candidate = None
-    for branch in git_list_branches(context):
-        match = re.fullmatch(BRANCH_PATTERN, branch.name)
+    for branch in git_list_refs(context, *const.LOCAL_AND_REMOTE_BRANCH_PREFIXES):
+        match = re.fullmatch(const.BRANCH_PATTERN, branch.name)
 
         name = match.group('name')
         local = match.group('remote') is None
@@ -366,14 +364,14 @@ def git_list_remote_branches(context: RepoContext, remote: str) -> list:
     """
     :rtype: list of Ref
     """
-    return git_list_refs(context, 'refs/remotes/' + remote + '/')
+    return git_list_refs(context, const.REMOTES_PREFIX + remote + '/')
 
 
 def git_list_branches(context: RepoContext) -> list:
     """
     :rtype: list of Ref
     """
-    return git_list_refs(context, 'refs/remotes/', 'refs/heads/')
+    return git_list_refs(context, *const.LOCAL_AND_REMOTE_BRANCH_PREFIXES)
 
 
 def git_get_tag_map(context: RepoContext):

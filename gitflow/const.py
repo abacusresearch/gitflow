@@ -45,6 +45,9 @@ LOCAL_BRANCH_PREFIX = 'refs/heads/'
 LOCAL_TAG_PREFIX = 'refs/tags/'
 REMOTES_PREFIX = 'refs/remotes/'
 
+BRANCH_PATTERN = '(?P<parent>refs/heads/|refs/remotes/(?P<remote>[^/]+)/)(?P<name>.+)'
+LOCAL_AND_REMOTE_BRANCH_PREFIXES = [LOCAL_BRANCH_PREFIX, REMOTES_PREFIX]
+
 BRANCH_PREFIX_DEV = 'dev'
 BRANCH_PREFIX_PROD = 'prod'
 
