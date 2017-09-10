@@ -189,7 +189,7 @@ def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, bran
 
 
 def git_export(context: RepoContext, target_dir: str, branch: Union[Ref, str] = None):
-    command = ['clone', '--depth', '1', '--shared']
+    command = ['clone', '--depth', '1', '--shallow-submodules']
     if branch is not None:
         command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
     command.extend([context.dir, target_dir])
