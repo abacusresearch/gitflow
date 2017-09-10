@@ -1862,7 +1862,7 @@ def status(context):
                     unique_version_codes.append(int(unique_code))
 
                     if unique_code in unique_codes:
-                        result.fail(os.EX_DATAERR,
+                        result.error(os.EX_DATAERR,
                                     _("Invalid sequential version tag {tag}.")
                                     .format(tag=branch_tag_ref.name),
                                     _("The code element of version {version_string} is not unique.")
@@ -1880,7 +1880,7 @@ def status(context):
                     if version_info.major == branch_version.major and version_info.minor == branch_version.minor:
                         cli.fcwriteln(sys.stdout, status_color, "    " + version_string)
                     else:
-                        result.fail(os.EX_DATAERR,
+                        result.error(os.EX_DATAERR,
                                     _("Invalid version tag {tag}.")
                                     .format(tag=repr(branch_tag_ref.name)),
                                     _("The major.minor part of the new version {new_version}"
@@ -1895,7 +1895,7 @@ def status(context):
     last_unique_code = None
     for unique_code in unique_version_codes:
         if not (last_unique_code is None or unique_code > last_unique_code):
-            result.fail(os.EX_DATAERR,
+            result.error(os.EX_DATAERR,
                         _("Version {version} breaks the sequence.")
                         .format(version=unique_code),
                         None
