@@ -1490,7 +1490,7 @@ def discontinue_version(context: Context):
                         ['merge', '--no-ff', repotools.create_ref_name(const.REMOTES_PREFIX,
                                                                        context.parsed_config.remote_name,
                                                                        release_branch.short_name)],
-                        _("Failed to merge work branch."
+                        _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
                         .format(work_branch=repr(release_branch.short_name),
                                 base_branch=repr(base_branch_ref.short_name))
@@ -1814,7 +1814,7 @@ def end(context: Context):
 
         git_or_fail(context, result,
                     ['merge', '--no-ff', work_branch_ref],
-                    _("Failed to merge work branch."
+                    _("Failed to merge work branch.\n"
                       "Rebase {work_branch} on {base_branch} and try again")
                     .format(work_branch=repr(work_branch_ref.short_name),
                             base_branch=repr(base_branch_ref.short_name))
