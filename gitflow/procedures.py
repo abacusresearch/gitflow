@@ -1882,9 +1882,6 @@ def status(context):
     git_context = RepoContext()
     git_context.dir = context.root
 
-    if context.pretty:
-        print("---------- STATUS ----------")
-
     unique_codes = set()
     unique_version_codes = list()
 
