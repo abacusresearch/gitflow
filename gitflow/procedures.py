@@ -443,7 +443,7 @@ def get_command_context(context, object_arg: str) -> Result:
 
     command_context.object_arg = object_arg
     command_context.context = context
-    command_context.upstreams = repotools.git_get_upstreams(context.repo, 'refs/heads')
+    command_context.upstreams = repotools.git_get_upstreams(context.repo, const.LOCAL_BRANCH_PREFIX)
     command_context.downstreams = {v: k for k, v in command_context.upstreams.items()}
 
     # resolve the full rev name and its hash for consistency
@@ -484,10 +484,10 @@ def get_command_context(context, object_arg: str) -> Result:
                (ref.name not in command_context.downstreams),
                repotools.git_list_refs(context.repo,
                                        '--contains', commit,
-                                       'refs/remotes/' + context.parsed_config.remote_name + '/release',
+                                       const.REMOTES_PREFIX + context.parsed_config.remote_name + '/release',
                                        'refs/heads/release',
                                        'refs/heads/master',
-                                       # 'refs/remotes/' + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base,
+                                       # const.REMOTES_PREFIX + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base,
                                        # 'refs/heads/' + context.parsed_config.release_branch_base,
                                        )))
     if len(affected_main_branches) == 1:
@@ -538,8 +538,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     result = Result()
     context: Context = command_context.context
 
-    if not command_context.selected_ref.name in ['refs/heads/' + context.parsed_config.release_branch_base,
-                                                 'refs/remotes/' + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base]:
+    if not command_context.selected_ref.name in [const.LOCAL_BRANCH_PREFIX + context.parsed_config.release_branch_base,
+                                                 const.REMOTES_PREFIX + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base]:
         result.fail(os.EX_USAGE,
                     _("Failed to create release branch based on {branch}.")
                     .format(branch=repr(command_context.selected_ref.name)),
@@ -1147,7 +1147,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             )
 
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
-                                'refs/remotes/' + context.parsed_config.remote_name + '/' + branch_name]
+                                const.REMOTES_PREFIX + context.parsed_config.remote_name + '/' + branch_name]
 
             proc = repotools.git(clone_context.repo, *checkout_command)
             proc.wait()
@@ -1888,7 +1888,7 @@ def status(context):
     upstreams = repotools.git_get_upstreams(context.repo)
     branch_info_dict = dict()
 
-    for branch_ref in repotools.git_list_refs(git_context, 'refs/remotes/' + context.parsed_config.remote_name):
+    for branch_ref in repotools.git_list_refs(git_context, const.REMOTES_PREFIX + context.parsed_config.remote_name):
         branch_match = context.parsed_config.release_branch_matcher.fullmatch(branch_ref.name)
         if branch_match:
             branch_version = context.parsed_config.release_branch_matcher.to_version(branch_ref.name)
