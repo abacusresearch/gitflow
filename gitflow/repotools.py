@@ -85,6 +85,12 @@ class Ref(Object):
     def short_name(self):
         return self.local_branch_name or self.local_tag_name or self.remote_branch_name
 
+    def __eq__(self, other):
+        return isinstance(other, Ref) and self.name == other.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 def ref_target(ref: Union[Object, str, list] or Object):
     if isinstance(ref, str):
@@ -168,6 +174,25 @@ def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, bran
     if branch is not None:
         command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
     command.extend([remote.url, target_dir])
+
+    repo = RepoContext()
+    repo.verbose = context.verbose
+    proc = git(repo, *command)
+    proc.wait()
+
+    if proc.returncode != os.EX_OK:
+        return None
+
+    repo.dir = target_dir
+
+    return repo
+
+
+def git_export(context: RepoContext, target_dir: str, branch: Union[Ref, str] = None):
+    command = ['clone', '--depth', '1', '--shared']
+    if branch is not None:
+        command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
+    command.extend([context.dir, target_dir])
 
     repo = RepoContext()
     repo.verbose = context.verbose
