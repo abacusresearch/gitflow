@@ -484,7 +484,9 @@ def get_command_context(context, object_arg: str) -> Result:
                (ref.name not in command_context.downstreams),
                repotools.git_list_refs(context.repo,
                                        '--contains', commit,
-                                       const.REMOTES_PREFIX + context.parsed_config.remote_name + '/release',
+                                       repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                 context.parsed_config.remote_name,
+                                                                 'release'),
                                        'refs/heads/release',
                                        'refs/heads/master',
                                        # const.REMOTES_PREFIX + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base,
@@ -538,8 +540,11 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     result = Result()
     context: Context = command_context.context
 
-    if not command_context.selected_ref.name in [const.LOCAL_BRANCH_PREFIX + context.parsed_config.release_branch_base,
-                                                 const.REMOTES_PREFIX + context.parsed_config.remote_name + '/' + context.parsed_config.release_branch_base]:
+    if not command_context.selected_ref.name in [
+        repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, context.parsed_config.release_branch_base),
+        repotools.create_ref_name(const.REMOTES_PREFIX,
+                                  context.parsed_config.remote_name,
+                                  context.parsed_config.release_branch_base)]:
         result.fail(os.EX_USAGE,
                     _("Failed to create release branch based on {branch}.")
                     .format(branch=repr(command_context.selected_ref.name)),
@@ -1147,7 +1152,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             )
 
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
-                                const.REMOTES_PREFIX + context.parsed_config.remote_name + '/' + branch_name]
+                                repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                          context.parsed_config.remote_name,
+                                                          branch_name)]
 
             proc = repotools.git(clone_context.repo, *checkout_command)
             proc.wait()
