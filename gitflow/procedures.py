@@ -1414,7 +1414,7 @@ def discontinue_version(context: Context):
         object_arg=utils.get_or_default(context.args, '<object>', None)
     )
     result.add_subresult(context_result)
-    command_context = context_result.value
+    command_context: CommandContext = context_result.value
 
     base_branch_ref = repotools.get_branch_by_name(context.repo, context.parsed_config.release_branch_base,
                                                    BranchSelection.BRANCH_PREFER_LOCAL)
@@ -1487,9 +1487,7 @@ def discontinue_version(context: Context):
                         )
 
             git_or_fail(clone_context, result,
-                        ['merge', '--no-ff', repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                                       context.parsed_config.remote_name,
-                                                                       release_branch.short_name)],
+                        ['merge', '--no-ff',  release_branch.short_name],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
                         .format(work_branch=repr(release_branch.short_name),
