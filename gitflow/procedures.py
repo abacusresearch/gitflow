@@ -1423,6 +1423,8 @@ def discontinue_version(context: Context):
 
     release_branch = command_context.selected_ref
 
+    release_branch_info = get_branch_info(command_context, release_branch)
+
     check_requirements(result_out=result,
                        command_context=command_context,
                        ref=release_branch,
@@ -1498,7 +1500,7 @@ def discontinue_version(context: Context):
                         )
 
             git_or_fail(clone_context, result,
-                        ['merge', '--no-ff', release_branch.short_name],
+                        ['merge', '--no-ff', release_branch_info.upstream.name],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
                         .format(work_branch=repr(release_branch.short_name),

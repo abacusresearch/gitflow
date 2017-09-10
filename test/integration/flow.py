@@ -16,7 +16,7 @@ class TestFlow:
     git_working_copy: str
 
     def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-B'] + [*args])
+        return __main__.main([__name__, '-Bvv'] + [*args])
 
     def git(self, *args) -> int:
         proc = subprocess.Popen(args=['git'] + [*args])
@@ -314,7 +314,39 @@ class TestFlow:
             'refs/tags/version/1.0.0-alpha.2'
         ])
 
-    def test_discontinue(self):
+    def test_discontinue_implicitly(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            # 'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+
+        self.checkout("release/1.0")
+
+        exit_code = self.git_flow('discontinue', '--assume-yes')
+        assert exit_code == os.EX_OK
+        exit_code = self.git_flow('discontinue', '--assume-yes')
+        assert exit_code == os.EX_USAGE
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/discontinued/1.0',
+            'refs/tags/sequential_version/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+
+    def test_discontinue_explicitly(self):
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs([
