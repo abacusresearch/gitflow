@@ -30,13 +30,19 @@ from gitflow.version import VersionConfig
 
 
 class VersionUpdateCommit(object):
-    message_parts = None
+    message_parts: list = None
+    files: list = None
 
     def __init__(self):
         self.message_parts = list()
+        self.files = list()
 
     def add_message(self, message: str):
         self.message_parts.append(message)
+
+    def add_file(self, file: str):
+        if file not in self.files:
+            self.files.append(file)
 
     @property
     def message(self) -> str:
@@ -246,8 +252,27 @@ def update_project_property_file(context: Context,
     version_property_name = context.config.get(const.CONFIG_VERSION_PROPERTY_NAME)
     sequential_version_property_name = context.config.get(const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
 
-    properties = context.load_project_properties()
-    if properties is not None:
+    property_store = None
+    if context.parsed_config.property_file is not None and version_property_name is not None:
+        if context.parsed_config.property_file.endswith(".properties"):
+            property_store = filesystem.JavaPropertyFile(context.parsed_config.property_file)
+        else:
+            result.fail(os.EX_DATAERR,
+                        _("Property file not supported: {path}\n"
+                          "Currently supported:\n"
+                          "{listing}")
+                        .format(path=repr(context.parsed_config.property_file),
+                                listing='\n'.join(' - ' + type for type in ['*.properties'])),
+                        None
+                        )
+
+        properties = property_store.load()
+        if properties is None:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to load properties from file: {path}")
+                        .format(path=repr(context.parsed_config.property_file)),
+                        None
+                        )
         result.value = 0
         if context.parsed_config.commit_version_property:
             version = properties.get(version_property_name)
@@ -256,7 +281,7 @@ def update_project_property_file(context: Context,
                 result.warn(_("Missing version property."),
                             _("Missing property {property} in file {file}.")
                             .format(property=repr(version_property_name),
-                                    file=repr(context.config[const.CONFIG_VERSION_PROPERTY_FILE]))
+                                    file=repr(context.parsed_config.property_file))
                             )
             properties[version_property_name] = new_version
             commit_out.add_message('#properties[' + utils.quote(version_property_name, '"') + ']:' + new_version)
@@ -266,14 +291,14 @@ def update_project_property_file(context: Context,
 
             result.value += 1
 
-        if context.parsed_config.commit_sequential_version_property:
+        if context.parsed_config.commit_sequential_version_property and sequential_version_property_name is not None:
             sequential_version = properties.get(sequential_version_property_name)
 
             if sequential_version_property_name not in properties:
                 result.warn(_("Missing version property."),
                             _("Missing property {property} in file {file}.")
                             .format(property=repr(sequential_version_property_name),
-                                    file=repr(context.config[const.CONFIG_VERSION_PROPERTY_FILE]))
+                                    file=repr(context.parsed_config.property_file))
                             )
             properties[sequential_version_property_name] = str(new_sequential_version)
             commit_out.add_message('#properties[' + utils.quote(sequential_version_property_name, '"') + ']:' + str(
@@ -286,7 +311,8 @@ def update_project_property_file(context: Context,
             result.value += 1
 
         if result.value:
-            context.store_project_properties(properties)
+            property_store.store(properties)
+            commit_out.add_file(context.parsed_config.property_file)
 
     return result
 
@@ -787,16 +813,15 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         if has_local_commit:
             # commit changes
-            add_command = ['add', '--all']
-            if context.verbose:
-                add_command.append('--verbose')
-            git_or_fail(context, result, add_command)
+            add_command = ['add', '--']
+            add_command.extend(commit_info.files)
+            git_or_fail(clone_context, result, add_command)
 
             commit_command = ['commit-tree',
                               '-p', command_context.selected_commit,
                               '-m', commit_info.message,
                               'HEAD^{tree}']
-            new_commit = git_for_line_or_fail(context, result, commit_command)
+            new_commit = git_for_line_or_fail(clone_context, result, commit_command)
 
             object_to_tag = new_commit
         else:
@@ -837,7 +862,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
             push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
-                                 repotools.ref_target(object_to_tag) + ':' + 'refs/tags/' + sequential_version_tag_name])
+                                 repotools.ref_target(
+                                     object_to_tag) + ':' + 'refs/tags/' + sequential_version_tag_name])
 
         git_or_fail(clone_context, result, push_command, _("Failed to push."))
 
@@ -1180,10 +1206,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         if has_local_commit:
             # commit changes
-            add_command = ['add', '--all']
-            if context.verbose:
-                add_command.append('--verbose')
-            git_or_fail(context, result, add_command)
+            add_command = ['add', '--']
+            add_command.extend(commit_info.files)
+            git_or_fail(clone_context, result, add_command)
 
             commit_command = ['commit-tree',
                               '-p', command_context.selected_commit,
@@ -1227,7 +1252,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
             push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
-                                 repotools.ref_target(object_to_tag) + ':' + 'refs/tags/' + sequential_version_tag_name])
+                                 repotools.ref_target(
+                                     object_to_tag) + ':' + 'refs/tags/' + sequential_version_tag_name])
 
         proc = repotools.git(clone_context.repo, *push_command)
         proc.wait()

@@ -58,7 +58,6 @@ class Context(object):
     args = None
     config: Config = None
     parsed_config: Config = None
-    __property_store = None
     __repo = None
 
     root = None
@@ -139,22 +138,9 @@ class Context(object):
 
         # project properties config
 
-        context.parsed_config.property_file = context.config.get(const.CONFIG_VERSION_PROPERTY_FILE)
+        context.parsed_config.property_file = context.config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
         if context.parsed_config.property_file is not None:
-            property_file = os.path.join(context.root, context.parsed_config.property_file)
-
-        if context.parsed_config.property_file is not None:
-            if context.parsed_config.property_file.endswith(".properties"):
-                context.__property_store = filesystem.JavaPropertyFile(context.parsed_config.property_file)
-            else:
-                result_out.fail(os.EX_DATAERR,
-                                _("property file not supported: {path}\n"
-                                  "Currently supported:\n"
-                                  "{listing}")
-                                .format(path=repr(context.parsed_config.property_file),
-                                        listing='\n'.join(' - ' + type for type in ['*.properties'])),
-                                None
-                                )
+            context.parsed_config.property_file = os.path.join(context.root, context.parsed_config.property_file)
 
         # version config
 
@@ -227,20 +213,6 @@ class Context(object):
     @property
     def repo(self):
         return self.__repo
-
-    def load_project_properties(self):
-        if self.__property_store:
-            return self.__property_store.load()
-        else:
-            return None
-
-    def store_project_properties(self, properties):
-        if self.__property_store:
-            return self.__property_store.store(properties)
-        else:
-            result_out.fail(os.EX_SOFTWARE,
-                            _("Failed to save properties."
-                              "Missing property store."))
 
     def get_release_branches(self):
         release_branches = list(filter(

@@ -4,7 +4,7 @@ from enum import Enum
 VERSION = '1.0.0-alpha.1'
 MIN_GIT_VERSION = "2.9.0"
 
-CONFIG_VERSION_PROPERTY_FILE = 'propertyFile'
+CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
 CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
 CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
 
@@ -16,6 +16,9 @@ CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN = 'sequentialVersionTagPattern'
 CONFIG_PRE_RELEASE_VERSION_QUALIFIERS = 'preReleaseVersionQualifiers'
 CONFIG_INITIAL_VERSION = 'initialVersion'
+
+DEFAULT_CONFIG_FILE = 'gitflow.properties'
+DEFAULT_PROJECT_PROPERTY_FILE = 'project.properties'
 
 DEFAULT_RELEASE_BRANCH_BASE = "master"
 

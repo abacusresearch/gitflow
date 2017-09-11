@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from gitflow import __main__
+from gitflow import __main__, const
 
 
 @pytest.mark.slow
@@ -96,9 +96,14 @@ class TestFlow:
         os.chdir(self.git_working_copy)
 
         # create the config file
-        config_file = os.path.join(self.git_working_copy, 'gitflow.properties')
+        config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
         with open(config_file, 'w+') as property_file:
-            property_file.write('')
+            property_file.write(
+                const.CONFIG_PROJECT_PROPERTY_FILE + '=' + const.DEFAULT_PROJECT_PROPERTY_FILE + os.linesep)
+            property_file.write(
+                const.CONFIG_VERSION_PROPERTY_NAME + '=' + 'version' + os.linesep)
+            property_file.write(
+                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME + '=' + 'seq' + os.linesep)
             property_file.close()
 
         # create & push the initial commit
