@@ -16,7 +16,7 @@ class TestFlow:
     git_working_copy: str
 
     def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-Bvv'] + [*args])
+        return __main__.main([__name__, '-Bv'] + [*args])
 
     def git(self, *args) -> int:
         proc = subprocess.Popen(args=['git'] + [*args])

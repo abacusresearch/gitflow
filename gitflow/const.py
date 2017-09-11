@@ -55,6 +55,7 @@ BRANCH_PREFIX_DEV = 'dev'
 BRANCH_PREFIX_PROD = 'prod'
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
+ERROR_VERBOSITY = 1
 INFO_VERBOSITY = 2
 TRACE_VERBOSITY = 3
 
