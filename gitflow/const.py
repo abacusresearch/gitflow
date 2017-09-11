@@ -1,6 +1,8 @@
 import os
 from enum import Enum
 
+NAME = 'gitflow'
+AUTHOR = 'samuel.oggier@gmail.com'
 VERSION = '1.0.0-alpha.1'
 MIN_GIT_VERSION = "2.9.0"
 
