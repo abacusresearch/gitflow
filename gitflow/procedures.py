@@ -375,12 +375,10 @@ def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str])
     discontinuation_tag_name = get_discontinuation_tag_name_for_version(context, version)
     discontinuation_tag = repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name)
 
-    discontinued = sum(1 for ref in repotools.git_list_refs(
-        context.repo,
-        '--contains', discontinuation_tag,
-        version_branch))
+    discontinuation_tags = [discontinuation_tag] \
+        if repotools.git_rev_parse(context.repo, discontinuation_tag) is not None \
+        else []
 
-    discontinuation_tags = [discontinuation_tag] if discontinued else []
     return discontinuation_tags, discontinuation_tag_name
 
 
