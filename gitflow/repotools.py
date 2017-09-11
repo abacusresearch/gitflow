@@ -133,7 +133,7 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
     env = os.environ.copy()
     env["LANGUAGE"] = "C"
     env["LC_ALL"] = "C"
-    if context.verbose >= const.TRACE_VERBOSITY:
+    if context.verbose >= const.ERROR_VERBOSITY:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
