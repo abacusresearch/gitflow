@@ -29,13 +29,18 @@ from gitflow.repotools import BranchSelection, RepoContext
 from gitflow.version import VersionConfig
 
 
-class VersionUpdateCommit(object):
+class CommitInfo(object):
     message_parts: list = None
+    parents: list = None
     files: list = None
 
     def __init__(self):
         self.message_parts = list()
+        self.parents = list()
         self.files = list()
+
+    def add_parent(self, parent: str):
+        self.parents.append(parent)
 
     def add_message(self, message: str):
         self.message_parts.append(message)
@@ -243,7 +248,7 @@ def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, s
 
 def update_project_property_file(context: Context,
                                  new_version: str, new_sequential_version: int,
-                                 commit_out: VersionUpdateCommit):
+                                 commit_out: CommitInfo):
     result = Result()
 
     commit_out.add_message("#version     : " + cli.if_none(new_version))
@@ -797,7 +802,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                                                 command_context.selected_commit],
                         _("Failed to check out release branch."))
 
-            commit_info = VersionUpdateCommit()
+            commit_info = CommitInfo()
+            commit_info.add_parent(command_context.selected_commit)
             update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
@@ -813,7 +819,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         if has_local_commit:
             # commit changes
-            object_to_tag = create_commit(command_context, clone_context, result, commit_info)
+            object_to_tag = create_commit(clone_context, result, commit_info)
         else:
             object_to_tag = command_context.selected_commit
 
@@ -1180,7 +1186,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             _("An unexpected error occurred.")
                             )
 
-            commit_info = VersionUpdateCommit()
+            commit_info = CommitInfo()
+            commit_info.add_parent(command_context.selected_commit)
             update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
@@ -1196,7 +1203,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         if has_local_commit:
             # commit changes
-            object_to_tag = create_commit(command_context, clone_context, result, commit_info)
+            object_to_tag = create_commit(clone_context, result, commit_info)
         else:
             object_to_tag = command_context.selected_commit
 
@@ -1254,18 +1261,20 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     return result
 
 
-def create_commit(command_context, clone_context, result, commit_info_out):
+def create_commit(clone_context, result, commit_info: CommitInfo):
     add_command = ['add', '--']
-    add_command.extend(commit_info_out.files)
+    add_command.extend(commit_info.files)
     git_or_fail(clone_context, result, add_command)
 
     write_tree_command = ['write-tree']
     new_tree = git_for_line_or_fail(clone_context, result, write_tree_command)
 
-    commit_command = ['commit-tree',
-                      '-p', command_context.selected_commit,
-                      '-m', commit_info_out.message,
-                      new_tree]
+    commit_command = ['commit-tree']
+    for parent in commit_info.parents:
+        commit_command.append('-p')
+        commit_command.append(parent)
+
+    commit_command.extend(['-m', commit_info.message, new_tree])
     new_commit = git_for_line_or_fail(clone_context, result, commit_command)
 
     # reset_command = ['reset', 'HEAD', new_commit]
