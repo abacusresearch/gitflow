@@ -813,17 +813,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         if has_local_commit:
             # commit changes
-            add_command = ['add', '--']
-            add_command.extend(commit_info.files)
-            git_or_fail(clone_context, result, add_command)
-
-            commit_command = ['commit-tree',
-                              '-p', command_context.selected_commit,
-                              '-m', commit_info.message,
-                              'HEAD^{tree}']
-            new_commit = git_for_line_or_fail(clone_context, result, commit_command)
-
-            object_to_tag = new_commit
+            object_to_tag = create_commit(command_context, clone_context, result, commit_info)
         else:
             object_to_tag = command_context.selected_commit
 
@@ -1206,17 +1196,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         if has_local_commit:
             # commit changes
-            add_command = ['add', '--']
-            add_command.extend(commit_info.files)
-            git_or_fail(clone_context, result, add_command)
-
-            commit_command = ['commit-tree',
-                              '-p', command_context.selected_commit,
-                              '-m', commit_info.message,
-                              'HEAD^{tree}']
-            new_commit = git_for_line_or_fail(context, result, commit_command)
-
-            object_to_tag = new_commit
+            object_to_tag = create_commit(command_context, clone_context, result, commit_info)
         else:
             object_to_tag = command_context.selected_commit
 
@@ -1272,6 +1252,27 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             git_or_fail(context, result, ['checkout', original_current_branch.short_name])
 
     return result
+
+
+def create_commit(command_context, clone_context, result, commit_info_out):
+    add_command = ['add', '--']
+    add_command.extend(commit_info_out.files)
+    git_or_fail(clone_context, result, add_command)
+
+    write_tree_command = ['write-tree']
+    new_tree = git_for_line_or_fail(clone_context, result, write_tree_command)
+
+    commit_command = ['commit-tree',
+                      '-p', command_context.selected_commit,
+                      '-m', commit_info_out.message,
+                      new_tree]
+    new_commit = git_for_line_or_fail(clone_context, result, commit_command)
+
+    # reset_command = ['reset', 'HEAD', new_commit]
+    # git_or_fail(clone_context, result, reset_command)
+
+    object_to_tag = new_commit
+    return object_to_tag
 
 
 def check_requirements(result_out: Result,
