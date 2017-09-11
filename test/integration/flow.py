@@ -211,11 +211,11 @@ class TestFlow:
             'refs/heads/master',
             'refs/remotes/origin/master',
 
-            'refs/heads/release/1.0', # local branch
+            'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
             'refs/tags/sequential_version/1',
             'refs/tags/version/1.0.0-alpha.1',
-            
+
             # 'refs/heads/release/1.1', # local branch
             'refs/remotes/origin/release/1.1',
             'refs/tags/sequential_version/2',
@@ -615,6 +615,21 @@ class TestFlow:
 
         self.assert_head('refs/heads/release/1.0')
 
+        # GA release
+
+        exit_code = self.git_flow('bump-patch', '--assume-yes', '1.0')
+        assert exit_code == os.EX_OK
+        exit_code = self.git_flow('bump-prerelease-type', '--assume-yes', '1.0')
+        assert exit_code == os.EX_OK
+        exit_code = self.git_flow('bump-to-release', '--assume-yes', '1.0')
+        assert exit_code == os.EX_OK
+
+        self.checkout('release/1.0')
+        self.assert_project_properties_contain({
+            # 'version': '1.0.1-alpha.1',
+            'seq': '2',
+        })
+
         # new feature
 
         self.checkout('master')
@@ -637,8 +652,14 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
+
             'refs/tags/sequential_version/1',
             'refs/tags/version/1.0.0-alpha.1',
+
+            'refs/tags/sequential_version/2',
+            'refs/tags/version/1.0.1-alpha.1',
+            'refs/tags/version/1.0.1-beta.1',
+            'refs/tags/version/1.0.1',
 
             'refs/heads/prod/fix/test-fix',
             'refs/remotes/origin/prod/fix/test-fix',
@@ -662,9 +683,14 @@ class TestFlow:
             'refs/tags/sequential_version/1',
             'refs/tags/version/1.0.0-alpha.1',
 
+            'refs/tags/sequential_version/2',
+            'refs/tags/version/1.0.1-alpha.1',
+            'refs/tags/version/1.0.1-beta.1',
+            'refs/tags/version/1.0.1',
+
             # 'refs/heads/release/2.0',  # local branch
             'refs/remotes/origin/release/2.0',
-            'refs/tags/sequential_version/2',
+            'refs/tags/sequential_version/3',
             'refs/tags/version/2.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -679,5 +705,5 @@ class TestFlow:
         self.checkout('release/2.0')
         self.assert_project_properties_contain({
             # 'version': '2.0.0-alpha.1',
-            'seq': '2',
+            'seq': '3',
         })
