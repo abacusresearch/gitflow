@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Union, Callable
 
 import colors
@@ -2084,7 +2085,7 @@ def download_file(source_uri: str, dest_file: str, hash_hex: str):
     return result
 
 
-def build(context):
+def build(context: Context):
     from urllib import parse
     import zipfile
 
@@ -2110,11 +2111,12 @@ def build(context):
     if remote is None:
         cli.fail(os.EX_CONFIG, "missing remote \"" + context.parsed_config.remote_name + "\"")
 
-    # tempdir = TemporaryDirectory(prefix="gitflow_build_")
-    # tempdir_path = tempdir.name
-    tempdir_path = "/tmp/gitflow_build_XXXXXX"
-    if not os.path.isdir(tempdir_path):
-        os.makedirs(tempdir_path, mode=0o700)
+    tempdir_path = tempfile.mkdtemp(prefix='gitflow_build_')
+    os.chmod(path=tempdir_path, mode=0o700)
+
+    cache_dir = filesystem.get_cache_dir(filesystem.build_tools_cache_dir)
+
+    context.add_temp_dir(tempdir_path)
 
     gradle_module_name = 'gradle-3.5.1'
     gradle_dist_url = 'https://services.gradle.org/distributions/' + gradle_module_name + '-bin.zip'
@@ -2124,7 +2126,7 @@ def build(context):
     repo_dir_name = repo_url.path.rsplit('/', 1)[-1]
 
     build_repo_path = os.path.join(tempdir_path, repo_dir_name)
-    gradle_dist_archive_path = os.path.join(tempdir_path, parse.urlparse(gradle_dist_url).path.rsplit('/', 1)[-1])
+    gradle_dist_archive_path = os.path.join(cache_dir, parse.urlparse(gradle_dist_url).path.rsplit('/', 1)[-1])
 
     gradle_dist_install_root = os.path.join(tempdir_path, 'buildtools')
     gradle_dist_install_path = os.path.join(gradle_dist_install_root, gradle_module_name)

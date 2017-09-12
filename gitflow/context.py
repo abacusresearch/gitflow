@@ -1,3 +1,4 @@
+import atexit
 import os
 import re
 import shutil
@@ -72,7 +73,7 @@ class Context(object):
     clones: list = None
 
     def __init__(self):
-        pass
+        atexit.register(self.cleanup)
 
     @staticmethod
     def create(args: dict, result_out: Result) -> 'Context':
@@ -224,6 +225,12 @@ class Context(object):
 
         return context
 
+    def add_temp_dir(self, dir):
+        if self.temp_dirs is None:
+            self.temp_dirs = list()
+        self.temp_dirs.append(dir)
+        pass
+
     @property
     def repo(self):
         return self.__repo
@@ -255,6 +262,7 @@ class Context(object):
         return release_branches
 
     def cleanup(self):
+        atexit.unregister(self.cleanup)
         if self.temp_dirs is not None:
             for temp_dir in self.temp_dirs:
                 shutil.rmtree(temp_dir)
@@ -262,7 +270,7 @@ class Context(object):
         if self.clones is not None:
             for clone in self.clones:
                 clone.cleanup()
-            self.clone = None
+            self.clones = None
 
     def __del__(self):
         self.cleanup()
