@@ -19,8 +19,10 @@ class Config(object):
     remote_name = "origin"
 
     release_branch_base = None
-    dev_branch_types = ['feature', 'fix', 'chore', 'issue']
-    prod_branch_types = ['fix', 'chore', 'issue']
+    dev_branch_types = ['feature', 'integration',
+                        'fix', 'chore', 'doc', 'issue']
+
+    prod_branch_types = ['fix', 'chore', 'doc', 'issue']
 
     release_base_branch_matcher: VersionMatcher = None
     release_branch_matcher: VersionMatcher = None
