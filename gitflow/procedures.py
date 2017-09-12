@@ -1260,7 +1260,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
 
 def create_commit(clone_context, result, commit_info: CommitInfo):
-    add_command = ['add', '--']
+    add_command = ['update-index', '--add', '--']
     add_command.extend(commit_info.files)
     git_or_fail(clone_context, result, add_command)
 
