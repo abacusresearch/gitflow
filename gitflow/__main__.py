@@ -20,6 +20,8 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow build [-d|--dry-run] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+ flow drop-cache [-d|--dry-run]
+        [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (-h|--help)
  flow --version
  flow --hook=<hook-name> [<hook-args>]...
@@ -54,7 +56,7 @@ import sys
 
 import docopt
 
-from gitflow import cli, procedures, repotools, _, hooks
+from gitflow import cli, procedures, repotools, _, hooks, filesystem
 from gitflow import const
 from gitflow import version
 from gitflow.common import GitFlowException, Result
@@ -123,6 +125,15 @@ def cmd_build(context):
     return procedures.build(context)
 
 
+def cmd_drop_cache(context):
+    result = Result()
+    cache_root = filesystem.get_cache_root_dir()
+    cli.print("dropping cache root: " + repr(cache_root))
+    if not context.dry_run:
+        filesystem.delete_all_cache_dirs()
+    return result
+
+
 # ========== hooks
 # mapped by hook_<name>
 
@@ -189,10 +200,11 @@ def main(argv: list = sys.argv) -> int:
                     cmd_finish,
                     cmd_log,
                     cmd_build,
+                    cmd_drop_cache,
                 ], context.args, 'cmd_')
 
                 if command_func is None:
-                    cli.fail(os.EX_SOFTWARE, "unimplemented invocation")
+                    cli.fail(os.EX_SOFTWARE, "unimplemented command")
 
                 if context.verbose >= const.TRACE_VERBOSITY:
                     cli.print("command: " + cli.if_none(command_func))
