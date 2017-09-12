@@ -43,11 +43,12 @@ class Config(object):
     # 2. Artifacts shall contain an opaque version, allowing promotion of artifacts from alpha to a stable/GA release
     # without rebuilding for according increments within the SemVer pre-release version.
     sequential_versioning = True
-    commit_version_property = False
-    commit_sequential_version_property = True
     # When enabled, a branch will be discontinued as soon as a successor branch receives a sequential version.
     # The only exception in this case are pre-release type increments related to an existing sequential version number.
     tie_sequential_version_to_semantic_version = True
+
+    commit_version_property = False
+    commit_sequential_version_property = True
     # TODO checks on merge base
     allow_shared_release_branch_base = False
     # TODO distinction of commit-based and purely tag based increments
