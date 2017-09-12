@@ -64,3 +64,6 @@ def get_cache_dir(name: str):
     cache_parent_dir = appdirs.user_cache_dir(appname=const.NAME, appauthor=const.AUTHOR, version=const.VERSION)
 
     return __get_or_create_dir(cache_parent_dir, name, 0o700)
+
+
+build_tools_cache_dir = get_cache_dir('build-tools')

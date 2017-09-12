@@ -2114,7 +2114,7 @@ def build(context: Context):
     tempdir_path = tempfile.mkdtemp(prefix='gitflow_build_')
     os.chmod(path=tempdir_path, mode=0o700)
 
-    cache_dir = filesystem.get_cache_dir("build-tools")
+    cache_dir = filesystem.get_cache_dir(filesystem.build_tools_cache_dir)
 
     context.add_temp_dir(tempdir_path)
 
