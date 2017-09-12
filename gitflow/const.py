@@ -46,6 +46,7 @@ DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
 
+# prefixes with a trailing slash for proper prefix matching
 LOCAL_BRANCH_PREFIX = 'refs/heads/'
 LOCAL_TAG_PREFIX = 'refs/tags/'
 REMOTES_PREFIX = 'refs/remotes/'

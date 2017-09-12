@@ -376,7 +376,7 @@ def git_list_branches(context: RepoContext) -> list:
 def git_get_tag_map(context: RepoContext):
     if context.tags is None:
         context.tags = dict()
-        for tag_ref in list(git_list_refs(context, 'refs/tags/')):
+        for tag_ref in list(git_list_refs(context, const.LOCAL_TAG_PREFIX)):
             tagged_commit = tag_ref.target.obj_name
             commit_tags = context.tags.get(tagged_commit)
             if commit_tags is None:

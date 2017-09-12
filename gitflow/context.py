@@ -193,14 +193,15 @@ class Context(object):
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)
 
+        remote_prefix = repotools.create_ref_name('refs/remotes/', context.config.remote_name)
         context.release_base_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + context.config.remote_name + '/'],
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             None,
             re.escape(context.config.release_branch_base),
         )
 
         context.release_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + context.config.remote_name + '/'],
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             'release/',
             config.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
@@ -208,7 +209,7 @@ class Context(object):
         )
 
         context.work_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + context.config.remote_name + '/'],
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
             config.get(
                 const.CONFIG_WORK_BRANCH_PATTERN,
@@ -216,7 +217,7 @@ class Context(object):
         )
 
         context.version_tag_matcher = VersionMatcher(
-            ['refs/tags/'],
+            [const.LOCAL_TAG_PREFIX],
             'version/',
             config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
@@ -224,7 +225,7 @@ class Context(object):
         )
 
         context.discontinuation_tag_matcher = VersionMatcher(
-            ['refs/tags/'],
+            [const.LOCAL_TAG_PREFIX],
             'discontinued/',
             config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
@@ -232,7 +233,7 @@ class Context(object):
         )
 
         context.sequential_version_tag_matcher = VersionMatcher(
-            ['refs/tags/'],
+            [const.LOCAL_TAG_PREFIX],
             'sequential_version/',
             config.get(
                 const.CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN,
@@ -255,7 +256,9 @@ class Context(object):
         release_branches = list(filter(
             lambda branch_ref: self.release_branch_matcher.format(
                 branch_ref.name) is not None,
-            repotools.git_list_refs(self.repo, 'refs/remotes/' + self.config.remote_name, 'refs/heads/')
+            repotools.git_list_refs(self.repo,
+                                    repotools.create_ref_name(const.REMOTES_PREFIX, self.config.remote_name),
+                                    const.LOCAL_BRANCH_PREFIX)
         ))
         release_branches.sort(
             reverse=True,
