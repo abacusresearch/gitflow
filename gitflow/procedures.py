@@ -172,11 +172,11 @@ def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
     # TODO optimize
     branch_class = None
     branch_classes = list()
-    if context.config.release_base_branch_matcher.fullmatch(ref_name) is not None:
+    if context.release_base_branch_matcher.fullmatch(ref_name) is not None:
         branch_classes.append(const.BranchClass.DEVELOPMENT_BASE)
-    if context.config.release_branch_matcher.fullmatch(ref_name) is not None:
+    if context.release_branch_matcher.fullmatch(ref_name) is not None:
         branch_classes.append(const.BranchClass.RELEASE)
-    match = context.config.work_branch_matcher.fullmatch(ref_name)
+    match = context.work_branch_matcher.fullmatch(ref_name)
     if match is not None:
         prefix = match.group('prefix').strip('/')
         if prefix == const.BRANCH_PREFIX_DEV:
@@ -329,17 +329,17 @@ def get_branch_version_component_for_version(context: Context,
 
 
 def get_branch_name_for_version(context: Context, version_on_branch: Union[semver.VersionInfo, version.Version]):
-    return context.config.release_branch_matcher.ref_name_infixes[0] \
+    return context.release_branch_matcher.ref_name_infixes[0] \
            + get_branch_version_component_for_version(context, version_on_branch)
 
 
 def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo):
-    return context.config.version_tag_matcher.ref_name_infixes[0] \
+    return context.version_tag_matcher.ref_name_infixes[0] \
            + version.format_version_info(version_info)
 
 
 def get_discontinuation_tag_name_for_version(context, version: Union[semver.VersionInfo, version.Version]):
-    return context.config.discontinuation_tag_matcher.ref_name_infixes[
+    return context.discontinuation_tag_matcher.ref_name_infixes[
                0] + get_branch_version_component_for_version(
         context, version)
 
@@ -347,13 +347,13 @@ def get_discontinuation_tag_name_for_version(context, version: Union[semver.Vers
 def get_global_sequence_number(context):
     sequential_tags = repotools.git_list_refs(context.repo,
                                               'refs/tags/' +
-                                              context.config.sequential_version_tag_matcher.ref_name_infixes[0])
+                                              context.sequential_version_tag_matcher.ref_name_infixes[0])
     counter = 0
     for tag in sequential_tags:
-        match = context.config.sequential_version_tag_matcher.fullmatch(tag.name)
+        match = context.sequential_version_tag_matcher.fullmatch(tag.name)
         if match is not None:
             counter = max(counter,
-                          int(match.group(context.config.sequential_version_tag_matcher.group_unique_code)))
+                          int(match.group(context.sequential_version_tag_matcher.group_unique_code)))
         else:
             raise Exception("invalid tag: " + tag.name)
     return counter
@@ -364,12 +364,12 @@ def create_sequence_number_for_version(context, new_version: Union[semver.Versio
 
 
 def create_sequential_version_tag_name(context, counter: int):
-    return context.config.sequential_version_tag_matcher.ref_name_infixes[0] + str(counter)
+    return context.sequential_version_tag_matcher.ref_name_infixes[0] + str(counter)
 
 
 def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str]):
     # TODO parse major.minor only
-    version = context.config.release_branch_matcher.to_version(version_branch.name)
+    version = context.release_branch_matcher.to_version(version_branch.name)
     if version is None:
         return [], None
 
@@ -403,9 +403,9 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
             branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
 
     if branch_ref is None:
-        if not name.startswith(context.config.release_branch_matcher.ref_name_infixes[0]):
+        if not name.startswith(context.release_branch_matcher.ref_name_infixes[0]):
             branch_ref = repotools.get_branch_by_name(context.repo,
-                                                      context.config.release_branch_matcher.ref_name_infixes[
+                                                      context.release_branch_matcher.ref_name_infixes[
                                                           0] + name,
                                                       search_mode)
 
@@ -646,7 +646,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         branch_refs = release_branch_merge_bases.get(history_commit)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
-                filter(lambda tag_ref: context.config.release_branch_matcher.format(tag_ref.name) is not None,
+                filter(lambda tag_ref: context.release_branch_matcher.format(tag_ref.name) is not None,
                        branch_refs))
             if not len(branch_refs):
                 continue
@@ -655,8 +655,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                 reverse=True,
                 key=utils.cmp_to_key(
                     lambda tag_ref_a, tag_ref_b: semver.compare(
-                        context.config.release_branch_matcher.format(tag_ref_a.name),
-                        context.config.release_branch_matcher.format(tag_ref_b.name)
+                        context.release_branch_matcher.format(tag_ref_a.name),
+                        context.release_branch_matcher.format(tag_ref_b.name)
                     )
                 )
             )
@@ -673,7 +673,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         branch_refs = release_branch_merge_bases.get(history_commit)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
-                filter(lambda tag_ref: context.config.release_branch_matcher.format(tag_ref.name) is not None,
+                filter(lambda tag_ref: context.release_branch_matcher.format(tag_ref.name) is not None,
                        branch_refs))
             if not len(branch_refs):
                 continue
@@ -682,8 +682,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                 reverse=True,
                 key=utils.cmp_to_key(
                     lambda tag_ref_a, tag_ref_b: semver.compare(
-                        context.config.release_branch_matcher.format(tag_ref_a.name),
-                        context.config.release_branch_matcher.format(tag_ref_b.name)
+                        context.release_branch_matcher.format(tag_ref_a.name),
+                        context.release_branch_matcher.format(tag_ref_b.name)
                     )
                 )
             )
@@ -699,7 +699,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                   + '\n'.join(' - ' + repr(tag_ref.name) for tag_ref in subsequent_branches))
 
     if latest_branch is not None:
-        latest_branch_version = context.config.release_branch_matcher.format(latest_branch.name)
+        latest_branch_version = context.release_branch_matcher.format(latest_branch.name)
         latest_branch_version_info = semver.parse_version_info(latest_branch_version)
     else:
         latest_branch_version = None
@@ -872,7 +872,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     # TODO configuration
     allow_merge_base_tags = True  # context.config.allow_shared_release_branch_base
 
-    branch_base_version = context.config.release_branch_matcher.format(command_context.selected_ref.name)
+    branch_base_version = context.release_branch_matcher.format(command_context.selected_ref.name)
     if branch_base_version is not None:
         branch_base_version_info = semver.parse_version_info(branch_base_version)
     else:
@@ -922,7 +922,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         assert not at_merge_base if not allow_merge_base_tags else True
 
         for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit):
-            version_info = context.config.version_tag_matcher.to_version_info(tag_ref.name)
+            version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
             if version_info is not None:
                 if at_merge_base:
                     # ignore apparent stray tags on potentially shared merge base
@@ -942,7 +942,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                     version_tag_refs = list()
                 version_tag_refs.append(tag_ref)
 
-            match = context.config.sequential_version_tag_matcher.fullmatch(tag_ref.name)
+            match = context.sequential_version_tag_matcher.fullmatch(tag_ref.name)
             if match is not None:
                 if sequential_version_tag_refs is None:
                     sequential_version_tag_refs = list()
@@ -953,8 +953,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                 reverse=True,
                 key=utils.cmp_to_key(
                     lambda tag_ref_a, tag_ref_b: semver.compare(
-                        context.config.version_tag_matcher.format(tag_ref_a.name),
-                        context.config.version_tag_matcher.format(tag_ref_b.name)
+                        context.version_tag_matcher.format(tag_ref_a.name),
+                        context.version_tag_matcher.format(tag_ref_b.name)
                     )
                 )
             )
@@ -968,7 +968,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                 preceding_version_tag = version_tag_refs[0]
 
             for tag_ref in version_tag_refs:
-                enclosing_versions.add(context.config.version_tag_matcher.format(tag_ref.name))
+                enclosing_versions.add(context.version_tag_matcher.format(tag_ref.name))
 
             if before_commit:
                 abort_version_scan = True
@@ -979,8 +979,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                 reverse=True,
                 key=utils.cmp_to_key(
                     lambda tag_ref_a, tag_ref_b: version.cmp_alnum_token(
-                        context.config.sequential_version_tag_matcher.format(tag_ref_a.name),
-                        context.config.sequential_version_tag_matcher.format(tag_ref_b.name)
+                        context.sequential_version_tag_matcher.format(tag_ref_a.name),
+                        context.sequential_version_tag_matcher.format(tag_ref_b.name)
                     )
                 )
             )
@@ -1000,10 +1000,10 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         if abort_version_scan and abort_sequential_version_scan:
             break
 
-    preceding_version = context.config.version_tag_matcher.format(
+    preceding_version = context.version_tag_matcher.format(
         preceding_version_tag.name) if preceding_version_tag is not None else None
 
-    preceding_sequential_version = context.config.sequential_version_tag_matcher.format(
+    preceding_sequential_version = context.sequential_version_tag_matcher.format(
         preceding_sequential_version_tag.name) if preceding_sequential_version_tag is not None else None
     if preceding_sequential_version is not None:
         preceding_sequential_version = int(preceding_sequential_version)
@@ -1016,7 +1016,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                   + '\n'.join(' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
 
     if preceding_version_tag is not None:
-        latest_branch_version = context.config.version_tag_matcher.format(preceding_version_tag.name)
+        latest_branch_version = context.version_tag_matcher.format(preceding_version_tag.name)
         latest_branch_version_info = semver.parse_version_info(latest_branch_version)
     else:
         latest_branch_version = None
@@ -1071,7 +1071,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
     if len(version_tags_on_same_commit):
         if context.config.allow_qualifier_increments_within_commit:
-            preceding_commit_version = context.config.version_tag_matcher.format(
+            preceding_commit_version = context.version_tag_matcher.format(
                 version_tags_on_same_commit[0].name)
             prerelease_keywords_list = [context.config.version_config.qualifiers, 1]
 
@@ -1697,7 +1697,7 @@ def end(context: Context):
         arg_work_branch = None
 
     ref_work_branch = WorkBranch()
-    selected_ref_match = context.config.work_branch_matcher.fullmatch(command_context.selected_ref.name)
+    selected_ref_match = context.work_branch_matcher.fullmatch(command_context.selected_ref.name)
     if selected_ref_match is not None:
         ref_work_branch.prefix = selected_ref_match.group('prefix')
         ref_work_branch.type = selected_ref_match.group('type')
@@ -1751,8 +1751,8 @@ def end(context: Context):
                                                                                  'release'))
             release_branches = list(release_branches)
             release_branches.sort(reverse=True, key=utils.cmp_to_key(lambda ref_a, ref_b: semver.compare(
-                context.config.release_branch_matcher.format(ref_a.name),
-                context.config.release_branch_matcher.format(ref_b.name)
+                context.release_branch_matcher.format(ref_a.name),
+                context.release_branch_matcher.format(ref_b.name)
             )))
             for release_branch_ref in release_branches:
                 merge_base = repotools.git_merge_base(context.repo, base_branch_ref, work_branch_ref.name)
@@ -1872,9 +1872,9 @@ def status(context):
     branch_info_dict = dict()
 
     for branch_ref in repotools.git_list_refs(git_context, const.REMOTES_PREFIX + context.config.remote_name):
-        branch_match = context.config.release_branch_matcher.fullmatch(branch_ref.name)
+        branch_match = context.release_branch_matcher.fullmatch(branch_ref.name)
         if branch_match:
-            branch_version = context.config.release_branch_matcher.to_version(branch_ref.name)
+            branch_version = context.release_branch_matcher.to_version(branch_ref.name)
 
             branch_version_string = get_branch_version_component_for_version(context, branch_version)
 
@@ -1930,7 +1930,7 @@ def status(context):
                                                  reverse=True,
                                                  tag_filter=None,
                                                  commit_tag_comparator=lambda a, b:
-                                                 -1 if context.config.sequential_version_tag_matcher.fullmatch(
+                                                 -1 if context.sequential_version_tag_matcher.fullmatch(
                                                      a.name) is not None
                                                  else 1)
 
@@ -1938,10 +1938,10 @@ def status(context):
 
             for branch_tag_ref in tags:
                 # print the sequential version tag
-                tag_match = context.config.sequential_version_tag_matcher.fullmatch(branch_tag_ref.name)
+                tag_match = context.sequential_version_tag_matcher.fullmatch(branch_tag_ref.name)
                 if tag_match:
                     unique_code = tag_match.group(
-                        context.config.sequential_version_tag_matcher.group_unique_code)
+                        context.sequential_version_tag_matcher.group_unique_code)
                     version_string = unique_code
 
                     unique_version_codes.append(int(unique_code))
@@ -1959,7 +1959,7 @@ def status(context):
                     cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
 
                 # print the version tag
-                version_string = context.config.version_tag_matcher.format(branch_tag_ref.name)
+                version_string = context.version_tag_matcher.format(branch_tag_ref.name)
                 if version_string:
                     version_info = semver.parse_version_info(version_string)
                     if version_info.major == branch_version.major and version_info.minor == branch_version.minor:

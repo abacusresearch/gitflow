@@ -36,14 +36,6 @@ class Config(object):
     strict_mode = True
 
     # version
-    release_base_branch_matcher: VersionMatcher = None
-    release_branch_matcher: VersionMatcher = None
-    work_branch_matcher: VersionMatcher = None
-
-    version_tag_matcher: VersionMatcher = None
-    discontinuation_tag_matcher: VersionMatcher = None
-    sequential_version_tag_matcher: VersionMatcher = None
-
     version_config: VersionConfig = None
 
     # repo
@@ -79,9 +71,11 @@ class Config(object):
 
 
 class Context(object):
-    args = None
     config: Config = None
     __repo = None
+
+    # args
+    args = None
 
     root = None
     batch = False
@@ -90,6 +84,16 @@ class Context(object):
     verbose = False
     pretty = False
 
+    # matchers
+    release_base_branch_matcher: VersionMatcher = None
+    release_branch_matcher: VersionMatcher = None
+    work_branch_matcher: VersionMatcher = None
+
+    version_tag_matcher: VersionMatcher = None
+    discontinuation_tag_matcher: VersionMatcher = None
+    sequential_version_tag_matcher: VersionMatcher = None
+
+    # resources
     temp_dirs: list = None
     clones: list = None
 
@@ -189,13 +193,13 @@ class Context(object):
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)
 
-        context.config.release_base_branch_matcher = VersionMatcher(
+        context.release_base_branch_matcher = VersionMatcher(
             ['refs/heads/', 'refs/remotes/' + context.config.remote_name + '/'],
             None,
             re.escape(context.config.release_branch_base),
         )
 
-        context.config.release_branch_matcher = VersionMatcher(
+        context.release_branch_matcher = VersionMatcher(
             ['refs/heads/', 'refs/remotes/' + context.config.remote_name + '/'],
             'release/',
             config.get(
@@ -203,7 +207,7 @@ class Context(object):
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
         )
 
-        context.config.work_branch_matcher = VersionMatcher(
+        context.work_branch_matcher = VersionMatcher(
             ['refs/heads/', 'refs/remotes/' + context.config.remote_name + '/'],
             [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
             config.get(
@@ -211,7 +215,7 @@ class Context(object):
                 const.DEFAULT_WORK_BRANCH_PATTERN),
         )
 
-        context.config.version_tag_matcher = VersionMatcher(
+        context.version_tag_matcher = VersionMatcher(
             ['refs/tags/'],
             'version/',
             config.get(
@@ -219,7 +223,7 @@ class Context(object):
                 const.DEFAULT_VERSION_TAG_PATTERN),
         )
 
-        context.config.discontinuation_tag_matcher = VersionMatcher(
+        context.discontinuation_tag_matcher = VersionMatcher(
             ['refs/tags/'],
             'discontinued/',
             config.get(
@@ -227,7 +231,7 @@ class Context(object):
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
         )
 
-        context.config.sequential_version_tag_matcher = VersionMatcher(
+        context.sequential_version_tag_matcher = VersionMatcher(
             ['refs/tags/'],
             'sequential_version/',
             config.get(
@@ -249,13 +253,13 @@ class Context(object):
 
     def get_release_branches(self):
         release_branches = list(filter(
-            lambda branch_ref: self.config.release_branch_matcher.format(
+            lambda branch_ref: self.release_branch_matcher.format(
                 branch_ref.name) is not None,
             repotools.git_list_refs(self.repo, 'refs/remotes/' + self.config.remote_name, 'refs/heads/')
         ))
         release_branches.sort(
             reverse=True,
-            key=self.config.release_branch_matcher.key_func
+            key=self.release_branch_matcher.key_func
         )
         return release_branches
 
