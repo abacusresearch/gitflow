@@ -2,6 +2,7 @@ import atexit
 import os
 import re
 import shutil
+from enum import Enum
 
 import semver
 
@@ -11,21 +12,30 @@ from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
 
 
+class VersioningScheme(Enum):
+    # SemVer tags
+    SEMVER = 1,
+    # SemVer tags, sequence number tags
+    SEMVER_WITH_SEQ = 2,
+    # SemVer tags tied to sequence number tags in strictly ascending order
+    SEMVER_WITH_TIED_SEQ = 3,
+
+
 class Config(object):
+    # versioning scheme
+    versioning_scheme: VersioningScheme = VersioningScheme.SEMVER_WITH_TIED_SEQ
+    commit_version_property = False
+    commit_sequential_version_property = True
+
+    # project properties
     property_file: str = None
     version_property_name: str = None
     sequential_version_property_name: str = None
 
+    # validation mode
     strict_mode = True
 
-    remote_name = "origin"
-
-    release_branch_base = None
-    dev_branch_types = ['feature', 'integration',
-                        'fix', 'chore', 'doc', 'issue']
-
-    prod_branch_types = ['fix', 'chore', 'doc', 'issue']
-
+    # version
     release_base_branch_matcher: VersionMatcher = None
     release_branch_matcher: VersionMatcher = None
     work_branch_matcher: VersionMatcher = None
@@ -36,19 +46,17 @@ class Config(object):
 
     version_config: VersionConfig = None
 
-    # Enables a sequential version counter across all release branches, effectively serializing the deployment order.
-    # When enabled, any newly created release branch will cause discontinuation of its predecessors.
-    # This feature is recommended in case one of these cases apply:
-    # 1. The projects target platform only supports integer versions (such as the Android version code)
-    # 2. Artifacts shall contain an opaque version, allowing promotion of artifacts from alpha to a stable/GA release
-    # without rebuilding for according increments within the SemVer pre-release version.
-    sequential_versioning = True
-    # When enabled, a branch will be discontinued as soon as a successor branch receives a sequential version.
-    # The only exception in this case are pre-release type increments related to an existing sequential version number.
-    tie_sequential_version_to_semantic_version = True
+    # repo
+    remote_name = "origin"
 
-    commit_version_property = False
-    commit_sequential_version_property = True
+    release_branch_base = None
+    dev_branch_types = ['feature', 'integration',
+                        'fix', 'chore', 'doc', 'issue']
+
+    prod_branch_types = ['fix', 'chore', 'doc', 'issue']
+
+    # hard config
+
     # TODO checks on merge base
     allow_shared_release_branch_base = False
     # TODO distinction of commit-based and purely tag based increments
@@ -58,6 +66,16 @@ class Config(object):
     # requires clean workspace and temporary detachment from branches to be pushed
     push_to_local = False
     pull_after_bump = True
+
+    # properties
+    @property
+    def sequential_versioning(self):
+        return self.versioning_scheme in (VersioningScheme.SEMVER_WITH_SEQ,
+                                          VersioningScheme.SEMVER_WITH_TIED_SEQ)
+
+    @property
+    def tie_sequential_version_to_semantic_version(self):
+        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_TIED_SEQ
 
 
 class Context(object):
