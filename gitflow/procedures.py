@@ -851,16 +851,15 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         # push the base branch commit
         # push_command.append(commit + ':' + const.LOCAL_BRANCH_PREFIX + selected_ref.local_branch_name)
         # push the new branch or fail if it exists
-        push_command.extend(['--force-with-lease=refs/heads/' + branch_name + ':',
-                             repotools.ref_target(object_to_tag) + ':' + const.LOCAL_BRANCH_PREFIX + branch_name])
+        push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name) + ':',
+                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name)])
         # push the new version tag or fail if it exists
-        push_command.extend(['--force-with-lease=refs/tags/' + tag_name + ':',
-                             repotools.ref_target(object_to_tag) + ':' + const.LOCAL_TAG_PREFIX + tag_name])
+        push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
+                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX , tag_name)])
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
-            push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
-                                 repotools.ref_target(
-                                     object_to_tag) + ':' + const.LOCAL_TAG_PREFIX + sequential_version_tag_name])
+            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name) + ':',
+                                 repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name)])
 
         git_or_fail(clone_context, result, push_command, _("Failed to push."))
 
@@ -1233,15 +1232,15 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             push_command.append('--verbose')
         push_command.append('origin')
         # push the release branch commit or its version increment commit
-        push_command.append(repotools.ref_target(object_to_tag) + ':' + const.LOCAL_BRANCH_PREFIX + branch_name)
+        push_command.append(repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name))
         # push the new version tag or fail if it exists
-        push_command.extend(['--force-with-lease=refs/tags/' + tag_name + ':',
-                             repotools.ref_target(object_to_tag) + ':' + const.LOCAL_TAG_PREFIX + tag_name])
+        push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
+                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name)])
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
-            push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
+            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name) + ':',
                                  repotools.ref_target(
-                                     object_to_tag) + ':' + const.LOCAL_TAG_PREFIX + sequential_version_tag_name])
+                                     object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name)])
 
         proc = repotools.git(clone_context.repo, *push_command)
         proc.wait()
@@ -1528,10 +1527,10 @@ def discontinue_version(context: Context):
             push_command.append('--verbose')
         push_command.append('origin')
 
-        push_command.append(base_branch_ref.name + ':' + const.LOCAL_BRANCH_PREFIX + base_branch_ref.short_name)
-        push_command.append('--force-with-lease=refs/tags/' + discontinuation_tag_name + ':')
+        push_command.append(base_branch_ref.name + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, base_branch_ref.short_name))
+        push_command.append('--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name) + ':')
         push_command.append(
-            repotools.ref_target(release_branch) + ':' + const.LOCAL_TAG_PREFIX + discontinuation_tag_name)
+            repotools.ref_target(release_branch) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name))
 
         git_or_fail(clone_context, result, push_command)
 
@@ -1607,7 +1606,7 @@ def begin(context: Context):
                                                 BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
         fixed_base_branch_info = get_branch_info(command_context,
-                                                 const.LOCAL_BRANCH_PREFIX + context.config.release_branch_base)
+                                                 repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, context.config.release_branch_base))
         fixed_base_branch, fixed_destination_branch_class = select_ref(result,
                                                                        fixed_base_branch_info,
                                                                        BranchSelection.BRANCH_PREFER_LOCAL)
@@ -1874,7 +1873,7 @@ def status(context):
     upstreams = repotools.git_get_upstreams(context.repo)
     branch_info_dict = dict()
 
-    for branch_ref in repotools.git_list_refs(git_context, const.REMOTES_PREFIX + context.config.remote_name):
+    for branch_ref in repotools.git_list_refs(git_context, repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)):
         branch_match = context.release_branch_matcher.fullmatch(branch_ref.name)
         if branch_match:
             branch_version = context.release_branch_matcher.to_version(branch_ref.name)

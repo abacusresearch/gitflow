@@ -363,7 +363,7 @@ def git_list_remote_branches(context: RepoContext, remote: str) -> list:
     """
     :rtype: list of Ref
     """
-    return git_list_refs(context, const.REMOTES_PREFIX + remote + '/')
+    return git_list_refs(context, create_ref_name(const.REMOTES_PREFIX, remote))
 
 
 def git_list_branches(context: RepoContext) -> list:
