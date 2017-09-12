@@ -30,14 +30,25 @@ from gitflow.repotools import BranchSelection, RepoContext
 from gitflow.version import VersionConfig
 
 
-class VersionUpdateCommit(object):
-    message_parts = None
+class CommitInfo(object):
+    message_parts: list = None
+    parents: list = None
+    files: list = None
 
     def __init__(self):
         self.message_parts = list()
+        self.parents = list()
+        self.files = list()
+
+    def add_parent(self, parent: str):
+        self.parents.append(parent)
 
     def add_message(self, message: str):
         self.message_parts.append(message)
+
+    def add_file(self, file: str):
+        if file not in self.files:
+            self.files.append(file)
 
     @property
     def message(self) -> str:
@@ -120,6 +131,39 @@ def git_or_fail(context: Context, result: Result, command: list,
                         .format(sub_command=repr(first_command_token)),
                         error_reason
                         )
+
+
+def git_for_line_or_fail(context: Context, result: Result, command: list,
+                         error_message: str = None, error_reason: str = None):
+    line = repotools.git_for_line(context.repo, *command)
+    if line is None:
+        if error_message is not None:
+            result.fail(os.EX_DATAERR, error_message, error_reason)
+        else:
+            first_command_token = next(filter(lambda token: not token.startswith('-'), command))
+            result.fail(os.EX_DATAERR, _("git {sub_command} failed.")
+                        .format(sub_command=repr(first_command_token)),
+                        error_reason
+                        )
+    return line
+
+
+def fetch_all_and_ff(context: Context, result_out: Result, remote: [repotools.Remote, str]):
+    # attempt a complete fetch and a fast forward on the current branch
+    remote_name = remote.name if isinstance(remote, repotools.Remote) else remote
+    proc = repotools.git(context.repo, 'fetch', '--tags', remote_name)
+    proc.wait()
+    if proc.returncode != os.EX_OK:
+        result_out.warn(
+            _("Failed to fetch from {remote}")
+                .format(repr(remote_name)),
+            None)
+    proc = repotools.git(context.repo, 'merge', '--ff-only')
+    proc.wait()
+    if proc.returncode != os.EX_OK:
+        result_out.warn(
+            _("Failed to fast forward"),
+            None)
 
 
 def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
@@ -205,7 +249,7 @@ def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, s
 
 def update_project_property_file(context: Context,
                                  new_version: str, new_sequential_version: int,
-                                 commit_out: VersionUpdateCommit):
+                                 commit_out: CommitInfo):
     result = Result()
 
     commit_out.add_message("#version     : " + cli.if_none(new_version))
@@ -214,8 +258,27 @@ def update_project_property_file(context: Context,
     version_property_name = context.config.get(const.CONFIG_VERSION_PROPERTY_NAME)
     sequential_version_property_name = context.config.get(const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
 
-    properties = context.load_project_properties()
-    if properties is not None:
+    property_store = None
+    if context.parsed_config.property_file is not None and version_property_name is not None:
+        if context.parsed_config.property_file.endswith(".properties"):
+            property_store = filesystem.JavaPropertyFile(context.parsed_config.property_file)
+        else:
+            result.fail(os.EX_DATAERR,
+                        _("Property file not supported: {path}\n"
+                          "Currently supported:\n"
+                          "{listing}")
+                        .format(path=repr(context.parsed_config.property_file),
+                                listing='\n'.join(' - ' + type for type in ['*.properties'])),
+                        None
+                        )
+
+        properties = property_store.load()
+        if properties is None:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to load properties from file: {path}")
+                        .format(path=repr(context.parsed_config.property_file)),
+                        None
+                        )
         result.value = 0
         if context.parsed_config.commit_version_property:
             version = properties.get(version_property_name)
@@ -224,7 +287,7 @@ def update_project_property_file(context: Context,
                 result.warn(_("Missing version property."),
                             _("Missing property {property} in file {file}.")
                             .format(property=repr(version_property_name),
-                                    file=repr(context.config[const.CONFIG_VERSION_PROPERTY_FILE]))
+                                    file=repr(context.parsed_config.property_file))
                             )
             properties[version_property_name] = new_version
             commit_out.add_message('#properties[' + utils.quote(version_property_name, '"') + ']:' + new_version)
@@ -234,14 +297,14 @@ def update_project_property_file(context: Context,
 
             result.value += 1
 
-        if context.parsed_config.commit_sequential_version_property:
+        if context.parsed_config.commit_sequential_version_property and sequential_version_property_name is not None:
             sequential_version = properties.get(sequential_version_property_name)
 
             if sequential_version_property_name not in properties:
                 result.warn(_("Missing version property."),
                             _("Missing property {property} in file {file}.")
                             .format(property=repr(sequential_version_property_name),
-                                    file=repr(context.config[const.CONFIG_VERSION_PROPERTY_FILE]))
+                                    file=repr(context.parsed_config.property_file))
                             )
             properties[sequential_version_property_name] = str(new_sequential_version)
             commit_out.add_message('#properties[' + utils.quote(sequential_version_property_name, '"') + ']:' + str(
@@ -254,7 +317,8 @@ def update_project_property_file(context: Context,
             result.value += 1
 
         if result.value:
-            context.store_project_properties(properties)
+            property_store.store(properties)
+            commit_out.add_file(context.parsed_config.property_file)
 
     return result
 
@@ -312,12 +376,10 @@ def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str])
     discontinuation_tag_name = get_discontinuation_tag_name_for_version(context, version)
     discontinuation_tag = repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name)
 
-    discontinued = sum(1 for ref in repotools.git_list_refs(
-        context.repo,
-        '--contains', discontinuation_tag,
-        version_branch))
+    discontinuation_tags = [discontinuation_tag] \
+        if repotools.git_rev_parse(context.repo, discontinuation_tag) is not None \
+        else []
 
-    discontinuation_tags = [discontinuation_tag] if discontinued else []
     return discontinuation_tags, discontinuation_tag_name
 
 
@@ -721,34 +783,6 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         clone_context = clone_result.value
 
-        # create branch ref
-        git_or_fail(clone_context, result,
-                    ['update-ref', 'refs/heads/' + branch_name, command_context.selected_commit],
-                    _("Failed to push."))
-
-        # # checkout base branch
-        # cloned_repo_commands = []
-        # checkout_command = ['checkout', '--force', context.parsed_config.release_branch_base]
-        # cloned_repo_commands.append(checkout_command)
-        #
-        # for command in cloned_repo_commands:
-        #     proc = repotools.git(clone_context.repo, *command)
-        #     proc.wait()
-        #     if proc.returncode != os.EX_OK:
-        #         result.fail(os.EX_DATAERR,
-        #                     _("Failed to check out release branch."),
-        #                     _("An unexpected error occurred.")
-        #                     )
-        #
-        # # run version change hooks on base branch
-        # update_result = update_project_metadata(clone_context, new_version)
-        # result.add_subresult(update_result)
-        # if (result.has_errors()):
-        #     result.fail(os.EX_DATAERR,
-        #                 _("Version change hook run failed."),
-        #                 _("An unexpected error occurred.")
-        #                 )
-
         has_local_commit = False
 
         if (context.parsed_config.commit_version_property and new_version is not None) \
@@ -762,10 +796,13 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             #                 )
 
             # run version change hooks on new release branch
-            git_or_fail(clone_context, result, ['checkout', '--force', branch_name],
+            git_or_fail(clone_context, result, ['checkout', '--force',
+                                                '-b', branch_name,
+                                                command_context.selected_commit],
                         _("Failed to check out release branch."))
 
-            commit_info = VersionUpdateCommit()
+            commit_info = CommitInfo()
+            commit_info.add_parent(command_context.selected_commit)
             update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
@@ -781,33 +818,9 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         if has_local_commit:
             # commit changes
-            cloned_repo_commands = []
-
-            add_command = ['add', '--all']
-            if context.verbose:
-                add_command.append('--verbose')
-            cloned_repo_commands.append(add_command)
-
-            commit_command = ['commit', '--allow-empty']
-            if context.verbose:
-                commit_command.append('--verbose')
-            commit_command.extend(['--message', commit_info.message])
-            cloned_repo_commands.append(commit_command)
-
-            for command in cloned_repo_commands:
-                git_or_fail(clone_context, result, command, _("Failed to commit."))
-
-        object_to_tag = 'refs/heads/' + branch_name
-
-        # create sequential tag ref
-        if sequential_version_tag_name is not None:
-            git_or_fail(clone_context, result,
-                        ['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag],
-                        _("Failed to tag."))
-
-        # create tag ref
-        git_or_fail(clone_context, result, ['update-ref', 'refs/tags/' + tag_name, object_to_tag],
-                    _("Failed to tag."))
+            object_to_tag = create_commit(clone_context, result, commit_info)
+        else:
+            object_to_tag = command_context.selected_commit
 
         # show info and prompt for confirmation
         cli.print("branch              : " + cli.if_none(command_context.selected_ref.name))
@@ -837,14 +850,15 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         # push_command.append(commit + ':' + 'refs/heads/' + selected_ref.local_branch_name)
         # push the new branch or fail if it exists
         push_command.extend(['--force-with-lease=refs/heads/' + branch_name + ':',
-                             object_to_tag + ':' + 'refs/heads/' + branch_name])
+                             repotools.ref_target(object_to_tag) + ':' + 'refs/heads/' + branch_name])
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=refs/tags/' + tag_name + ':',
-                             'refs/tags/' + tag_name + ':' + 'refs/tags/' + tag_name])
+                             repotools.ref_target(object_to_tag) + ':' + 'refs/tags/' + tag_name])
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
             push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
-                                 'refs/tags/' + sequential_version_tag_name + ':' + 'refs/tags/' + sequential_version_tag_name])
+                                 repotools.ref_target(
+                                     object_to_tag) + ':' + 'refs/tags/' + sequential_version_tag_name])
 
         git_or_fail(clone_context, result, push_command, _("Failed to push."))
 
@@ -1171,7 +1185,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             _("An unexpected error occurred.")
                             )
 
-            commit_info = VersionUpdateCommit()
+            commit_info = CommitInfo()
+            commit_info.add_parent(command_context.selected_commit)
             update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
@@ -1187,49 +1202,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         if has_local_commit:
             # commit changes
-            cloned_repo_commands = []
-
-            add_command = ['add', '--all']
-            if context.verbose:
-                add_command.append('--verbose')
-            cloned_repo_commands.append(add_command)
-
-            commit_command = ['commit', '--allow-empty']
-            if context.verbose:
-                commit_command.append('--verbose')
-            commit_command.extend(['--message', commit_info.message])
-            cloned_repo_commands.append(commit_command)
-
-            for command in cloned_repo_commands:
-                proc = repotools.git(clone_context.repo, *command)
-                proc.wait()
-                if proc.returncode != os.EX_OK:
-                    result.fail(os.EX_DATAERR,
-                                _("Failed to commit."),
-                                _("An unexpected error occurred.")
-                                )
-
-        object_to_tag = branch_name if has_local_commit else command_context.selected_commit
-
-        # create sequential tag ref
-        if sequential_version_tag_name is not None:
-            proc = repotools.git(clone_context.repo,
-                                 *['update-ref', 'refs/tags/' + sequential_version_tag_name, object_to_tag])
-            proc.wait()
-            if proc.returncode != os.EX_OK:
-                result.fail(os.EX_DATAERR,
-                            _("Failed to tag."),
-                            _("An unexpected error occurred.")
-                            )
-
-        # create tag ref
-        proc = repotools.git(clone_context.repo, *['update-ref', 'refs/tags/' + tag_name, object_to_tag])
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.fail(os.EX_DATAERR,
-                        _("Failed to tag."),
-                        _("An unexpected error occurred.")
-                        )
+            object_to_tag = create_commit(clone_context, result, commit_info)
+        else:
+            object_to_tag = command_context.selected_commit
 
         # show info and prompt for confirmation
         print("branch              : " + cli.if_none(command_context.selected_ref.name))
@@ -1259,11 +1234,12 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         push_command.append(repotools.ref_target(object_to_tag) + ':' + 'refs/heads/' + branch_name)
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=refs/tags/' + tag_name + ':',
-                             'refs/tags/' + tag_name + ':' + 'refs/tags/' + tag_name])
+                             repotools.ref_target(object_to_tag) + ':' + 'refs/tags/' + tag_name])
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
             push_command.extend(['--force-with-lease=refs/tags/' + sequential_version_tag_name + ':',
-                                 'refs/tags/' + sequential_version_tag_name + ':' + 'refs/tags/' + sequential_version_tag_name])
+                                 repotools.ref_target(
+                                     object_to_tag) + ':' + 'refs/tags/' + sequential_version_tag_name])
 
         proc = repotools.git(clone_context.repo, *push_command)
         proc.wait()
@@ -1282,6 +1258,29 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             git_or_fail(context, result, ['checkout', original_current_branch.short_name])
 
     return result
+
+
+def create_commit(clone_context, result, commit_info: CommitInfo):
+    add_command = ['update-index', '--add', '--']
+    add_command.extend(commit_info.files)
+    git_or_fail(clone_context, result, add_command)
+
+    write_tree_command = ['write-tree']
+    new_tree = git_for_line_or_fail(clone_context, result, write_tree_command)
+
+    commit_command = ['commit-tree']
+    for parent in commit_info.parents:
+        commit_command.append('-p')
+        commit_command.append(parent)
+
+    commit_command.extend(['-m', commit_info.message, new_tree])
+    new_commit = git_for_line_or_fail(clone_context, result, commit_command)
+
+    # reset_command = ['reset', 'HEAD', new_commit]
+    # git_or_fail(clone_context, result, reset_command)
+
+    object_to_tag = new_commit
+    return object_to_tag
 
 
 def check_requirements(result_out: Result,
@@ -1398,27 +1397,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
     if not result.has_errors() \
             and context.parsed_config.pull_after_bump \
             and not context.parsed_config.push_to_local:
-        proc = repotools.git(context.repo, 'fetch', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.fail(os.EX_UNAVAILABLE,
-                        _("Failed to fetch from {remote}")
-                        .format(remote=context.parsed_config.remote_name),
-                        None)
-        proc = repotools.git(context.repo, 'fetch', '--tags', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.fail(os.EX_UNAVAILABLE,
-                        _("Failed to fetch from {remote}")
-                        .format(remote=context.parsed_config.remote_name),
-                        None)
-        proc = repotools.git(context.repo, 'pull', '--ff-only', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.warn(
-                _("Failed to fast forward from {remote}")
-                    .format(remote=command_context.current_branch.name),
-                None)
+        fetch_all_and_ff(context, result, context.parsed_config.remote_name)
 
     return result
 
@@ -1549,26 +1528,11 @@ def discontinue_version(context: Context):
 
         push_command.append(base_branch_ref.name + ':' + 'refs/heads/' + base_branch_ref.short_name)
         push_command.append('--force-with-lease=refs/tags/' + discontinuation_tag_name + ':')
-        push_command.append(release_branch.obj_name + ':' + 'refs/tags/' + discontinuation_tag_name)
+        push_command.append(repotools.ref_target(release_branch) + ':' + 'refs/tags/' + discontinuation_tag_name)
 
         git_or_fail(clone_context, result, push_command)
 
-        # attempt a fast forward pull
-        proc = repotools.git(context.repo, 'pull', '--ff-only', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.warn(
-                _("Failed to fast forward from {remote}")
-                    .format(remote=context.parsed_config.remote_name),
-                None)
-
-        proc = repotools.git(context.repo, 'pull', '--ff-only', '--tags', context.parsed_config.remote_name)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
-            result.warn(
-                _("Failed to fast forward from {remote}")
-                    .format(remote=context.parsed_config.remote_name),
-                None)
+        fetch_all_and_ff(context, result, context.parsed_config.remote_name)
 
     return result
 

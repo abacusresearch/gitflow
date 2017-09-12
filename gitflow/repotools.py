@@ -133,7 +133,7 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
     env = os.environ.copy()
     env["LANGUAGE"] = "C"
     env["LC_ALL"] = "C"
-    if context.verbose >= const.TRACE_VERBOSITY:
+    if context.verbose >= const.ERROR_VERBOSITY:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
@@ -229,18 +229,17 @@ def git_version(context: RepoContext):
     return version_match.group(1)
 
 
-def git_get_remote(context: RepoContext, remote_name: str):
+def git_get_remote(context: RepoContext, remote_name: str) -> Remote:
     proc = git(context, 'remote', 'get-url', remote_name)
     out, err = proc.communicate()
 
     if proc.returncode == os.EX_OK:
         lines = out.decode("utf-8").splitlines()
         if len(lines) == 1:
-            remote_name = Remote()
-            remote_name.name = remote_name
-            remote_name.url = lines[0]
-            return remote_name
-    return None
+            remote = Remote()
+            remote.name = remote_name
+            remote.url = lines[0]
+            return remote
 
 
 class BranchSelection(Enum):
