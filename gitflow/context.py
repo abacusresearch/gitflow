@@ -193,7 +193,8 @@ class Context(object):
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)
 
-        remote_prefix = repotools.create_ref_name('refs/remotes/', context.config.remote_name)
+        remote_prefix = repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)
+
         context.release_base_branch_matcher = VersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             None,
