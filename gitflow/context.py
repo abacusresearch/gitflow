@@ -131,7 +131,7 @@ class Context(object):
             if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
                 result_out.fail(os.EX_UNAVAILABLE,
                                 _("git {required_version} or newer required, got {actual_version}.")
-                                .format(required_version=repr(const.MIN_GIT_VERSION, actual_version=repr(git_version))),
+                                .format(required_version=repr(const.MIN_GIT_VERSION), actual_version=repr(git_version)),
                                 None
                                 )
 
@@ -182,9 +182,9 @@ class Context(object):
         if qualifiers != sorted(qualifiers):
             result_out.fail(
                 os.EX_DATAERR,
-                "Configuration failed.",
-                "Pre-release qualifiers are not specified in ascending order: "
-                + str(sorted(qualifiers)))
+                _("Configuration failed."),
+                _("Pre-release qualifiers are not specified in ascending order.")
+            )
         context.config.version_config = VersionConfig()
         context.config.version_config.qualifiers = qualifiers
 
