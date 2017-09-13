@@ -11,11 +11,21 @@ CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
 CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
+
+CONFIG_RELEASE_BRANCH_PREFIX = 'releaseBranchPrefix'
 CONFIG_RELEASE_BRANCH_PATTERN = 'releaseBranchPattern'
+
 CONFIG_WORK_BRANCH_PATTERN = 'workBranchPattern'
+
+CONFIG_VERSION_TAG_PREFIX = 'versionTagPrefix'
 CONFIG_VERSION_TAG_PATTERN = 'versionTagPattern'
-CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
+
+CONFIG_SEQUENTIAL_VERSION_TAG_PREFIX = 'sequentialVersionTagPrefix'
 CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN = 'sequentialVersionTagPattern'
+
+CONFIG_DISCONTINUATION_TAG_PREFIX = 'discontinuationTagPrefix'
+CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
+
 CONFIG_PRE_RELEASE_VERSION_QUALIFIERS = 'preReleaseVersionQualifiers'
 CONFIG_INITIAL_VERSION = 'initialVersion'
 
@@ -24,19 +34,24 @@ DEFAULT_PROJECT_PROPERTY_FILE = 'project.properties'
 
 DEFAULT_RELEASE_BRANCH_BASE = "master"
 
+DEFAULT_RELEASE_BRANCH_PREFIX = 'release/'
 DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
+
+DEFAULT_VERSION_TAG_PREFIX = 'version/'
 DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
                               r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                               r'(\.(?P<prerelease_version>\d+))?)?'
 
+DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX = 'sequential_version/'
+DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN = r'(?P<unique_code>\d+)'
+
+DEFAULT_DISCONTINUATION_TAG_PREFIX = 'discontinued/'
 DEFAULT_DISCONTINUATION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)(?:\.(?P<patch>\d+)' \
                                       r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                                       r'(\.(?P<prerelease_version>\d+))?)?)?'
-
-DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN = r'(?P<unique_code>\d+)'
 
 TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
                              "[-<prerelease_type:(a-zA-Z)(a-zA-Z0-9)*>.<prerelease_version:uint>]" \

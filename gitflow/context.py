@@ -203,7 +203,9 @@ class Context(object):
 
         context.release_branch_matcher = VersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
-            'release/',
+            config.get(
+                const.CONFIG_RELEASE_BRANCH_PREFIX,
+                const.DEFAULT_RELEASE_BRANCH_PREFIX),
             config.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
@@ -219,7 +221,9 @@ class Context(object):
 
         context.version_tag_matcher = VersionMatcher(
             [const.LOCAL_TAG_PREFIX],
-            'version/',
+            config.get(
+                const.CONFIG_VERSION_TAG_PREFIX,
+                const.DEFAULT_VERSION_TAG_PREFIX),
             config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
                 const.DEFAULT_VERSION_TAG_PATTERN),
@@ -227,7 +231,9 @@ class Context(object):
 
         context.discontinuation_tag_matcher = VersionMatcher(
             [const.LOCAL_TAG_PREFIX],
-            'discontinued/',
+            config.get(
+                const.CONFIG_DISCONTINUATION_TAG_PREFIX,
+                const.DEFAULT_DISCONTINUATION_TAG_PREFIX),
             config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
@@ -235,7 +241,9 @@ class Context(object):
 
         context.sequential_version_tag_matcher = VersionMatcher(
             [const.LOCAL_TAG_PREFIX],
-            'sequential_version/',
+            config.get(
+                const.CONFIG_SEQUENTIAL_VERSION_TAG_PREFIX,
+                const.DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX),
             config.get(
                 const.CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN,
                 const.DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN),
