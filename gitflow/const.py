@@ -26,7 +26,7 @@ CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN = 'sequentialVersionTagPattern'
 CONFIG_DISCONTINUATION_TAG_PREFIX = 'discontinuationTagPrefix'
 CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 
-CONFIG_PRE_RELEASE_VERSION_QUALIFIERS = 'preReleaseVersionQualifiers'
+CONFIG_PRE_RELEASE_QUALIFIERS = 'preReleaseVersionQualifiers'
 CONFIG_INITIAL_VERSION = 'initialVersion'
 
 DEFAULT_CONFIG_FILE = 'gitflow.properties'

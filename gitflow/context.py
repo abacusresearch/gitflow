@@ -175,7 +175,7 @@ class Context(object):
 
         # version config
 
-        qualifiers = config.get(const.CONFIG_PRE_RELEASE_VERSION_QUALIFIERS)
+        qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:
             qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
         qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
