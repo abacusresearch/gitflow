@@ -127,13 +127,13 @@ class Context(object):
             context.__repo.dir = context.root
             context.__repo.verbose = context.verbose
 
-            git_version = repotools.git_version(context.__repo)
-            if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
-                result_out.fail(os.EX_UNAVAILABLE,
-                                _("git {required_version} or newer required, got {actual_version}.")
-                                .format(required_version=repr(const.MIN_GIT_VERSION), actual_version=repr(git_version)),
-                                None
-                                )
+            # git_version = repotools.git_version(context.__repo)
+            # if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
+            #     result_out.fail(os.EX_UNAVAILABLE,
+            #                     _("git {required_version} or newer required, got {actual_version}.")
+            #                     .format(required_version=repr(const.MIN_GIT_VERSION), actual_version=repr(git_version)),
+            #                     None
+            #                     )
 
             root = repotools.git_rev_parse(context.__repo, '--show-toplevel')
             # None when invalid or bare
