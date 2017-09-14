@@ -223,7 +223,7 @@ def git_version(context: RepoContext):
     line = git_for_line(context, '--version')
     if line is None:
         return None
-    version_match = re.fullmatch(r'(?:(?:git|version|\s+)+?\s+)?(\d+(?:\.\d+)*[a-zA-Z0-9.+\-]*)\s*', line)
+    version_match = re.fullmatch(r'(?:(?:git|version|\s+)+?\s+)?(\d+\.\d+\.\d+).*', line)
     if version_match is None:
         return None
     return version_match.group(1)
