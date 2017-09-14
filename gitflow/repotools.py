@@ -14,6 +14,7 @@ class RepoContext(object):
     dir = '.'
     tags = None  # dict
     verbose = False  # TODO use parent context
+    use_root_dir_arg = False
 
 
 class Remote(object):
@@ -120,9 +121,10 @@ def create_ref_name(*strings: str):
 
 def git(context: RepoContext, *args) -> subprocess.Popen:
     command = [context.git]
-    if context.dir is not None:
+    if context.use_root_dir_arg:
         command.extend(['-C', context.dir])
     command.extend(args)
+
     for index, arg in enumerate(command):
         if isinstance(arg, Ref):
             command[index] = arg.name
@@ -137,18 +139,23 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
+                                cwd=context.dir if not context.use_root_dir_arg else None,
                                 env=env)
     else:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
+                                cwd=context.dir if not context.use_root_dir_arg else None,
                                 env=env)
 
 
 def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
-    command = [context.git, '-C', context.dir]
+    command = [context.git]
+    if context.use_root_dir_arg:
+        command.extend(['-C', context.dir])
     command.extend(args)
+
     for index, arg in enumerate(command):
         if isinstance(arg, Ref):
             command[index] = arg.name
@@ -156,7 +163,8 @@ def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
     if context.verbose >= const.TRACE_VERBOSITY:
         print(' '.join(shlex.quote(token) for token in command))
 
-    return subprocess.Popen(args=command)
+    return subprocess.Popen(args=command,
+                            cwd=context.dir if not context.use_root_dir_arg else None)
 
 
 def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, branch: Union[Ref, str] = None):
