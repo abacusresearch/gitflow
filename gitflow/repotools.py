@@ -41,9 +41,13 @@ class Object(object):
     def __repr__(self):
         if isinstance(self, Ref):
             target = self.target
-            return ref_name(self) + ' => ' + (ref_name(target) if target != self else target.obj_name)
+            if target != self and isinstance(target, Ref):
+                target_name = ref_name(target)
+            else:
+                target_name = ref_target(target)
+            return ref_name(self) + ' => ' + target_name
         else:
-            return ref_name(self)
+            return self.obj_name
 
     def __str__(self):
         return self.__repr__()
@@ -91,7 +95,7 @@ class Ref(Object):
         return not self.__eq__(other)
 
 
-def ref_target(ref: Union[Object, str, list] or Object):
+def ref_target(ref: Union[Object, str, list]):
     if isinstance(ref, str):
         return ref
     elif isinstance(ref, Ref):
@@ -104,7 +108,7 @@ def ref_target(ref: Union[Object, str, list] or Object):
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
 
-def ref_name(ref: Union[Ref, str, list] or Object):
+def ref_name(ref: Union[Ref, str, list]):
     if isinstance(ref, str):
         return ref
     elif isinstance(ref, Ref):
