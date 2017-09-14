@@ -2,6 +2,7 @@ import atexit
 import os
 import re
 import shutil
+from enum import Enum
 
 import semver
 
@@ -11,39 +12,43 @@ from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
 
 
-class Config(object):
-    property_file: str = None
+class VersioningScheme(Enum):
+    # SemVer tags
+    SEMVER = 1,
+    # SemVer tags, sequence number tags
+    SEMVER_WITH_SEQ = 2,
+    # SemVer tags tied to sequence number tags in strictly ascending order
+    SEMVER_WITH_TIED_SEQ = 3,
 
+
+class Config(object):
+    # versioning scheme
+    versioning_scheme: VersioningScheme = VersioningScheme.SEMVER_WITH_TIED_SEQ
+    commit_version_property = False
+    commit_sequential_version_property = True
+
+    # project properties
+    property_file: str = None
+    version_property_name: str = None
+    sequential_version_property_name: str = None
+
+    # validation mode
     strict_mode = True
 
+    # version
+    version_config: VersionConfig = None
+
+    # repo
     remote_name = "origin"
 
     release_branch_base = None
-    dev_branch_types = ['feature', 'fix', 'chore', 'issue']
-    prod_branch_types = ['fix', 'chore', 'issue']
+    dev_branch_types = ['feature', 'integration',
+                        'fix', 'chore', 'doc', 'issue']
 
-    release_base_branch_matcher: VersionMatcher = None
-    release_branch_matcher: VersionMatcher = None
-    work_branch_matcher: VersionMatcher = None
+    prod_branch_types = ['fix', 'chore', 'doc', 'issue']
 
-    version_tag_matcher: VersionMatcher = None
-    discontinuation_tag_matcher: VersionMatcher = None
-    sequential_version_tag_matcher: VersionMatcher = None
+    # hard config
 
-    version_config: VersionConfig = None
-
-    # Enables a sequential version counter across all release branches, effectively serializing the deployment order.
-    # When enabled, any newly created release branch will cause discontinuation of its predecessors.
-    # This feature is recommended in case one of these cases apply:
-    # 1. The projects target platform only supports integer versions (such as the Android version code)
-    # 2. Artifacts shall contain an opaque version, allowing promotion of artifacts from alpha to a stable/GA release
-    # without rebuilding for according increments within the SemVer pre-release version.
-    sequential_versioning = True
-    commit_version_property = False
-    commit_sequential_version_property = True
-    # When enabled, a branch will be discontinued as soon as a successor branch receives a sequential version.
-    # The only exception in this case are pre-release type increments related to an existing sequential version number.
-    tie_sequential_version_to_semantic_version = True
     # TODO checks on merge base
     allow_shared_release_branch_base = False
     # TODO distinction of commit-based and purely tag based increments
@@ -54,12 +59,23 @@ class Config(object):
     push_to_local = False
     pull_after_bump = True
 
+    # properties
+    @property
+    def sequential_versioning(self):
+        return self.versioning_scheme in (VersioningScheme.SEMVER_WITH_SEQ,
+                                          VersioningScheme.SEMVER_WITH_TIED_SEQ)
+
+    @property
+    def tie_sequential_version_to_semantic_version(self):
+        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_TIED_SEQ
+
 
 class Context(object):
-    args = None
     config: Config = None
-    parsed_config: Config = None
     __repo = None
+
+    # args
+    args = None
 
     root = None
     batch = False
@@ -68,6 +84,16 @@ class Context(object):
     verbose = False
     pretty = False
 
+    # matchers
+    release_base_branch_matcher: VersionMatcher = None
+    release_branch_matcher: VersionMatcher = None
+    work_branch_matcher: VersionMatcher = None
+
+    version_tag_matcher: VersionMatcher = None
+    discontinuation_tag_matcher: VersionMatcher = None
+    sequential_version_tag_matcher: VersionMatcher = None
+
+    # resources
     temp_dirs: list = None
     clones: list = None
 
@@ -77,7 +103,7 @@ class Context(object):
     @staticmethod
     def create(args: dict, result_out: Result) -> 'Context':
         context = Context()
-        context.parsed_config: Config = Config()
+        context.config: Config = Config()
 
         if args is not None:
             context.args = args
@@ -101,13 +127,13 @@ class Context(object):
             context.__repo.dir = context.root
             context.__repo.verbose = context.verbose
 
-            git_version = repotools.git_version(context.__repo)
-            if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
-                result_out.fail(os.EX_UNAVAILABLE,
-                                _("git {required_version} or newer required, got {actual_version}.")
-                                .format(required_version=repr(const.MIN_GIT_VERSION, actual_version=repr(git_version))),
-                                None
-                                )
+            # git_version = repotools.git_version(context.__repo)
+            # if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
+            #     result_out.fail(os.EX_UNAVAILABLE,
+            #                     _("git {required_version} or newer required, got {actual_version}.")
+            #                     .format(required_version=repr(const.MIN_GIT_VERSION), actual_version=repr(git_version)),
+            #                     None
+            #                     )
 
             root = repotools.git_rev_parse(context.__repo, '--show-toplevel')
             # None when invalid or bare
@@ -133,78 +159,92 @@ class Context(object):
                                 None
                                 )
 
-            context.config = filesystem.JavaPropertyFile(gitflow_config_file).load()
+            config = filesystem.JavaPropertyFile(gitflow_config_file).load()
         else:
-            context.config = dict()
+            config = dict()
 
         # project properties config
 
-        context.parsed_config.property_file = context.config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
-        if context.parsed_config.property_file is not None:
-            context.parsed_config.property_file = os.path.join(context.root, context.parsed_config.property_file)
+        context.config.property_file = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
+        if context.config.property_file is not None:
+            context.config.property_file = os.path.join(context.root, context.config.property_file)
+
+        context.config.version_property_name = config.get(const.CONFIG_VERSION_PROPERTY_NAME)
+        context.config.sequential_version_property_name = config.get(
+            const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
 
         # version config
 
-        qualifiers = context.config.get(const.CONFIG_PRE_RELEASE_VERSION_QUALIFIERS)
+        qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:
             qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
         qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
         if qualifiers != sorted(qualifiers):
             result_out.fail(
                 os.EX_DATAERR,
-                "Configuration failed.",
-                "Pre-release qualifiers are not specified in ascending order: "
-                + str(sorted(qualifiers)))
-        context.parsed_config.version_config = VersionConfig()
-        context.parsed_config.version_config.qualifiers = qualifiers
+                _("Configuration failed."),
+                _("Pre-release qualifiers are not specified in ascending order.")
+            )
+        context.config.version_config = VersionConfig()
+        context.config.version_config.qualifiers = qualifiers
 
         # branch config
 
-        context.parsed_config.release_branch_base = context.config.get(const.CONFIG_RELEASE_BRANCH_BASE,
-                                                                       const.DEFAULT_RELEASE_BRANCH_BASE)
+        context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
+                                                        const.DEFAULT_RELEASE_BRANCH_BASE)
 
-        context.parsed_config.release_base_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + context.parsed_config.remote_name + '/'],
+        remote_prefix = repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)
+
+        context.release_base_branch_matcher = VersionMatcher(
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             None,
-            re.escape(context.parsed_config.release_branch_base),
+            re.escape(context.config.release_branch_base),
         )
 
-        context.parsed_config.release_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + context.parsed_config.remote_name + '/'],
-            'release/',
-            context.config.get(
+        context.release_branch_matcher = VersionMatcher(
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
+            config.get(
+                const.CONFIG_RELEASE_BRANCH_PREFIX,
+                const.DEFAULT_RELEASE_BRANCH_PREFIX),
+            config.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
         )
 
-        context.parsed_config.work_branch_matcher = VersionMatcher(
-            ['refs/heads/', 'refs/remotes/' + context.parsed_config.remote_name + '/'],
+        context.work_branch_matcher = VersionMatcher(
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
-            context.config.get(
+            config.get(
                 const.CONFIG_WORK_BRANCH_PATTERN,
                 const.DEFAULT_WORK_BRANCH_PATTERN),
         )
 
-        context.parsed_config.version_tag_matcher = VersionMatcher(
-            ['refs/tags/'],
-            'version/',
-            context.config.get(
+        context.version_tag_matcher = VersionMatcher(
+            [const.LOCAL_TAG_PREFIX],
+            config.get(
+                const.CONFIG_VERSION_TAG_PREFIX,
+                const.DEFAULT_VERSION_TAG_PREFIX),
+            config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
                 const.DEFAULT_VERSION_TAG_PATTERN),
         )
 
-        context.parsed_config.discontinuation_tag_matcher = VersionMatcher(
-            ['refs/tags/'],
-            'discontinued/',
-            context.config.get(
+        context.discontinuation_tag_matcher = VersionMatcher(
+            [const.LOCAL_TAG_PREFIX],
+            config.get(
+                const.CONFIG_DISCONTINUATION_TAG_PREFIX,
+                const.DEFAULT_DISCONTINUATION_TAG_PREFIX),
+            config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
         )
 
-        context.parsed_config.sequential_version_tag_matcher = VersionMatcher(
-            ['refs/tags/'],
-            'sequential_version/',
-            context.config.get(
+        context.sequential_version_tag_matcher = VersionMatcher(
+            [const.LOCAL_TAG_PREFIX],
+            config.get(
+                const.CONFIG_SEQUENTIAL_VERSION_TAG_PREFIX,
+                const.DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX),
+            config.get(
                 const.CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN,
                 const.DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN),
             '{unique_code}')
@@ -223,13 +263,15 @@ class Context(object):
 
     def get_release_branches(self):
         release_branches = list(filter(
-            lambda branch_ref: self.parsed_config.release_branch_matcher.format(
+            lambda branch_ref: self.release_branch_matcher.format(
                 branch_ref.name) is not None,
-            repotools.git_list_refs(self.repo, 'refs/remotes/' + self.parsed_config.remote_name, 'refs/heads/')
+            repotools.git_list_refs(self.repo,
+                                    repotools.create_ref_name(const.REMOTES_PREFIX, self.config.remote_name),
+                                    const.LOCAL_BRANCH_PREFIX)
         ))
         release_branches.sort(
             reverse=True,
-            key=self.parsed_config.release_branch_matcher.key_func
+            key=self.release_branch_matcher.key_func
         )
         return release_branches
 

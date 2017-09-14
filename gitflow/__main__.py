@@ -98,7 +98,7 @@ def cmd_bump_to_release(context):
 
 def cmd_bump_to(context):
     return procedures.create_version(context,
-                                     version.version_set(context.parsed_config.version, context.args['<version>']))
+                                     version.version_set(context.config.version, context.args['<version>']))
 
 
 def cmd_discontinue(context):

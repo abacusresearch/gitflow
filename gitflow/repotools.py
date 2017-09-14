@@ -223,7 +223,7 @@ def git_version(context: RepoContext):
     line = git_for_line(context, '--version')
     if line is None:
         return None
-    version_match = re.fullmatch(r'(?:(?:git|version|\s+)+?\s+)?(\d+(?:\.\d+)*[a-zA-Z0-9.+\-]*)\s*', line)
+    version_match = re.fullmatch(r'(?:(?:git|version|\s+)+?\s+)?(\d+\.\d+\.\d+).*', line)
     if version_match is None:
         return None
     return version_match.group(1)
@@ -363,7 +363,7 @@ def git_list_remote_branches(context: RepoContext, remote: str) -> list:
     """
     :rtype: list of Ref
     """
-    return git_list_refs(context, const.REMOTES_PREFIX + remote + '/')
+    return git_list_refs(context, create_ref_name(const.REMOTES_PREFIX, remote))
 
 
 def git_list_branches(context: RepoContext) -> list:
@@ -376,7 +376,7 @@ def git_list_branches(context: RepoContext) -> list:
 def git_get_tag_map(context: RepoContext):
     if context.tags is None:
         context.tags = dict()
-        for tag_ref in list(git_list_refs(context, 'refs/tags/')):
+        for tag_ref in list(git_list_refs(context, const.LOCAL_TAG_PREFIX)):
             tagged_commit = tag_ref.target.obj_name
             commit_tags = context.tags.get(tagged_commit)
             if commit_tags is None:
