@@ -59,35 +59,6 @@ class BranchInfo(object):
     upstream_class: const.BranchClass = None
 
 
-def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
-        -> [repotools.Ref, const.BranchClass]:
-    if branch_info.local is not None and branch_info.upstream is not None:
-        if branch_info.local_class != branch_info.upstream_class:
-            result_out.error(os.EX_DATAERR,
-                             _("Local and upstream branch have a mismatching branch class."),
-                             None)
-        if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
-            result_out.error(os.EX_DATAERR,
-                             _("Local and upstream branch have a mismatching short name."),
-                             None)
-
-    candidate = None
-    candidate_class = None
-    if selection == BranchSelection.BRANCH_PREFER_LOCAL:
-        candidate = branch_info.local or branch_info.upstream
-        candidate_class = branch_info.local_class or branch_info.upstream_class
-    elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
-        candidate = branch_info.local
-        candidate_class = branch_info.local_class
-    elif selection == BranchSelection.BRANCH_PREFER_REMOTE:
-        candidate = branch_info.upstream or branch_info.local
-        candidate_class = branch_info.upstream_class or branch_info.local_class
-    elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
-        candidate = branch_info.upstream
-        candidate_class = branch_info.upstream_class
-    return candidate, candidate_class
-
-
 class CommandContext(object):
     object_arg: str = None
     context: Context = None
@@ -129,6 +100,35 @@ class CommandContext(object):
 
     def abort(self):
         return self.result.abort()
+
+
+def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
+        -> [repotools.Ref, const.BranchClass]:
+    if branch_info.local is not None and branch_info.upstream is not None:
+        if branch_info.local_class != branch_info.upstream_class:
+            result_out.error(os.EX_DATAERR,
+                             _("Local and upstream branch have a mismatching branch class."),
+                             None)
+        if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
+            result_out.error(os.EX_DATAERR,
+                             _("Local and upstream branch have a mismatching short name."),
+                             None)
+
+    candidate = None
+    candidate_class = None
+    if selection == BranchSelection.BRANCH_PREFER_LOCAL:
+        candidate = branch_info.local or branch_info.upstream
+        candidate_class = branch_info.local_class or branch_info.upstream_class
+    elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
+        candidate = branch_info.local
+        candidate_class = branch_info.local_class
+    elif selection == BranchSelection.BRANCH_PREFER_REMOTE:
+        candidate = branch_info.upstream or branch_info.local
+        candidate_class = branch_info.upstream_class or branch_info.local_class
+    elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
+        candidate = branch_info.upstream
+        candidate_class = branch_info.upstream_class
+    return candidate, candidate_class
 
 
 def git(context: Context, command: list) -> int:
