@@ -56,6 +56,13 @@ import sys
 
 import docopt
 
+import gitflow.procedures.begin
+import gitflow.procedures.build
+import gitflow.procedures.create_version
+import gitflow.procedures.discontinue_version
+import gitflow.procedures.end
+import gitflow.procedures.log
+import gitflow.procedures.status
 from gitflow import cli, procedures, repotools, _, hooks, filesystem
 from gitflow import const
 from gitflow import version
@@ -73,56 +80,56 @@ ENABLE_PROFILER = False
 # mapped by cmd_<name>
 
 def cmd_bump_major(context):
-    return procedures.create_version(context, version.version_bump_major)
+    return gitflow.procedures.create_version.call(context, version.version_bump_major)
 
 
 def cmd_bump_minor(context):
-    return procedures.create_version(context, version.version_bump_minor)
+    return gitflow.procedures.create_version.call(context, version.version_bump_minor)
 
 
 def cmd_bump_patch(context):
-    return procedures.create_version(context, version.version_bump_patch)
+    return gitflow.procedures.create_version.call(context, version.version_bump_patch)
 
 
 def cmd_bump_prerelease_type(context):
-    return procedures.create_version(context, version.version_bump_qualifier)
+    return gitflow.procedures.create_version.call(context, version.version_bump_qualifier)
 
 
 def cmd_bump_prerelease(context):
-    return procedures.create_version(context, version.version_bump_prerelease)
+    return gitflow.procedures.create_version.call(context, version.version_bump_prerelease)
 
 
 def cmd_bump_to_release(context):
-    return procedures.create_version(context, version.version_bump_to_release)
+    return gitflow.procedures.create_version.call(context, version.version_bump_to_release)
 
 
 def cmd_bump_to(context):
-    return procedures.create_version(context,
-                                     version.version_set(context.config.version, context.args['<version>']))
+    return gitflow.procedures.create_version.call(context,
+                                                  version.version_set(context.config.version, context.args['<version>']))
 
 
 def cmd_discontinue(context):
-    return procedures.discontinue_version(context)
+    return gitflow.procedures.discontinue_version.call(context)
 
 
 def cmd_start(context):
-    return procedures.begin(context)
+    return gitflow.procedures.begin.call(context)
 
 
 def cmd_finish(context):
-    return procedures.end(context)
+    return gitflow.procedures.end.call(context)
 
 
 def cmd_log(context):
-    return procedures.log(context)
+    return gitflow.procedures.log.call(context)
 
 
 def cmd_status(context):
-    return procedures.status(context)
+    return gitflow.procedures.status.call(context)
 
 
 def cmd_build(context):
-    return procedures.build(context)
+    return gitflow.procedures.build.call(context)
 
 
 def cmd_drop_cache(context):
