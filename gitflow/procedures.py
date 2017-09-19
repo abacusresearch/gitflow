@@ -93,7 +93,7 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
     return candidate, candidate_class
 
 
-class CommandContext(object):
+class CommandContext(Result):
     object_arg: str = None
     context: Context = None
 
@@ -110,6 +110,7 @@ class CommandContext(object):
     downstreams: dict = None
 
     def __init__(self):
+        super(CommandContext, self).__init__()
         self.branch_info_dict = dict()
 
 
@@ -507,9 +508,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
     return result
 
 
-def get_command_context(context, object_arg: str) -> Result:
-    result = Result()
-
+def get_command_context(context, object_arg: str) -> CommandContext:
     command_context = CommandContext()
 
     command_context.object_arg = object_arg
@@ -523,7 +522,7 @@ def get_command_context(context, object_arg: str) -> Result:
     affected_main_branches = None
     if object_arg is None:
         if current_branch is None:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Operation failed."),
                         _("No object specified and not on a branch (may be an empty repository).")
                         )
@@ -543,7 +542,7 @@ def get_command_context(context, object_arg: str) -> Result:
                 selected_ref.obj_type = 'commit'
                 selected_ref.obj_name = commit
     if commit is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Failed to resolve object {object}.")
                     .format(object=repr(object_arg)),
                     _("No corresponding commit found.")
@@ -568,13 +567,13 @@ def get_command_context(context, object_arg: str) -> Result:
             selected_ref = affected_main_branches[0]
     if selected_ref is None:
         if len(affected_main_branches) == 0:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Failed to resolve target branch"),
                         _("Failed to resolve branch containing object: {object}")
                         .format(object=repr(object_arg))
                         )
         else:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Failed to resolve unique release branch for object: {object}")
                         .format(object=repr(object_arg)),
                         _("Multiple different branches contain this commit:\n"
@@ -582,7 +581,7 @@ def get_command_context(context, object_arg: str) -> Result:
                         .format(listing='\n'.join(' - ' + repr(ref.name) for ref in affected_main_branches))
                         )
     if selected_ref is None or commit is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Failed to resolve ref."),
                     _("{object} could not be resolved.")
                     .format(object=repr(object_arg)))
@@ -602,9 +601,9 @@ def get_command_context(context, object_arg: str) -> Result:
     command_context.affected_main_branches = affected_main_branches
     command_context.current_branch = current_branch
 
-    result.value = command_context
+    command_context.value = command_context
 
-    return result
+    return command_context
 
 
 def create_version_branch(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]):
@@ -1284,8 +1283,7 @@ def create_commit(clone_context, result, commit_info: CommitInfo):
     return object_to_tag
 
 
-def check_requirements(result_out: Result,
-                       command_context: CommandContext,
+def check_requirements(command_context: CommandContext,
                        ref: repotools.Ref,
                        modifiable: bool,
                        with_upstream: bool,
@@ -1296,7 +1294,7 @@ def check_requirements(result_out: Result,
         # check, whether the  selected branch/commit is on remote
 
         if with_upstream and command_context.selected_branch.upstream is None:
-            result_out.error(os.EX_USAGE,
+            command_context.error(os.EX_USAGE,
                              fail_message,
                              _("{branch} does not have an upstream branch.")
                              .format(branch=repr(ref.name)),
@@ -1314,14 +1312,14 @@ def check_requirements(result_out: Result,
             push_merge_base = repotools.git_merge_base(command_context.context.repo, command_context.selected_commit,
                                                        command_context.selected_branch.upstream)
             if push_merge_base is None:
-                result_out.error(os.EX_USAGE,
+                command_context.error(os.EX_USAGE,
                                  fail_message,
                                  _("{branch} does not have a common base with its upstream branch: {remote_branch}")
                                  .format(branch=repr(ref.name),
                                          remote_branch=repr(command_context.selected_branch.upstream.name)),
                                  throw)
             elif push_merge_base != command_context.selected_commit:
-                result_out.error(os.EX_USAGE,
+                command_context.error(os.EX_USAGE,
                                  fail_message,
                                  _("{branch} is not in sync with its upstream branch.\n"
                                    "Push your changes and try again.")
@@ -1332,7 +1330,7 @@ def check_requirements(result_out: Result,
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context,
                                                                               ref)
     if modifiable and len(discontinuation_tags):
-        result_out.error(os.EX_USAGE,
+        command_context.error(os.EX_USAGE,
                          fail_message,
                          _("{branch} is discontinued.")
                          .format(branch=repr(ref.name)),
@@ -1340,16 +1338,12 @@ def check_requirements(result_out: Result,
 
 
 def create_version(context: Context, operation: Callable[[VersionConfig, str], str]):
-    result = Result()
-    context_result = get_command_context(
+    command_context = get_command_context(
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None)
     )
-    result.add_subresult(context_result)
-    command_context = context_result.value
 
-    check_requirements(result_out=result,
-                       command_context=command_context,
+    check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
@@ -1362,7 +1356,7 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
             or operation == version.version_bump_minor:
 
         tag_result = create_version_branch(command_context, operation)
-        result.add_subresult(tag_result)
+        command_context.add_subresult(tag_result)
 
     elif operation == version.version_bump_patch \
             or operation == version.version_bump_qualifier \
@@ -1370,15 +1364,15 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
             or operation == version.version_bump_to_release:
 
         tag_result = create_version_tag(command_context, operation)
-        result.add_subresult(tag_result)
+        command_context.add_subresult(tag_result)
 
     elif isinstance(operation, version.version_set):
 
         version_result = operation(context.config.version_config, None)
-        result.add_subresult(version_result)
+        command_context.add_subresult(version_result)
         new_version = version_result.value
         if new_version is None:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Illegal argument."),
                         _("Failed to parse version.")
                         )
@@ -1389,33 +1383,29 @@ def create_version(context: Context, operation: Callable[[VersionConfig, str], s
         release_branch = repotools.get_branch_by_name(context.repo, branch_name, BranchSelection.BRANCH_PREFER_LOCAL)
         if release_branch is None:
             tag_result = create_version_branch(command_context, operation)
-            result.add_subresult(tag_result)
+            command_context.add_subresult(tag_result)
         else:
             selected_ref = release_branch
             tag_result = create_version_tag(command_context, operation)
-            result.add_subresult(tag_result)
+            command_context.add_subresult(tag_result)
 
-    if not result.has_errors() \
+    if not command_context.has_errors() \
             and context.config.pull_after_bump \
             and not context.config.push_to_local:
-        fetch_all_and_ff(context, result, context.config.remote_name)
+        fetch_all_and_ff(context, command_context, context.config.remote_name)
 
-    return result
+    return command_context
 
 
 def discontinue_version(context: Context):
-    result = Result()
-
     object_arg = context.args['<object>']
 
     reintegrate = cli.get_boolean_opt(context.args, '--reintegrate')
 
-    context_result = get_command_context(
+    command_context = get_command_context(
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None)
     )
-    result.add_subresult(context_result)
-    command_context: CommandContext = context_result.value
 
     base_branch_ref = repotools.get_branch_by_name(context.repo, context.config.release_branch_base,
                                                    BranchSelection.BRANCH_PREFER_LOCAL)
@@ -1424,8 +1414,7 @@ def discontinue_version(context: Context):
 
     release_branch_info = get_branch_info(command_context, release_branch)
 
-    check_requirements(result_out=result,
-                       command_context=command_context,
+    check_requirements(command_context=command_context,
                        ref=release_branch,
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
@@ -1434,7 +1423,7 @@ def discontinue_version(context: Context):
                        )
 
     if release_branch is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
                     _("Failed to resolve an object for token {object}.")
                     .format(object=repr(object_arg))
@@ -1443,7 +1432,7 @@ def discontinue_version(context: Context):
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, release_branch)
 
     if discontinuation_tag_name is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
                     _("{branch} cannot be discontinued.")
                     .format(branch=repr(release_branch.name))
@@ -1456,7 +1445,7 @@ def discontinue_version(context: Context):
         pass
 
     if len(discontinuation_tags):
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Branch discontinuation failed."),
                     _("The branch {branch} is already discontinued.")
                     .format(branch=repr(release_branch.name))
@@ -1473,32 +1462,32 @@ def discontinue_version(context: Context):
                 .format(branch=repr(release_branch.short_name),
                         base_branch=repr(base_branch_ref.short_name)),
         )
-        result.add_subresult(prompt_result)
-        if result.has_errors():
-            return result
+        command_context.add_subresult(prompt_result)
+        if command_context.has_errors():
+            return command_context
 
         reintegrate = prompt_result.value
 
-    if not result.has_errors():
+    if not command_context.has_errors():
         # run merge on local clone
 
         clone_result = create_shared_clone_repository(context)
-        result.add_subresult(clone_result)
-        if result.has_errors():
-            return result
+        command_context.add_subresult(clone_result)
+        if command_context.has_errors():
+            return command_context
 
         clone_context: Context = clone_result.value
 
         changes = list()
 
         if reintegrate:
-            git_or_fail(clone_context, result,
+            git_or_fail(clone_context, command_context,
                         ['checkout', base_branch_ref.short_name],
                         _("Failed to checkout branch {branch_name}.")
                         .format(branch_name=repr(base_branch_ref.short_name))
                         )
 
-            git_or_fail(clone_context, result,
+            git_or_fail(clone_context, command_context,
                         ['merge', '--no-ff', release_branch_info.upstream.name],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
@@ -1516,9 +1505,9 @@ def discontinue_version(context: Context):
             message=(" - " + (os.linesep + " - ").join([_("Changes to be pushed:")] + changes)),
             prompt=_("Continue?"),
         )
-        result.add_subresult(prompt_result)
-        if result.has_errors() or not prompt_result.value:
-            return result
+        command_context.add_subresult(prompt_result)
+        if command_context.has_errors() or not prompt_result.value:
+            return command_context
 
         push_command = ['push', '--atomic']
         if context.dry_run:
@@ -1532,11 +1521,11 @@ def discontinue_version(context: Context):
         push_command.append(
             repotools.ref_target(release_branch) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name))
 
-        git_or_fail(clone_context, result, push_command)
+        git_or_fail(clone_context, command_context, push_command)
 
-        fetch_all_and_ff(context, result, context.config.remote_name)
+        fetch_all_and_ff(context, command_context, context.config.remote_name)
 
-    return result
+    return command_context
 
 
 class WorkBranch(object):
@@ -1561,16 +1550,12 @@ class WorkBranch(object):
 
 
 def begin(context: Context):
-    result = Result()
-    context_result = get_command_context(
+    command_context = get_command_context(
         context=context,
         object_arg=utils.get_or_default(context.args, '<base-object>', None)
     )
-    result.add_subresult(context_result)
-    command_context: CommandContext = context_result.value
 
-    check_requirements(result_out=result,
-                       command_context=command_context,
+    check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
@@ -1583,7 +1568,7 @@ def begin(context: Context):
     branch_short_name = context.args['<name>']
 
     if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Invalid branch super type: {supertype}.")
                     .format(supertype=repr(branch_supertype)),
                     None)
@@ -1595,33 +1580,33 @@ def begin(context: Context):
     if True:
         work_branch_info = get_branch_info(command_context, work_branch_ref_name)
         if work_branch_info is not None:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("The branch {branch} already exists locally or remotely.")
                         .format(branch=repr(work_branch_name)),
                         None)
 
     allowed_base_branch_class = const.BRANCHING[work_branch_class]
 
-    base_branch, base_branch_class = select_ref(result, command_context.selected_branch,
+    base_branch, base_branch_class = select_ref(command_context, command_context.selected_branch,
                                                 BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
         fixed_base_branch_info = get_branch_info(command_context,
                                                  repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, context.config.release_branch_base))
-        fixed_base_branch, fixed_destination_branch_class = select_ref(result,
+        fixed_base_branch, fixed_destination_branch_class = select_ref(command_context,
                                                                        fixed_base_branch_info,
                                                                        BranchSelection.BRANCH_PREFER_LOCAL)
 
         base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
 
     if allowed_base_branch_class != base_branch_class:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("The branch {branch} is not a valid base for {supertype} branches.")
                     .format(branch=repr(base_branch.name),
                             supertype=repr(branch_supertype)),
                     None)
 
     if base_branch is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Base branch undetermined."),
                     None)
 
@@ -1630,50 +1615,44 @@ def begin(context: Context):
         cli.print("work_branch_name: " + work_branch_name)
         cli.print("base_branch_name: " + base_branch.name)
 
-    if not context.dry_run and not result.has_errors():
+    if not context.dry_run and not command_context.has_errors():
         index_status = git(context, ['diff-index', 'HEAD', '--'])
         if index_status == 1:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Branch creation aborted."),
                         _("You have staged changes in your workspace.\n"
                           "Unstage, commit or stash them and try again."))
         elif index_status != 0:
-            result.fail(os.EX_DATAERR,
+            command_context.fail(os.EX_DATAERR,
                         _("Failed to determine index status."),
                         None)
 
-        git_or_fail(context, result,
+        git_or_fail(context, command_context,
                     ['update-ref', work_branch_ref_name, command_context.selected_commit, ''],
                     _("Failed to create branch {branch_name}.")
                     .format(branch_name=work_branch_name)
                     )
-        git_or_fail(context, result,
+        git_or_fail(context, command_context,
                     ['checkout', work_branch_name],
                     _("Failed to checkout branch {branch_name}.")
                     .format(branch_name=work_branch_name)
                     )
 
-    return result
+    return command_context
 
 
 def end(context: Context):
-    result = Result()
-    context_result = get_command_context(
+    command_context = get_command_context(
         context=context,
         object_arg=utils.get_or_default(context.args, '<work-branch>', None)
     )
-    result.add_subresult(context_result)
-    command_context: CommandContext = context_result.value
 
-    base_context_result = get_command_context(
+    base_command_context = get_command_context(
         context=context,
         object_arg=utils.get_or_default(context.args, '<base-branch>', None)
     )
-    result.add_subresult(base_context_result)
-    base_command_context: CommandContext = base_context_result.value
 
-    check_requirements(result_out=result,
-                       command_context=command_context,
+    check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
@@ -1690,7 +1669,7 @@ def end(context: Context):
 
     if arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None:
         if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Invalid branch super type: {supertype}.")
                         .format(supertype=repr(arg_work_branch.prefix)),
                         None)
@@ -1708,7 +1687,7 @@ def end(context: Context):
         ref_work_branch = None
 
         if command_context.selected_explicitly:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("The ref {branch} does not refer to a work branch.")
                         .format(branch=repr(command_context.selected_ref.name)),
                         None)
@@ -1717,12 +1696,12 @@ def end(context: Context):
 
     work_branch_info = get_branch_info(command_context, work_branch.local_ref_name())
     if work_branch_info is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("The branch {branch} does neither exist locally nor remotely.")
                     .format(branch=repr(work_branch.branch_name())),
                     None)
 
-    work_branch_ref, work_branch_class = select_ref(result,
+    work_branch_ref, work_branch_class = select_ref(command_context,
                                                     work_branch_info,
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
 
@@ -1731,7 +1710,7 @@ def end(context: Context):
     base_branch_info = get_branch_info(base_command_context,
                                        base_command_context.selected_ref)
 
-    base_branch_ref, base_branch_class = select_ref(result,
+    base_branch_ref, base_branch_class = select_ref(command_context,
                                                     base_branch_info,
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
     if not base_command_context.selected_explicitly:
@@ -1739,7 +1718,7 @@ def end(context: Context):
             fixed_base_branch_info = get_branch_info(base_command_context,
                                                      repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                                context.config.release_branch_base))
-            fixed_base_branch, fixed_destination_branch_class = select_ref(result,
+            fixed_base_branch, fixed_destination_branch_class = select_ref(command_context,
                                                                            fixed_base_branch_info,
                                                                            BranchSelection.BRANCH_PREFER_LOCAL)
 
@@ -1761,20 +1740,20 @@ def end(context: Context):
                 if merge_base is not None:
                     base_branch_info = get_branch_info(base_command_context, release_branch_ref)
 
-                    base_branch_ref, base_branch_class = select_ref(result,
+                    base_branch_ref, base_branch_class = select_ref(command_context,
                                                                     base_branch_info,
                                                                     BranchSelection.BRANCH_PREFER_LOCAL)
                     break
 
     if allowed_base_branch_class != base_branch_class:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("The branch {branch} is not a valid base for {supertype} branches.")
                     .format(branch=repr(base_branch_ref.name),
                             supertype=repr(work_branch.prefix)),
                     None)
 
     if base_branch_ref is None:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Base branch undetermined."),
                     None)
 
@@ -1788,29 +1767,29 @@ def end(context: Context):
     if work_branch_ref.obj_name == merge_base:
         cli.print(_("Branch {branch} is already merged.")
                   .format(branch=repr(work_branch_ref.name)))
-        return result
+        return command_context
 
     # check for staged changes
     index_status = git(context, ['diff-index', 'HEAD', '--'])
     if index_status == 1:
-        result.fail(os.EX_USAGE,
+        command_context.fail(os.EX_USAGE,
                     _("Branch creation aborted."),
                     _("You have staged changes in your workspace.\n"
                       "Unstage, commit or stash them and try again."))
     elif index_status != 0:
-        result.fail(os.EX_DATAERR,
+        command_context.fail(os.EX_DATAERR,
                     _("Failed to determine index status."),
                     None)
 
-    if not context.dry_run and not result.has_errors():
+    if not context.dry_run and not command_context.has_errors():
         # run merge
-        git_or_fail(context, result,
+        git_or_fail(context, command_context,
                     ['checkout', base_branch_ref.short_name],
                     _("Failed to checkout branch {branch_name}.")
                     .format(branch_name=repr(base_branch_ref.short_name))
                     )
 
-        git_or_fail(context, result,
+        git_or_fail(context, command_context,
                     ['merge', '--no-ff', work_branch_ref],
                     _("Failed to merge work branch.\n"
                       "Rebase {work_branch} on {base_branch} and try again")
@@ -1818,13 +1797,13 @@ def end(context: Context):
                             base_branch=repr(base_branch_ref.short_name))
                     )
 
-        git_or_fail(context, result,
+        git_or_fail(context, command_context,
                     ['push', context.config.remote_name, base_branch_ref.short_name],
                     _("Failed to push branch {branch_name}.")
                     .format(branch_name=repr(base_branch_ref.short_name))
                     )
 
-    return result
+    return command_context
 
 
 def log(context: Context):
@@ -2055,17 +2034,12 @@ def build(context: Context):
     from urllib import parse
     import zipfile
 
-    result = Result()
-
-    context_result = get_command_context(
+    command_context = get_command_context(
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None)
     )
-    result.add_subresult(context_result)
-    command_context: CommandContext = context_result.value
 
-    check_requirements(result_out=result,
-                       command_context=command_context,
+    check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
@@ -2103,14 +2077,14 @@ def build(context: Context):
 
     repo = repotools.git_export(context.repo, build_repo_path, command_context.selected_ref)
     if repo is None:
-        result.fail(os.EX_IOERR,
+        command_context.fail(os.EX_IOERR,
                     _("Failed to clone {remote}.")
                     .format(remote=repr(remote.url)),
                     None
                     )
 
     download_result = download_file(gradle_dist_url, gradle_dist_archive_path, gradle_dist_hash_sha256)
-    result.add_subresult(download_result)
+    command_context.add_subresult(download_result)
 
     if os.path.exists(gradle_dist_install_path):
         shutil.rmtree(gradle_dist_install_path)
@@ -2144,4 +2118,4 @@ def build(context: Context):
     # print(gradle_process.stderr)
 
 
-    return result
+    return command_context
