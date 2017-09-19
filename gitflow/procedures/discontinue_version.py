@@ -35,19 +35,19 @@ def call(context: Context) -> Result:
 
     if release_branch is None:
         command_context.fail(os.EX_USAGE,
-                    _("Branch discontinuation failed."),
-                    _("Failed to resolve an object for token {object}.")
-                    .format(object=repr(object_arg))
-                    )
+                             _("Branch discontinuation failed."),
+                             _("Failed to resolve an object for token {object}.")
+                             .format(object=repr(object_arg))
+                             )
 
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, release_branch)
 
     if discontinuation_tag_name is None:
         command_context.fail(os.EX_USAGE,
-                    _("Branch discontinuation failed."),
-                    _("{branch} cannot be discontinued.")
-                    .format(branch=repr(release_branch.name))
-                    )
+                             _("Branch discontinuation failed."),
+                             _("{branch} cannot be discontinued.")
+                             .format(branch=repr(release_branch.name))
+                             )
 
     if context.verbose:
         cli.print("discontinuation tags:")
@@ -57,10 +57,10 @@ def call(context: Context) -> Result:
 
     if len(discontinuation_tags):
         command_context.fail(os.EX_USAGE,
-                    _("Branch discontinuation failed."),
-                    _("The branch {branch} is already discontinued.")
-                    .format(branch=repr(release_branch.name))
-                    )
+                             _("Branch discontinuation failed."),
+                             _("The branch {branch} is already discontinued.")
+                             .format(branch=repr(release_branch.name))
+                             )
     # show info and prompt for confirmation
     print("discontinued_branch : " + cli.if_none(release_branch.name))
 
@@ -127,10 +127,13 @@ def call(context: Context) -> Result:
             push_command.append('--verbose')
         push_command.append('origin')
 
-        push_command.append(base_branch_ref.name + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, base_branch_ref.short_name))
-        push_command.append('--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name) + ':')
+        push_command.append(base_branch_ref.name + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
+                                                                                   base_branch_ref.short_name))
         push_command.append(
-            repotools.ref_target(release_branch) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name))
+            '--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name) + ':')
+        push_command.append(
+            repotools.ref_target(release_branch) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
+                                                                                   discontinuation_tag_name))
 
         git_or_fail(clone_context, command_context.result, push_command)
 

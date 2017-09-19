@@ -6,7 +6,8 @@ import semver
 from gitflow import utils, _, version, repotools, cli, const
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_command_context, check_requirements, get_branch_name_for_version, fetch_all_and_ff, CommandContext, create_sequence_number_for_version, \
+from gitflow.procedures import get_command_context, check_requirements, get_branch_name_for_version, fetch_all_and_ff, \
+    CommandContext, create_sequence_number_for_version, \
     create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation
 from gitflow.repotools import BranchSelection
@@ -379,15 +380,20 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             push_command.append('--verbose')
         push_command.append('origin')
         # push the release branch commit or its version increment commit
-        push_command.append(repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name))
+        push_command.append(
+            repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
+                                                                                  branch_name))
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
-                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name)])
+                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
+                                 const.LOCAL_TAG_PREFIX, tag_name)])
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
-            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name) + ':',
+            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
+                                                                                   sequential_version_tag_name) + ':',
                                  repotools.ref_target(
-                                     object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name)])
+                                     object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
+                                                                                      sequential_version_tag_name)])
 
         proc = repotools.git(clone_context.repo, *push_command)
         proc.wait()
@@ -652,15 +658,20 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         # push the base branch commit
         # push_command.append(commit + ':' + const.LOCAL_BRANCH_PREFIX + selected_ref.local_branch_name)
         # push the new branch or fail if it exists
-        push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name) + ':',
-                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name)])
+        push_command.extend(
+            ['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name) + ':',
+             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
+                                                                                   branch_name)])
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
-                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX , tag_name)])
+                             repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
+                                 const.LOCAL_TAG_PREFIX, tag_name)])
         # push the new sequential version tag or fail if it exists
         if sequential_version_tag_name is not None:
-            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name) + ':',
-                                 repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, sequential_version_tag_name)])
+            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
+                                                                                   sequential_version_tag_name) + ':',
+                                 repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
+                                     const.LOCAL_TAG_PREFIX, sequential_version_tag_name)])
 
         git_or_fail(clone_context, result, push_command, _("Failed to push."))
 
@@ -703,9 +714,9 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
         new_version = version_result.value
         if new_version is None:
             command_context.fail(os.EX_USAGE,
-                        _("Illegal argument."),
-                        _("Failed to parse version.")
-                        )
+                                 _("Illegal argument."),
+                                 _("Failed to parse version.")
+                                 )
         new_version_info = semver.parse_version_info(new_version)
 
         branch_name = get_branch_name_for_version(context, new_version_info)

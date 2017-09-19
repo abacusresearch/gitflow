@@ -39,9 +39,9 @@ def call(context: Context) -> Result:
     if arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None:
         if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
             command_context.fail(os.EX_USAGE,
-                        _("Invalid branch super type: {supertype}.")
-                        .format(supertype=repr(arg_work_branch.prefix)),
-                        None)
+                                 _("Invalid branch super type: {supertype}.")
+                                 .format(supertype=repr(arg_work_branch.prefix)),
+                                 None)
 
     else:
         arg_work_branch = None
@@ -57,18 +57,18 @@ def call(context: Context) -> Result:
 
         if command_context.selected_explicitly:
             command_context.fail(os.EX_USAGE,
-                        _("The ref {branch} does not refer to a work branch.")
-                        .format(branch=repr(command_context.selected_ref.name)),
-                        None)
+                                 _("The ref {branch} does not refer to a work branch.")
+                                 .format(branch=repr(command_context.selected_ref.name)),
+                                 None)
 
     work_branch = ref_work_branch or arg_work_branch
 
     work_branch_info = get_branch_info(command_context, work_branch.local_ref_name())
     if work_branch_info is None:
         command_context.fail(os.EX_USAGE,
-                    _("The branch {branch} does neither exist locally nor remotely.")
-                    .format(branch=repr(work_branch.branch_name())),
-                    None)
+                             _("The branch {branch} does neither exist locally nor remotely.")
+                             .format(branch=repr(work_branch.branch_name())),
+                             None)
 
     work_branch_ref, work_branch_class = select_ref(command_context.result,
                                                     work_branch_info,
@@ -116,15 +116,15 @@ def call(context: Context) -> Result:
 
     if allowed_base_branch_class != base_branch_class:
         command_context.fail(os.EX_USAGE,
-                    _("The branch {branch} is not a valid base for {supertype} branches.")
-                    .format(branch=repr(base_branch_ref.name),
-                            supertype=repr(work_branch.prefix)),
-                    None)
+                             _("The branch {branch} is not a valid base for {supertype} branches.")
+                             .format(branch=repr(base_branch_ref.name),
+                                     supertype=repr(work_branch.prefix)),
+                             None)
 
     if base_branch_ref is None:
         command_context.fail(os.EX_USAGE,
-                    _("Base branch undetermined."),
-                    None)
+                             _("Base branch undetermined."),
+                             None)
 
     if context.verbose:
         cli.print("branch_name: " + command_context.selected_ref.name)
@@ -142,13 +142,13 @@ def call(context: Context) -> Result:
     index_status = git(context, ['diff-index', 'HEAD', '--'])
     if index_status == 1:
         command_context.fail(os.EX_USAGE,
-                    _("Branch creation aborted."),
-                    _("You have staged changes in your workspace.\n"
-                      "Unstage, commit or stash them and try again."))
+                             _("Branch creation aborted."),
+                             _("You have staged changes in your workspace.\n"
+                               "Unstage, commit or stash them and try again."))
     elif index_status != 0:
         command_context.fail(os.EX_DATAERR,
-                    _("Failed to determine index status."),
-                    None)
+                             _("Failed to determine index status."),
+                             None)
 
     if not context.dry_run and not command_context.has_errors():
         # run merge

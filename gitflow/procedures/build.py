@@ -57,10 +57,10 @@ def call(context: Context):
     repo = repotools.git_export(context.repo, build_repo_path, command_context.selected_ref)
     if repo is None:
         command_context.fail(os.EX_IOERR,
-                    _("Failed to clone {remote}.")
-                    .format(remote=repr(remote.url)),
-                    None
-                    )
+                             _("Failed to clone {remote}.")
+                             .format(remote=repr(remote.url)),
+                             None
+                             )
 
     download_result = download_file(gradle_dist_url, gradle_dist_archive_path, gradle_dist_hash_sha256)
     command_context.add_subresult(download_result)

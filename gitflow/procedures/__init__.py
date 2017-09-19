@@ -540,9 +540,9 @@ def get_command_context(context, object_arg: str) -> CommandContext:
     if object_arg is None:
         if current_branch is None:
             command_context.fail(os.EX_USAGE,
-                        _("Operation failed."),
-                        _("No object specified and not on a branch (may be an empty repository).")
-                        )
+                                 _("Operation failed."),
+                                 _("No object specified and not on a branch (may be an empty repository).")
+                                 )
         commit = current_branch.target.obj_name
         selected_ref = current_branch
     else:
@@ -560,10 +560,10 @@ def get_command_context(context, object_arg: str) -> CommandContext:
                 selected_ref.obj_name = commit
     if commit is None:
         command_context.fail(os.EX_USAGE,
-                    _("Failed to resolve object {object}.")
-                    .format(object=repr(object_arg)),
-                    _("No corresponding commit found.")
-                    )
+                             _("Failed to resolve object {object}.")
+                             .format(object=repr(object_arg)),
+                             _("No corresponding commit found.")
+                             )
 
     # determine affected branches
     affected_main_branches = list(
@@ -585,23 +585,23 @@ def get_command_context(context, object_arg: str) -> CommandContext:
     if selected_ref is None:
         if len(affected_main_branches) == 0:
             command_context.fail(os.EX_USAGE,
-                        _("Failed to resolve target branch"),
-                        _("Failed to resolve branch containing object: {object}")
-                        .format(object=repr(object_arg))
-                        )
+                                 _("Failed to resolve target branch"),
+                                 _("Failed to resolve branch containing object: {object}")
+                                 .format(object=repr(object_arg))
+                                 )
         else:
             command_context.fail(os.EX_USAGE,
-                        _("Failed to resolve unique release branch for object: {object}")
-                        .format(object=repr(object_arg)),
-                        _("Multiple different branches contain this commit:\n"
-                          "{listing}")
-                        .format(listing='\n'.join(' - ' + repr(ref.name) for ref in affected_main_branches))
-                        )
+                                 _("Failed to resolve unique release branch for object: {object}")
+                                 .format(object=repr(object_arg)),
+                                 _("Multiple different branches contain this commit:\n"
+                                   "{listing}")
+                                 .format(listing='\n'.join(' - ' + repr(ref.name) for ref in affected_main_branches))
+                                 )
     if selected_ref is None or commit is None:
         command_context.fail(os.EX_USAGE,
-                    _("Failed to resolve ref."),
-                    _("{object} could not be resolved.")
-                    .format(object=repr(object_arg)))
+                             _("Failed to resolve ref."),
+                             _("{object} could not be resolved.")
+                             .format(object=repr(object_arg)))
     if context.verbose >= const.INFO_VERBOSITY:
         cli.print(_("Target branch: {name} ({commit})")
                   .format(name=repr(selected_ref.name), commit=selected_ref.target.obj_name))
@@ -658,10 +658,10 @@ def check_requirements(command_context: CommandContext,
 
         if with_upstream and command_context.selected_branch.upstream is None:
             command_context.error(os.EX_USAGE,
-                             fail_message,
-                             _("{branch} does not have an upstream branch.")
-                             .format(branch=repr(ref.name)),
-                             throw)
+                                  fail_message,
+                                  _("{branch} does not have an upstream branch.")
+                                  .format(branch=repr(ref.name)),
+                                  throw)
 
         # if branch_info.upstream.short_name != selected_ref.short_name:
         #     result.error(os.EX_USAGE,
@@ -676,28 +676,29 @@ def check_requirements(command_context: CommandContext,
                                                        command_context.selected_branch.upstream)
             if push_merge_base is None:
                 command_context.error(os.EX_USAGE,
-                                 fail_message,
-                                 _("{branch} does not have a common base with its upstream branch: {remote_branch}")
-                                 .format(branch=repr(ref.name),
-                                         remote_branch=repr(command_context.selected_branch.upstream.name)),
-                                 throw)
+                                      fail_message,
+                                      _(
+                                          "{branch} does not have a common base with its upstream branch: {remote_branch}")
+                                      .format(branch=repr(ref.name),
+                                              remote_branch=repr(command_context.selected_branch.upstream.name)),
+                                      throw)
             elif push_merge_base != command_context.selected_commit:
                 command_context.error(os.EX_USAGE,
-                                 fail_message,
-                                 _("{branch} is not in sync with its upstream branch.\n"
-                                   "Push your changes and try again.")
-                                 .format(branch=repr(ref.name),
-                                         remote_branch=repr(command_context.selected_branch.upstream.name)),
-                                 throw)
+                                      fail_message,
+                                      _("{branch} is not in sync with its upstream branch.\n"
+                                        "Push your changes and try again.")
+                                      .format(branch=repr(ref.name),
+                                              remote_branch=repr(command_context.selected_branch.upstream.name)),
+                                      throw)
 
     discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context,
                                                                               ref)
     if modifiable and len(discontinuation_tags):
         command_context.error(os.EX_USAGE,
-                         fail_message,
-                         _("{branch} is discontinued.")
-                         .format(branch=repr(ref.name)),
-                         throw)
+                              fail_message,
+                              _("{branch} is discontinued.")
+                              .format(branch=repr(ref.name)),
+                              throw)
 
 
 class WorkBranch(object):
@@ -778,5 +779,3 @@ def download_file(source_uri: str, dest_file: str, hash_hex: str):
         result.value = dest_file
 
     return result
-
-

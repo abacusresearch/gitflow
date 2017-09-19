@@ -22,7 +22,8 @@ def call(context) -> Result:
     upstreams = repotools.git_get_upstreams(context.repo)
     branch_info_dict = dict()
 
-    for branch_ref in repotools.git_list_refs(git_context, repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)):
+    for branch_ref in repotools.git_list_refs(git_context, repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                                     context.config.remote_name)):
         branch_match = context.release_branch_matcher.fullmatch(branch_ref.name)
         if branch_match:
             branch_version = context.release_branch_matcher.to_version(branch_ref.name)
