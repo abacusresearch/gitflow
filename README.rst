@@ -4,7 +4,7 @@ GitFlow CLI
 
 Requirements
 ~~~~~~~~~~~~
-* Python >= 3.0
+* Python >= 3.6
 * Git >= 2.9.0
 
 Install
@@ -23,14 +23,14 @@ Branching Model
 | Type                      | Tags                      | Property commits [1]      | Rebuild after             |
 |                           |                           |                           | increment                 |
 +===========================+===========================+===========================+===========================+
-| Concurrent                | version/<sem_ver>         | n                         | y [2]                     |
-|                           | build/<number> (optional) |                           |                           |
-+---------------------------+---------------------------+---------------------------+---------------------------+
-| Concurrent                | for all increments          for all increments                                    |
-| + Project Properties      |                                                                                   |
-+---------------------------+---------------------------+---------------------------+---------------------------+
-| Sequential                |                           | n                         | y [2]                     |
+| Concurrent                |                           | n                         | y [2]                     |
 |                           |                           |                           |                           |
++---------------------------+ version/<sem_ver>         +---------------------------+---------------------------+
+| Concurrent                | build/<number> (optional) | for all increments                                    |
+| + Project Properties      |                           |                                                       |
++---------------------------+---------------------------+---------------------------+---------------------------+
+| Sequential                |                           | n                         | for increments other      |
+|                           |                           |                           | than pre-release type     |
 +---------------------------+                           +---------------------------+---------------------------+
 | Sequential                | version/<sem_ver>         | for all increments                                    |
 | + Properties              | seq/<number>              |                                                       |
@@ -40,8 +40,8 @@ Branching Model
 | + Opaque                  |                           |                                                       |
 +---------------------------+---------------------------+---------------------------+---------------------------+
 
-[1] Hides release branch tags on the development base branch.
-Indicates whether a rebuild is necessary after a version increment.
+[1] Release branch tags will never point to commits on master.
+A version property commit implies a rebuild of the corresponding hash.
 [2] A build process would need to fetch the version information from the project repository.
 
 Configuration

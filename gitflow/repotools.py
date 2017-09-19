@@ -14,6 +14,7 @@ class RepoContext(object):
     dir = '.'
     tags = None  # dict
     verbose = False  # TODO use parent context
+    use_root_dir_arg = False
 
 
 class Remote(object):
@@ -40,9 +41,13 @@ class Object(object):
     def __repr__(self):
         if isinstance(self, Ref):
             target = self.target
-            return ref_name(self) + ' => ' + (ref_name(target) if target != self else target.obj_name)
+            if target != self and isinstance(target, Ref):
+                target_name = ref_name(target)
+            else:
+                target_name = ref_target(target)
+            return ref_name(self) + ' => ' + target_name
         else:
-            return ref_name(self)
+            return self.obj_name
 
     def __str__(self):
         return self.__repr__()
@@ -90,7 +95,7 @@ class Ref(Object):
         return not self.__eq__(other)
 
 
-def ref_target(ref: Union[Object, str, list] or Object):
+def ref_target(ref: Union[Object, str, list]):
     if isinstance(ref, str):
         return ref
     elif isinstance(ref, Ref):
@@ -103,7 +108,7 @@ def ref_target(ref: Union[Object, str, list] or Object):
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
 
-def ref_name(ref: Union[Ref, str, list] or Object):
+def ref_name(ref: Union[Ref, str, list]):
     if isinstance(ref, str):
         return ref
     elif isinstance(ref, Ref):
@@ -120,9 +125,10 @@ def create_ref_name(*strings: str):
 
 def git(context: RepoContext, *args) -> subprocess.Popen:
     command = [context.git]
-    if context.dir is not None:
+    if context.use_root_dir_arg:
         command.extend(['-C', context.dir])
     command.extend(args)
+
     for index, arg in enumerate(command):
         if isinstance(arg, Ref):
             command[index] = arg.name
@@ -137,18 +143,23 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
+                                cwd=context.dir if not context.use_root_dir_arg else None,
                                 env=env)
     else:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
+                                cwd=context.dir if not context.use_root_dir_arg else None,
                                 env=env)
 
 
 def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
-    command = [context.git, '-C', context.dir]
+    command = [context.git]
+    if context.use_root_dir_arg:
+        command.extend(['-C', context.dir])
     command.extend(args)
+
     for index, arg in enumerate(command):
         if isinstance(arg, Ref):
             command[index] = arg.name
@@ -156,7 +167,8 @@ def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
     if context.verbose >= const.TRACE_VERBOSITY:
         print(' '.join(shlex.quote(token) for token in command))
 
-    return subprocess.Popen(args=command)
+    return subprocess.Popen(args=command,
+                            cwd=context.dir if not context.use_root_dir_arg else None)
 
 
 def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, branch: Union[Ref, str] = None):

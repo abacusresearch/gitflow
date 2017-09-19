@@ -72,7 +72,7 @@ class Config(object):
 
 class Context(object):
     config: Config = None
-    __repo = None
+    repo: RepoContext = None
 
     # args
     args = None
@@ -96,6 +96,9 @@ class Context(object):
     # resources
     temp_dirs: list = None
     clones: list = None
+
+    # misc
+    git_version: str = None
 
     def __init__(self):
         atexit.register(self.cleanup)
@@ -123,32 +126,28 @@ class Context(object):
         if '--root' in context.args and context.args['--root'] is not None:
             context.root = context.args['--root']
 
-            context.__repo = RepoContext()
-            context.__repo.dir = context.root
-            context.__repo.verbose = context.verbose
+            context.repo = RepoContext()
+            context.repo.dir = context.root
+            context.repo.verbose = context.verbose
 
-            # git_version = repotools.git_version(context.__repo)
-            # if semver.compare(git_version, const.MIN_GIT_VERSION) < 0:
-            #     result_out.fail(os.EX_UNAVAILABLE,
-            #                     _("git {required_version} or newer required, got {actual_version}.")
-            #                     .format(required_version=repr(const.MIN_GIT_VERSION), actual_version=repr(git_version)),
-            #                     None
-            #                     )
+            context.git_version = repotools.git_version(context.repo)
+            # context.repo.use_root_dir_arg = semver.compare(context.git_version, "2.9.0") >= 0
+            context.repo.use_root_dir_arg = False
 
-            root = repotools.git_rev_parse(context.__repo, '--show-toplevel')
+            root = repotools.git_rev_parse(context.repo, '--show-toplevel')
             # None when invalid or bare
             if root is not None:
-                context.__repo.dir = root
+                context.repo.dir = root
 
                 if context.verbose >= const.TRACE_VERBOSITY:
                     cli.print("--------------------------------------------------------------------------------")
-                    cli.print("refs in {repo}:".format(repo=context.__repo.dir))
+                    cli.print("refs in {repo}:".format(repo=context.repo.dir))
                     cli.print("--------------------------------------------------------------------------------")
-                    for ref in repotools.git_list_refs(context.__repo):
+                    for ref in repotools.git_list_refs(context.repo):
                         cli.print(repr(ref))
                     cli.print("--------------------------------------------------------------------------------")
 
-            gitflow_config_file = os.path.join(context.__repo.dir, context.args['--config'])
+            gitflow_config_file = os.path.join(context.repo.dir, context.args['--config'])
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("gitflow_config_file: " + gitflow_config_file)
 
@@ -256,10 +255,6 @@ class Context(object):
             self.temp_dirs = list()
         self.temp_dirs.append(dir)
         pass
-
-    @property
-    def repo(self):
-        return self.__repo
 
     def get_release_branches(self):
         release_branches = list(filter(

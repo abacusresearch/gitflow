@@ -1506,7 +1506,7 @@ marking successful builds of a sequence tag (optional)<y:LabelModel>
           <y:Geometry height="36.62017200938237" width="787.5681263487115" x="794.9999999999999" y="570.1618527840062"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="left" autoSizePolicy="node_size" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="36.62017200938237" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="787.5681263487115" x="0.0" y="-1.1368683772161603E-13">When needed for propject property updates within the git file tree, separate version increment commits are inserted,
+          <y:NodeLabel alignment="left" autoSizePolicy="node_size" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="36.62017200938237" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="787.5681263487115" x="0.0" y="-1.1368683772161603E-13">When needed for project property updates within the git file tree, separate version increment commits are inserted,
 in which case, the commit of interest will become the parent of such a commit.
 <y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
@@ -1651,7 +1651,7 @@ in which case, the commit of interest will become the parent of such a commit.
           <y:Geometry height="44.59870967741938" width="209.4299999999999" x="195.28500000000003" y="905.7977667288724"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="left" autoSizePolicy="node_size" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="44.59870967741938" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="209.4299999999999" x="0.0" y="-1.1368683772161603E-13">Builds on demand or for each
+          <y:NodeLabel alignment="left" autoSizePolicy="node_size" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="44.59870967741938" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="209.4299999999999" x="2.8421709430404007E-14" y="-1.1368683772161603E-13">Builds on demand or for each
 successfully built changeset<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
             </y:LabelModel>
