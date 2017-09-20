@@ -110,7 +110,17 @@ class TestFlow:
             config = {
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
                 const.CONFIG_VERSION_PROPERTY_NAME: 'version',
-                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq'
+                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq',
+                const.CONFIG_BUILD: {
+                    'stages': {
+                        'test': {
+                            'app': [['echo', 'test#1']]
+                        },
+                        'assemble': {
+                            'app': [['echo', 'assemble#1']]
+                        }
+                    }
+                }
             }
             json.dump(obj=config, fp=property_file)
 
@@ -707,3 +717,7 @@ class TestFlow:
             # 'version': '2.0.0-alpha.1',
             'seq': '3',
         })
+
+    def test_build(self):
+        exit_code = self.git_flow('build')
+        assert exit_code == os.EX_OK

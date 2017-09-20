@@ -5,7 +5,7 @@ import re
 import shutil
 from enum import Enum
 
-from gitflow import cli, const, repotools, _
+from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
@@ -18,6 +18,39 @@ class VersioningScheme(Enum):
     SEMVER_WITH_SEQ = 2,
     # SemVer tags tied to sequence number tags in strictly ascending order
     SEMVER_WITH_TIED_SEQ = 3,
+
+
+class BuildStepType(Enum):
+    ASSEMBLE = 'assemble',
+
+    TEST = 'test',
+    INTEGRATION_TEST = 'integration_test',
+
+    PACKAGE = 'package',
+    DEPLOY = 'deploy'
+
+
+class BuildLabels(Enum):
+    OPENSHIFT_S2I_TEST = 'com.openshift:s2i'
+
+
+class BuildStep(object):
+    name: str = None
+    commands: list = None
+    """a list of command arrays"""
+    labels: set = None
+    """contains labels for mapping to the ci tasks, effectively extending the label set in the enclosing stage"""
+
+
+class BuildStage(object):
+    type: str
+    steps: list = None
+    labels: set = None
+    """contains labels for mapping to ci tasks"""
+
+    def __init__(self):
+        self.steps = list()
+        self.labels = list()
 
 
 class Config(object):
@@ -45,6 +78,9 @@ class Config(object):
                         'fix', 'chore', 'doc', 'issue']
 
     prod_branch_types = ['fix', 'chore', 'doc', 'issue']
+
+    # build config
+    build_stages: list = None
 
     # hard config
 
@@ -161,6 +197,68 @@ class Context(object):
                 config = json.load(fp=json_file)
         else:
             config = object()
+
+        build_config_json = config.get(const.CONFIG_BUILD)
+
+        context.config.build_stages = list()
+
+        supported_stage_types = ['assemble', 'test', 'integration_test', 'package', 'deploy']
+
+        if build_config_json is not None:
+            stages_json = build_config_json.get('stages')
+            if stages_json is not None:
+                for stage_key, stage_json in stages_json.items():
+
+                    stage = BuildStage()
+                    stage.type = stage_json.get('type') or stage_key
+                    if stage.type not in supported_stage_types:
+                        result_out.fail(
+                            os.EX_DATAERR,
+                            _("Configuration failed."),
+                            _("Invalid build stage type {key}."
+                              .format(key=repr(stage.type)))
+                        )
+
+                    stage.name = stage_json.get('name') or stage_key
+
+                    stage_labels = stage_json.get('labels')
+                    if isinstance(stage_labels, list):
+                        stage.labels.extend(stage_labels)
+                    else:
+                        stage.labels.append(stage_labels)
+
+                    for step_key, step_json in stage_json.items():
+                        step = BuildStep()
+
+                        if isinstance(step_json, dict):
+                            step.type = step_json.get('name') or step_key
+                            step.commands = step_json.get('commands')
+
+                            stage_labels = stage_json.get('labels')
+                            if isinstance(stage_labels, list):
+                                stage.labels.extend(stage_labels)
+                            else:
+                                stage.labels.append(stage_labels)
+                        elif isinstance(step_json, list):
+                            step.type = step_key
+                            step.commands = step_json
+                        else:
+                            result_out.fail(
+                                os.EX_DATAERR,
+                                _("Configuration failed."),
+                                _("Invalid build step definition {key}."
+                                  .format(key=repr(step_key)))
+                            )
+
+                        stage.steps.append(step)
+                    context.config.build_stages.append(stage)
+
+        context.config.build_stages.sort(key=utils.cmp_to_key(lambda stage_a, stage_b:
+                                                              supported_stage_types.index(stage_a.type)
+                                                              - supported_stage_types.index(stage_b.type)
+                                                              ),
+                                         reverse=False
+                                         )
 
         # project properties config
 

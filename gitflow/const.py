@@ -8,6 +8,7 @@ VERSION = '1.0.0-alpha.1'
 CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
 CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
 CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
+CONFIG_BUILD = 'build'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
 
