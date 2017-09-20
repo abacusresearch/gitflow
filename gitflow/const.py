@@ -71,7 +71,15 @@ LOCAL_AND_REMOTE_BRANCH_PREFIXES = [LOCAL_BRANCH_PREFIX, REMOTES_PREFIX]
 BRANCH_PREFIX_DEV = 'dev'
 BRANCH_PREFIX_PROD = 'prod'
 
-BUILD_STAGE_TYPES = ['assemble', 'test', 'integration_test', 'package', 'deploy']
+BUILD_STAGE_TYPE_ASSEMBLE = 'assemble'
+BUILD_STAGE_TYPE_TEST = 'test'
+BUILD_STAGE_TYPE_INTEGRATION_TEST = 'integration_test'
+
+BUILD_STAGE_TYPES = [
+    BUILD_STAGE_TYPE_ASSEMBLE,
+    BUILD_STAGE_TYPE_TEST,
+    BUILD_STAGE_TYPE_INTEGRATION_TEST
+]
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
 ERROR_VERBOSITY = 1
