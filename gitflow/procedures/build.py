@@ -1,7 +1,8 @@
 import os
+import shlex
 import subprocess
 
-from gitflow import utils, _
+from gitflow import utils, _, const
 from gitflow.context import Context
 from gitflow.procedures import get_command_context
 
@@ -15,7 +16,11 @@ def call(context: Context):
     for stage in context.config.build_stages:
         for step in stage.steps:
             for command in step.commands:
+                if context.verbose >= const.TRACE_VERBOSITY:
+                    print(' '.join(shlex.quote(token) for token in command))
+
                 try:
+
                     proc = subprocess.Popen(args=command,
                                             stdin=subprocess.PIPE,
                                             cwd=context.root)
