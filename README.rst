@@ -55,7 +55,7 @@ Minimal Example::
     versionPropertyName=mavenPomVersion
     sequentialVersionPropertyName=androidVersionCode
 
-    preReleaseVersionQualifiers=alpha,beta,rc
+    versionTypes=alpha,beta,rc
 
 Usage
 ~~~~~

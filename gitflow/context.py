@@ -293,7 +293,8 @@ class Context(object):
         qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:
             qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
-        qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
+        if isinstance(qualifiers, str):
+            qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
         if qualifiers != sorted(qualifiers):
             result_out.fail(
                 os.EX_DATAERR,
