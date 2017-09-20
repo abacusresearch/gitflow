@@ -181,8 +181,11 @@ class Context(object):
                     for ref in repotools.git_list_refs(context.repo):
                         cli.print(repr(ref))
                     cli.print("--------------------------------------------------------------------------------")
+                gitflow_config_file = os.path.join(context.repo.dir, context.args['--config'])
+            else:
+                context.repo = None
+                gitflow_config_file = os.path.join(context.root, context.args['--config'])
 
-            gitflow_config_file = os.path.join(context.repo.dir, context.args['--config'])
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("gitflow_config_file: " + gitflow_config_file)
 

@@ -725,6 +725,14 @@ class TestFlow:
             'seq': '3',
         })
 
-    def test_build(self):
-        exit_code = self.git_flow('build')
+    def test_assemble(self):
+        exit_code = self.git_flow('assemble')
+        assert exit_code == os.EX_OK
+
+    def test_test(self):
+        exit_code = self.git_flow('test')
+        assert exit_code == os.EX_OK
+
+    def test_integration_test(self):
+        exit_code = self.git_flow('integration-test')
         assert exit_code == os.EX_OK

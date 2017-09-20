@@ -532,95 +532,97 @@ def get_command_context(context, object_arg: str) -> CommandContext:
 
     command_context.object_arg = object_arg
     command_context.context = context
-    command_context.upstreams = repotools.git_get_upstreams(context.repo, const.LOCAL_BRANCH_PREFIX)
-    command_context.downstreams = {v: k for k, v in command_context.upstreams.items()}
 
-    # resolve the full rev name and its hash for consistency
-    selected_ref = None
-    current_branch = repotools.git_get_current_branch(context.repo)
-    affected_main_branches = None
-    if object_arg is None:
-        if current_branch is None:
-            command_context.fail(os.EX_USAGE,
-                                 _("Operation failed."),
-                                 _("No object specified and not on a branch (may be an empty repository).")
-                                 )
-        commit = current_branch.target.obj_name
-        selected_ref = current_branch
-    else:
-        branch_ref = get_branch_by_branch_name_or_version_tag(context, object_arg, BranchSelection.BRANCH_PREFER_LOCAL)
-        if branch_ref is not None:
-            selected_ref = branch_ref
-            commit = branch_ref.target.obj_name
+    if context.repo is not None:
+        command_context.upstreams = repotools.git_get_upstreams(context.repo, const.LOCAL_BRANCH_PREFIX)
+        command_context.downstreams = {v: k for k, v in command_context.upstreams.items()}
+
+        # resolve the full rev name and its hash for consistency
+        selected_ref = None
+        current_branch = repotools.git_get_current_branch(context.repo)
+        affected_main_branches = None
+        if object_arg is None:
+            if current_branch is None:
+                command_context.fail(os.EX_USAGE,
+                                     _("Operation failed."),
+                                     _("No object specified and not on a branch (may be an empty repository).")
+                                     )
+            commit = current_branch.target.obj_name
+            selected_ref = current_branch
         else:
-            branch_ref = repotools.git_rev_parse(context.repo, '--revs-only', '--symbolic-full-name', object_arg)
-            commit = repotools.git_rev_parse(context.repo, '--revs-only', object_arg)
+            branch_ref = get_branch_by_branch_name_or_version_tag(context, object_arg,
+                                                                  BranchSelection.BRANCH_PREFER_LOCAL)
             if branch_ref is not None:
-                selected_ref = repotools.Ref()
-                selected_ref.name = branch_ref
-                selected_ref.obj_type = 'commit'
-                selected_ref.obj_name = commit
-    if commit is None:
-        command_context.fail(os.EX_USAGE,
-                             _("Failed to resolve object {object}.")
-                             .format(object=repr(object_arg)),
-                             _("No corresponding commit found.")
-                             )
-
-    # determine affected branches
-    affected_main_branches = list(
-        filter(lambda ref:
-               (ref.name not in command_context.downstreams),
-               repotools.git_list_refs(context.repo,
-                                       '--contains', commit,
-                                       repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                                 context.config.remote_name,
-                                                                 'release'),
-                                       'refs/heads/release',
-                                       'refs/heads/master',
-                                       # const.REMOTES_PREFIX + context.config.remote_name + '/' + context.config.release_branch_base,
-                                       # const.LOCAL_BRANCH_PREFIX + context.config.release_branch_base,
-                                       )))
-    if len(affected_main_branches) == 1:
-        if selected_ref is None or selected_ref.name.startswith(const.LOCAL_TAG_PREFIX):
-            selected_ref = affected_main_branches[0]
-    if selected_ref is None:
-        if len(affected_main_branches) == 0:
+                selected_ref = branch_ref
+                commit = branch_ref.target.obj_name
+            else:
+                branch_ref = repotools.git_rev_parse(context.repo, '--revs-only', '--symbolic-full-name', object_arg)
+                commit = repotools.git_rev_parse(context.repo, '--revs-only', object_arg)
+                if branch_ref is not None:
+                    selected_ref = repotools.Ref()
+                    selected_ref.name = branch_ref
+                    selected_ref.obj_type = 'commit'
+                    selected_ref.obj_name = commit
+        if commit is None:
             command_context.fail(os.EX_USAGE,
-                                 _("Failed to resolve target branch"),
-                                 _("Failed to resolve branch containing object: {object}")
-                                 .format(object=repr(object_arg))
-                                 )
-        else:
-            command_context.fail(os.EX_USAGE,
-                                 _("Failed to resolve unique release branch for object: {object}")
+                                 _("Failed to resolve object {object}.")
                                  .format(object=repr(object_arg)),
-                                 _("Multiple different branches contain this commit:\n"
-                                   "{listing}")
-                                 .format(listing='\n'.join(' - ' + repr(ref.name) for ref in affected_main_branches))
+                                 _("No corresponding commit found.")
                                  )
-    if selected_ref is None or commit is None:
-        command_context.fail(os.EX_USAGE,
-                             _("Failed to resolve ref."),
-                             _("{object} could not be resolved.")
-                             .format(object=repr(object_arg)))
-    if context.verbose >= const.INFO_VERBOSITY:
-        cli.print(_("Target branch: {name} ({commit})")
-                  .format(name=repr(selected_ref.name), commit=selected_ref.target.obj_name))
-        cli.print(_("Target commit: {commit}")
-                  .format(commit=commit))
 
-    branch_info = get_branch_info(command_context, selected_ref)
+        # determine affected branches
+        affected_main_branches = list(
+            filter(lambda ref:
+                   (ref.name not in command_context.downstreams),
+                   repotools.git_list_refs(context.repo,
+                                           '--contains', commit,
+                                           repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                     context.config.remote_name,
+                                                                     'release'),
+                                           'refs/heads/release',
+                                           'refs/heads/master',
+                                           # const.REMOTES_PREFIX + context.config.remote_name + '/' + context.config.release_branch_base,
+                                           # const.LOCAL_BRANCH_PREFIX + context.config.release_branch_base,
+                                           )))
+        if len(affected_main_branches) == 1:
+            if selected_ref is None or selected_ref.name.startswith(const.LOCAL_TAG_PREFIX):
+                selected_ref = affected_main_branches[0]
+        if selected_ref is None:
+            if len(affected_main_branches) == 0:
+                command_context.fail(os.EX_USAGE,
+                                     _("Failed to resolve target branch"),
+                                     _("Failed to resolve branch containing object: {object}")
+                                     .format(object=repr(object_arg))
+                                     )
+            else:
+                command_context.fail(os.EX_USAGE,
+                                     _("Failed to resolve unique release branch for object: {object}")
+                                     .format(object=repr(object_arg)),
+                                     _("Multiple different branches contain this commit:\n"
+                                       "{listing}")
+                                     .format(
+                                         listing='\n'.join(' - ' + repr(ref.name) for ref in affected_main_branches))
+                                     )
+        if selected_ref is None or commit is None:
+            command_context.fail(os.EX_USAGE,
+                                 _("Failed to resolve ref."),
+                                 _("{object} could not be resolved.")
+                                 .format(object=repr(object_arg)))
+        if context.verbose >= const.INFO_VERBOSITY:
+            cli.print(_("Target branch: {name} ({commit})")
+                      .format(name=repr(selected_ref.name), commit=selected_ref.target.obj_name))
+            cli.print(_("Target commit: {commit}")
+                      .format(commit=commit))
 
-    command_context.selected_ref = selected_ref
-    command_context.selected_commit = commit
-    command_context.selected_branch = branch_info
-    command_context.selected_explicitly = object_arg is not None
+        branch_info = get_branch_info(command_context, selected_ref)
 
-    command_context.affected_main_branches = affected_main_branches
-    command_context.current_branch = current_branch
+        command_context.selected_ref = selected_ref
+        command_context.selected_commit = commit
+        command_context.selected_branch = branch_info
+        command_context.selected_explicitly = object_arg is not None
 
-    command_context.value = command_context
+        command_context.affected_main_branches = affected_main_branches
+        command_context.current_branch = current_branch
 
     return command_context
 
@@ -795,19 +797,19 @@ def execute_build_steps(command_context, context, types: list = None):
                 if context.verbose >= const.TRACE_VERBOSITY:
                     print(' '.join(shlex.quote(token) for token in command))
 
-                try:
-
-                    proc = subprocess.Popen(args=command,
-                                            stdin=subprocess.PIPE,
-                                            cwd=context.root)
-                    proc.wait()
-                    if proc.returncode != os.EX_OK:
+                if not context.dry_run:
+                    try:
+                        proc = subprocess.Popen(args=command,
+                                                stdin=subprocess.PIPE,
+                                                cwd=context.root)
+                        proc.wait()
+                        if proc.returncode != os.EX_OK:
+                            command_context.fail(os.EX_DATAERR,
+                                                 _("Build failed."),
+                                                 _("Stage {stage}:{step} returned with an error.")
+                                                 .format(stage=stage.name, step=step.name))
+                    except FileNotFoundError as e:
                         command_context.fail(os.EX_DATAERR,
                                              _("Build failed."),
-                                             _("Stage {stage}:{step} returned with an error.")
+                                             _("Stage {stage}:{step} could not be executed.")
                                              .format(stage=stage.name, step=step.name))
-                except FileNotFoundError as e:
-                    command_context.fail(os.EX_DATAERR,
-                                         _("Build failed."),
-                                         _("Stage {stage}:{step} could not be executed.")
-                                         .format(stage=stage.name, step=step.name))

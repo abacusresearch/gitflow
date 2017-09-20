@@ -18,7 +18,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- [<git-arg>]]...
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow build [-d|--dry-run] [<object>]
+ flow (assemble|test|integration-test) [-d|--dry-run] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow drop-cache [-d|--dry-run]
         [-B|--batch] [-v|--verbose]... [-p|--pretty]
@@ -63,7 +63,7 @@ import gitflow.procedures.discontinue_version
 import gitflow.procedures.end
 import gitflow.procedures.log
 import gitflow.procedures.status
-from gitflow import cli, procedures, repotools, _, hooks, filesystem
+from gitflow import cli, repotools, _, hooks, filesystem
 from gitflow import const
 from gitflow import version
 from gitflow.common import GitFlowException, Result
@@ -105,7 +105,8 @@ def cmd_bump_to_release(context):
 
 def cmd_bump_to(context):
     return gitflow.procedures.create_version.call(context,
-                                                  version.version_set(context.config.version, context.args['<version>']))
+                                                  version.version_set(context.config.version,
+                                                                      context.args['<version>']))
 
 
 def cmd_discontinue(context):
@@ -128,7 +129,15 @@ def cmd_status(context):
     return gitflow.procedures.status.call(context)
 
 
-def cmd_build(context):
+def cmd_assemble(context):
+    return gitflow.procedures.build.call(context)
+
+
+def cmd_test(context):
+    return gitflow.procedures.build.call(context)
+
+
+def cmd_integration_test(context):
     return gitflow.procedures.build.call(context)
 
 
@@ -206,7 +215,9 @@ def main(argv: list = sys.argv) -> int:
                     cmd_start,
                     cmd_finish,
                     cmd_log,
-                    cmd_build,
+                    cmd_assemble,
+                    cmd_test,
+                    cmd_integration_test,
                     cmd_drop_cache,
                 ], context.args, 'cmd_')
 
@@ -216,7 +227,7 @@ def main(argv: list = sys.argv) -> int:
                 if context.verbose >= const.TRACE_VERBOSITY:
                     cli.print("command: " + cli.if_none(command_func))
 
-                start_branch = repotools.git_get_current_branch(context.repo)
+                start_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
 
                 try:
                     command_result = command_func(context)
@@ -224,8 +235,8 @@ def main(argv: list = sys.argv) -> int:
                     command_result = e.result
                 result.errors.extend(command_result.errors)
 
-                current_branch = repotools.git_get_current_branch(context.repo)
-                if current_branch != start_branch:
+                current_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
+                if current_branch is not None and current_branch != start_branch:
                     cli.print(_("You are now on {branch}.")
                               .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
         finally:
