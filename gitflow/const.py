@@ -39,7 +39,6 @@ DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
-
 DEFAULT_VERSION_TAG_PREFIX = 'version/'
 DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
                               r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
@@ -71,6 +70,8 @@ LOCAL_AND_REMOTE_BRANCH_PREFIXES = [LOCAL_BRANCH_PREFIX, REMOTES_PREFIX]
 
 BRANCH_PREFIX_DEV = 'dev'
 BRANCH_PREFIX_PROD = 'prod'
+
+BUILD_STAGE_TYPES = ['assemble', 'test', 'integration_test', 'package', 'deploy']
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
 ERROR_VERBOSITY = 1

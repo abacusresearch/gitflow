@@ -202,8 +202,6 @@ class Context(object):
 
         context.config.build_stages = list()
 
-        supported_stage_types = ['assemble', 'test', 'integration_test', 'package', 'deploy']
-
         if build_config_json is not None:
             stages_json = build_config_json.get('stages')
             if stages_json is not None:
@@ -213,7 +211,7 @@ class Context(object):
 
                     if isinstance(stage_json, dict):
                         stage.type = stage_json.get('type') or stage_key
-                        if stage.type not in supported_stage_types:
+                        if stage.type not in const.BUILD_STAGE_TYPES:
                             result_out.fail(
                                 os.EX_DATAERR,
                                 _("Configuration failed."),
@@ -274,8 +272,8 @@ class Context(object):
                     context.config.build_stages.append(stage)
 
         context.config.build_stages.sort(key=utils.cmp_to_key(lambda stage_a, stage_b:
-                                                              supported_stage_types.index(stage_a.type)
-                                                              - supported_stage_types.index(stage_b.type)
+                                                              const.BUILD_STAGE_TYPES.index(stage_a.type)
+                                                              - const.BUILD_STAGE_TYPES.index(stage_b.type)
                                                               ),
                                          reverse=False
                                          )
