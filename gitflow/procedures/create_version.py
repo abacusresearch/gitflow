@@ -6,7 +6,8 @@ import semver
 from gitflow import utils, _, version, repotools, cli, const
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_command_context, check_requirements, get_branch_name_for_version, fetch_all_and_ff, \
+from gitflow.procedures.common import get_command_context, check_requirements, get_branch_name_for_version, \
+    fetch_all_and_ff, \
     CommandContext, create_sequence_number_for_version, \
     create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \

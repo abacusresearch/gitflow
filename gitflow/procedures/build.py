@@ -1,6 +1,6 @@
-from gitflow import utils, procedures, const
+from gitflow import utils, const
 from gitflow.context import Context
-from gitflow.procedures import get_command_context
+from gitflow.procedures.common import get_command_context, execute_build_steps
 
 
 def call(context: Context):
@@ -15,6 +15,6 @@ def call(context: Context):
         if context.args[stage_type.replace('_', '-')]:
             selected_stages.append(stage_type)
 
-    procedures.execute_build_steps(command_context, context, selected_stages)
+    execute_build_steps(command_context, context, selected_stages)
 
     return command_context.result

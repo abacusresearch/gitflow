@@ -3,7 +3,7 @@ import os
 from gitflow import _, repotools, utils
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_branch_by_branch_name_or_version_tag, get_command_context, check_in_repo
+from gitflow.procedures.common import get_branch_by_branch_name_or_version_tag, get_command_context, check_in_repo
 from gitflow.repotools import BranchSelection
 
 

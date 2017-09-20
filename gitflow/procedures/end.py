@@ -5,8 +5,8 @@ import semver
 from gitflow import utils, _, const, repotools, cli
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_command_context, check_requirements, WorkBranch, get_branch_info, select_ref, git, \
-    git_or_fail, check_in_repo
+from gitflow.procedures.common import get_command_context, check_requirements, WorkBranch, get_branch_info, \
+    select_ref, git, git_or_fail, check_in_repo
 from gitflow.repotools import BranchSelection
 
 

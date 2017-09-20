@@ -3,8 +3,9 @@ import os
 from gitflow import cli, utils, repotools, _, const
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_command_context, get_branch_info, check_requirements, get_discontinuation_tags, \
-    prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, check_in_repo
+from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
+    get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
+    check_in_repo
 from gitflow.repotools import BranchSelection
 
 
