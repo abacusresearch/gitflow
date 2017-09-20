@@ -783,8 +783,13 @@ def download_file(source_uri: str, dest_file: str, hash_hex: str):
     return result
 
 
-def execute_build_steps(command_context, context):
-    for stage in context.config.build_stages:
+def execute_build_steps(command_context, context, types: list = None):
+    if types is not None:
+        stages = filter(lambda stage: stage.type in types, context.config.build_stages)
+    else:
+        stages = context.config.build_stages
+
+    for stage in stages:
         for step in stage.steps:
             for command in step.commands:
                 if context.verbose >= const.TRACE_VERBOSITY:
