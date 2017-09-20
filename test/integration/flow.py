@@ -113,11 +113,18 @@ class TestFlow:
                 const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq',
                 const.CONFIG_BUILD: {
                     'stages': {
+                        'assemble': [['echo', 'assemble#1']],
                         'test': {
-                            'app': [['echo', 'test#1']]
+                            'steps': {
+                                'app': [['echo', 'test#1']]
+                            }
                         },
-                        'assemble': {
-                            'app': [['echo', 'assemble#1']]
+                        'google_testing_lab': {
+                            'type': 'integration_test',
+                            'steps': {
+                                'monkey_test': [['echo', 'monkey_test']],
+                                'instrumentation_test': [['echo', 'instrumentation_test']]
+                            }
                         }
                     }
                 }

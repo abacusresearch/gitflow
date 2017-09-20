@@ -210,47 +210,67 @@ class Context(object):
                 for stage_key, stage_json in stages_json.items():
 
                     stage = BuildStage()
-                    stage.type = stage_json.get('type') or stage_key
-                    if stage.type not in supported_stage_types:
-                        result_out.fail(
-                            os.EX_DATAERR,
-                            _("Configuration failed."),
-                            _("Invalid build stage type {key}."
-                              .format(key=repr(stage.type)))
-                        )
 
-                    stage.name = stage_json.get('name') or stage_key
-
-                    stage_labels = stage_json.get('labels')
-                    if isinstance(stage_labels, list):
-                        stage.labels.extend(stage_labels)
-                    else:
-                        stage.labels.append(stage_labels)
-
-                    for step_key, step_json in stage_json.items():
-                        step = BuildStep()
-
-                        if isinstance(step_json, dict):
-                            step.type = step_json.get('name') or step_key
-                            step.commands = step_json.get('commands')
-
-                            stage_labels = stage_json.get('labels')
-                            if isinstance(stage_labels, list):
-                                stage.labels.extend(stage_labels)
-                            else:
-                                stage.labels.append(stage_labels)
-                        elif isinstance(step_json, list):
-                            step.type = step_key
-                            step.commands = step_json
-                        else:
+                    if isinstance(stage_json, dict):
+                        stage.type = stage_json.get('type') or stage_key
+                        if stage.type not in supported_stage_types:
                             result_out.fail(
                                 os.EX_DATAERR,
                                 _("Configuration failed."),
-                                _("Invalid build step definition {key}."
-                                  .format(key=repr(step_key)))
+                                _("Invalid build stage type {key}."
+                                  .format(key=repr(stage.type)))
                             )
 
-                        stage.steps.append(step)
+                        stage.name = stage_json.get('name') or stage_key
+
+                        stage_labels = stage_json.get('labels')
+                        if isinstance(stage_labels, list):
+                            stage.labels.extend(stage_labels)
+                        else:
+                            stage.labels.append(stage_labels)
+
+                        stage_steps_json = stage_json.get('steps')
+                        if stage_steps_json is not None:
+                            for step_key, step_json in stage_steps_json.items():
+                                step = BuildStep()
+
+                                if isinstance(step_json, dict):
+                                    step.name = step_json.get('name') or step_key
+                                    step.commands = step_json.get('commands')
+
+                                    stage_labels = stage_json.get('labels')
+                                    if isinstance(stage_labels, list):
+                                        stage.labels.extend(stage_labels)
+                                    else:
+                                        stage.labels.append(stage_labels)
+                                elif isinstance(step_json, list):
+                                    step.type = step_key
+                                    step.commands = step_json
+                                else:
+                                    result_out.fail(
+                                        os.EX_DATAERR,
+                                        _("Configuration failed."),
+                                        _("Invalid build step definition {type} {key}."
+                                          .format(type=repr(type(step_json)), key=repr(step_key)))
+                                    )
+
+                                stage.steps.append(step)
+                    elif isinstance(stage_json, list):
+                        stage.type = stage_key
+                        stage.name = stage_key
+
+                        if len(stage_json):
+                            step = BuildStep()
+                            step.name = '#'
+                            step.commands = stage_json
+                            stage.steps.append(step)
+                    else:
+                        result_out.fail(
+                            os.EX_DATAERR,
+                            _("Configuration failed."),
+                            _("Invalid build stage definition {key}."
+                              .format(key=repr(stage_key)))
+                        )
                     context.config.build_stages.append(stage)
 
         context.config.build_stages.sort(key=utils.cmp_to_key(lambda stage_a, stage_b:
