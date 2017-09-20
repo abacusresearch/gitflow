@@ -28,7 +28,7 @@ CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 CONFIG_PRE_RELEASE_QUALIFIERS = 'preReleaseVersionQualifiers'
 CONFIG_INITIAL_VERSION = 'initialVersion'
 
-DEFAULT_CONFIG_FILE = 'gitflow.properties'
+DEFAULT_CONFIG_FILE = 'gitflow.json'
 DEFAULT_PROJECT_PROPERTY_FILE = 'project.properties'
 
 DEFAULT_RELEASE_BRANCH_BASE = "master"

@@ -1,12 +1,11 @@
 import atexit
+import json
 import os
 import re
 import shutil
 from enum import Enum
 
-import semver
-
-from gitflow import cli, const, filesystem, repotools, _
+from gitflow import cli, const, repotools, _
 from gitflow.common import Result
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
@@ -158,9 +157,10 @@ class Context(object):
                                 None
                                 )
 
-            config = filesystem.JavaPropertyFile(gitflow_config_file).load()
+            with open(gitflow_config_file) as json_file:
+                config = json.load(fp=json_file)
         else:
-            config = dict()
+            config = object()
 
         # project properties config
 

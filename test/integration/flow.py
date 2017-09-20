@@ -1,4 +1,5 @@
 import itertools
+import json
 import os
 import subprocess
 from tempfile import TemporaryDirectory
@@ -106,13 +107,12 @@ class TestFlow:
         self.project_property_file = const.DEFAULT_PROJECT_PROPERTY_FILE
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
         with open(config_file, 'w+') as property_file:
-            property_file.write(
-                const.CONFIG_PROJECT_PROPERTY_FILE + '=' + self.project_property_file + os.linesep)
-            property_file.write(
-                const.CONFIG_VERSION_PROPERTY_NAME + '=' + 'version' + os.linesep)
-            property_file.write(
-                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME + '=' + 'seq' + os.linesep)
-            property_file.close()
+            config = {
+                const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
+                const.CONFIG_VERSION_PROPERTY_NAME: 'version',
+                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq'
+            }
+            json.dump(obj=config, fp=property_file)
 
         # create & push the initial commit
         self.add(config_file)
