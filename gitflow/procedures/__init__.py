@@ -10,7 +10,9 @@
 
 import os
 import re
+import shlex
 import shutil
+import subprocess
 import sys
 from typing import Union
 
@@ -779,3 +781,28 @@ def download_file(source_uri: str, dest_file: str, hash_hex: str):
         result.value = dest_file
 
     return result
+
+
+def execute_build_steps(command_context, context):
+    for stage in context.config.build_stages:
+        for step in stage.steps:
+            for command in step.commands:
+                if context.verbose >= const.TRACE_VERBOSITY:
+                    print(' '.join(shlex.quote(token) for token in command))
+
+                try:
+
+                    proc = subprocess.Popen(args=command,
+                                            stdin=subprocess.PIPE,
+                                            cwd=context.root)
+                    proc.wait()
+                    if proc.returncode != os.EX_OK:
+                        command_context.fail(os.EX_DATAERR,
+                                             _("Build failed."),
+                                             _("Stage {stage}:{step} returned with an error.")
+                                             .format(stage=stage.name, step=step.name))
+                except FileNotFoundError as e:
+                    command_context.fail(os.EX_DATAERR,
+                                         _("Build failed."),
+                                         _("Stage {stage}:{step} could not be executed.")
+                                         .format(stage=stage.name, step=step.name))
