@@ -650,6 +650,13 @@ def create_commit(clone_context, result, commit_info: CommitInfo):
     return object_to_tag
 
 
+def check_in_repo(command_context: CommandContext):
+    if command_context.context.repo is None:
+        command_context.fail(os.EX_USAGE,
+                             _("No repo at this location."),
+                             None)
+
+
 def check_requirements(command_context: CommandContext,
                        ref: repotools.Ref,
                        modifiable: bool,

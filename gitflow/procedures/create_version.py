@@ -9,7 +9,8 @@ from gitflow.context import Context
 from gitflow.procedures import get_command_context, check_requirements, get_branch_name_for_version, fetch_all_and_ff, \
     CommandContext, create_sequence_number_for_version, \
     create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
-    create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation
+    create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
+    check_in_repo
 from gitflow.repotools import BranchSelection
 from gitflow.version import VersionConfig
 
@@ -683,6 +684,8 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None)
     )
+
+    check_in_repo(command_context)
 
     check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
