@@ -13,14 +13,14 @@ from gitflow.repotools import BranchSelection
 def call(context: Context) -> Result:
     command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<work-branch>', None)
+        object_arg=context.args['<work-branch>']
     )
 
     check_in_repo(command_context)
 
     base_command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<base-branch>', None)
+        object_arg=context.args['<base-object>']
     )
 
     check_requirements(command_context=command_context,
