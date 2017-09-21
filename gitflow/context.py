@@ -245,6 +245,7 @@ class Context(object):
                                     else:
                                         stage.labels.append(stage_labels)
                                 elif isinstance(step_json, list):
+                                    step.name = step_key
                                     step.type = step_key
                                     step.commands = step_json
                                 else:

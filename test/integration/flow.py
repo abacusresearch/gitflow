@@ -2,7 +2,10 @@ import itertools
 import json
 import os
 import subprocess
+import sys
+from io import StringIO
 from tempfile import TemporaryDirectory
+from typing import Tuple
 
 import pytest
 
@@ -19,7 +22,20 @@ class TestFlow:
     project_property_file: str
 
     def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-Bv'] + [*args])
+        return __main__.main([__name__, '-B'] + [*args])
+
+    def git_flow_for_lines(self, *args) -> Tuple[int, str]:
+        prev_stdout = sys.stdout
+        sys.stdout = stdout_buf = StringIO()
+
+        exit_code = __main__.main([__name__, '-B'] + [*args])
+
+        sys.stdout.flush()
+        out_lines = stdout_buf.getvalue().splitlines()
+
+        sys.stdout = prev_stdout
+
+        return exit_code, out_lines
 
     def git(self, *args) -> int:
         proc = subprocess.Popen(args=['git'] + [*args])
@@ -726,13 +742,26 @@ class TestFlow:
         })
 
     def test_assemble(self):
-        exit_code = self.git_flow('assemble')
+        exit_code, out_lines = self.git_flow_for_lines('assemble')
+
         assert exit_code == os.EX_OK
+        assert out_lines == [
+            "assemble:#: OK"
+        ]
 
     def test_test(self):
-        exit_code = self.git_flow('test')
+        exit_code, out_lines = self.git_flow_for_lines('test')
+
         assert exit_code == os.EX_OK
+        assert out_lines == [
+            "test:app: OK"
+        ]
 
     def test_integration_test(self):
-        exit_code = self.git_flow('integration-test')
+        exit_code, out_lines = self.git_flow_for_lines('integration-test')
+
         assert exit_code == os.EX_OK
+        assert out_lines == [
+            "google_testing_lab:monkey_test: OK",
+            "google_testing_lab:instrumentation_test: OK"
+        ]

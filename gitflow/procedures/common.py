@@ -800,6 +800,8 @@ def execute_build_steps(command_context, context, types: list = None):
 
     for stage in stages:
         for step in stage.steps:
+            step_errors = 0
+
             for command in step.commands:
                 if context.verbose >= const.TRACE_VERBOSITY:
                     print(' '.join(shlex.quote(token) for token in command))
@@ -816,7 +818,13 @@ def execute_build_steps(command_context, context, types: list = None):
                                                  _("Stage {stage}:{step} returned with an error.")
                                                  .format(stage=stage.name, step=step.name))
                     except FileNotFoundError as e:
+                        step_errors += 1
                         command_context.fail(os.EX_DATAERR,
                                              _("Build failed."),
                                              _("Stage {stage}:{step} could not be executed.")
                                              .format(stage=stage.name, step=step.name))
+
+            if not step_errors:
+                cli.print(stage.name + ":" + step.name + ": OK")
+            else:
+                cli.print(stage.name + ":" + step.name + ": FAILED")
