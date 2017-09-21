@@ -216,7 +216,7 @@ def main(argv: list = sys.argv) -> int:
                 command_funcs = list()
 
                 for command_name, command_func in commands.items():
-                    if args[command_name]:
+                    if args[command_name] is True:
                         command_funcs.append(command_func)
 
                 if not len(command_funcs):
