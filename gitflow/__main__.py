@@ -18,7 +18,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- [<git-arg>]]...
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow build [-d|--dry-run] [<object>]
+ flow (assemble|test|integration-test) [-d|--dry-run] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow drop-cache [-d|--dry-run]
         [-B|--batch] [-v|--verbose]... [-p|--pretty]
@@ -34,7 +34,7 @@ Workspace Options:
  --root=DIR                         The working copy root.
  [default: .]
  --config=FILE                      The configuration file relative to the working copy root.
- [default: gitflow.properties]
+ [default: gitflow.json]
 
 Execution Mode Options:
  -B --batch             Disables interaction and output coloring.
@@ -63,7 +63,7 @@ import gitflow.procedures.discontinue_version
 import gitflow.procedures.end
 import gitflow.procedures.log
 import gitflow.procedures.status
-from gitflow import cli, procedures, repotools, _, hooks, filesystem
+from gitflow import cli, repotools, _, hooks, filesystem
 from gitflow import const
 from gitflow import version
 from gitflow.common import GitFlowException, Result
@@ -105,7 +105,8 @@ def cmd_bump_to_release(context):
 
 def cmd_bump_to(context):
     return gitflow.procedures.create_version.call(context,
-                                                  version.version_set(context.config.version, context.args['<version>']))
+                                                  version.version_set(context.config.version,
+                                                                      context.args['<version>']))
 
 
 def cmd_discontinue(context):
@@ -193,39 +194,50 @@ def main(argv: list = sys.argv) -> int:
                     hook_result = e.result
                 result.errors.extend(hook_result.errors)
             else:
-                command_func = cli.get_cmd_for_subcommand([
-                    cmd_status,
-                    cmd_bump_major,
-                    cmd_bump_minor,
-                    cmd_bump_patch,
-                    cmd_bump_prerelease_type,
-                    cmd_bump_prerelease,
-                    cmd_bump_to_release,
-                    cmd_bump_to,
-                    cmd_discontinue,
-                    cmd_start,
-                    cmd_finish,
-                    cmd_log,
-                    cmd_build,
-                    cmd_drop_cache,
-                ], context.args, 'cmd_')
+                commands = {
+                    'status': cmd_status,
+                    'bump-major': cmd_bump_major,
+                    'bump-minor': cmd_bump_minor,
+                    'bump-patch': cmd_bump_patch,
+                    'bump-prerelease-type': cmd_bump_prerelease_type,
+                    'bump-prerelease': cmd_bump_prerelease,
+                    'bump-to-release': cmd_bump_to_release,
+                    'bump-to': cmd_bump_to,
+                    'discontinue': cmd_discontinue,
+                    'start': cmd_start,
+                    'finish': cmd_finish,
+                    'log': cmd_log,
+                    'assemble': cmd_build,
+                    'test': cmd_build,
+                    'integration-test': cmd_build,
+                    'drop-cache': cmd_drop_cache,
+                }
 
-                if command_func is None:
+                command_funcs = list()
+
+                for command_name, command_func in commands.items():
+                    if args[command_name] is True:
+                        command_funcs.append(command_func)
+
+                if not len(command_funcs):
                     cli.fail(os.EX_SOFTWARE, "unimplemented command")
 
                 if context.verbose >= const.TRACE_VERBOSITY:
-                    cli.print("command: " + cli.if_none(command_func))
+                    cli.print("commands: " + repr(command_funcs))
 
-                start_branch = repotools.git_get_current_branch(context.repo)
+                start_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
 
-                try:
-                    command_result = command_func(context)
-                except GitFlowException as e:
-                    command_result = e.result
-                result.errors.extend(command_result.errors)
+                for command_func in command_funcs:
+                    try:
+                        command_result = command_func(context)
+                    except GitFlowException as e:
+                        command_result = e.result
+                    result.errors.extend(command_result.errors)
+                    if result.has_errors():
+                        break
 
-                current_branch = repotools.git_get_current_branch(context.repo)
-                if current_branch != start_branch:
+                current_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
+                if current_branch is not None and current_branch != start_branch:
                     cli.print(_("You are now on {branch}.")
                               .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
         finally:

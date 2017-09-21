@@ -1,14 +1,19 @@
 import os
 
-from gitflow import _, repotools
+from gitflow import _, repotools, utils
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_branch_by_branch_name_or_version_tag
+from gitflow.procedures.common import get_branch_by_branch_name_or_version_tag, get_command_context, check_in_repo
 from gitflow.repotools import BranchSelection
 
 
 def call(context: Context) -> Result:
-    result = Result()
+    command_context = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<work-branch>', None)
+    )
+
+    check_in_repo(command_context)
 
     object_arg = context.args['<object>']
     args = context.args['<git-arg>']
@@ -17,7 +22,7 @@ def call(context: Context) -> Result:
         selected_branch = get_branch_by_branch_name_or_version_tag(context, object_arg,
                                                                    BranchSelection.BRANCH_PREFER_LOCAL)
         if selected_branch is None:
-            result.fail(os.EX_USAGE,
+            command_context.fail(os.EX_USAGE,
                         _("Log failed."),
                         _("Failed to resolve an object for token {object}.")
                         .format(object=repr(object_arg))
@@ -38,4 +43,4 @@ def call(context: Context) -> Result:
     proc = repotools.git_interactive(context.repo, *(log_command + args))
     proc.wait()
 
-    return result
+    return command_context.result

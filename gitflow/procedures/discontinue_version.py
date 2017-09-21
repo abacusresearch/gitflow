@@ -3,8 +3,9 @@ import os
 from gitflow import cli, utils, repotools, _, const
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_command_context, get_branch_info, check_requirements, get_discontinuation_tags, \
-    prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff
+from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
+    get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
+    check_in_repo
 from gitflow.repotools import BranchSelection
 
 
@@ -17,6 +18,8 @@ def call(context: Context) -> Result:
         context=context,
         object_arg=utils.get_or_default(context.args, '<object>', None)
     )
+
+    check_in_repo(command_context)
 
     base_branch_ref = repotools.get_branch_by_name(context.repo, context.config.release_branch_base,
                                                    BranchSelection.BRANCH_PREFER_LOCAL)

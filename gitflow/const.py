@@ -8,6 +8,7 @@ VERSION = '1.0.0-alpha.1'
 CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
 CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
 CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
+CONFIG_BUILD = 'build'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
 
@@ -25,10 +26,10 @@ CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN = 'sequentialVersionTagPattern'
 CONFIG_DISCONTINUATION_TAG_PREFIX = 'discontinuationTagPrefix'
 CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 
-CONFIG_PRE_RELEASE_QUALIFIERS = 'preReleaseVersionQualifiers'
+CONFIG_PRE_RELEASE_QUALIFIERS = 'versionTypes'
 CONFIG_INITIAL_VERSION = 'initialVersion'
 
-DEFAULT_CONFIG_FILE = 'gitflow.properties'
+DEFAULT_CONFIG_FILE = 'gitflow.json'
 DEFAULT_PROJECT_PROPERTY_FILE = 'project.properties'
 
 DEFAULT_RELEASE_BRANCH_BASE = "master"
@@ -37,7 +38,6 @@ DEFAULT_RELEASE_BRANCH_PREFIX = 'release/'
 DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
-
 
 DEFAULT_VERSION_TAG_PREFIX = 'version/'
 DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
@@ -70,6 +70,16 @@ LOCAL_AND_REMOTE_BRANCH_PREFIXES = [LOCAL_BRANCH_PREFIX, REMOTES_PREFIX]
 
 BRANCH_PREFIX_DEV = 'dev'
 BRANCH_PREFIX_PROD = 'prod'
+
+BUILD_STAGE_TYPE_ASSEMBLE = 'assemble'
+BUILD_STAGE_TYPE_TEST = 'test'
+BUILD_STAGE_TYPE_INTEGRATION_TEST = 'integration_test'
+
+BUILD_STAGE_TYPES = [
+    BUILD_STAGE_TYPE_ASSEMBLE,
+    BUILD_STAGE_TYPE_TEST,
+    BUILD_STAGE_TYPE_INTEGRATION_TEST
+]
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
 ERROR_VERBOSITY = 1

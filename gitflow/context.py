@@ -1,12 +1,11 @@
 import atexit
+import json
 import os
 import re
 import shutil
 from enum import Enum
 
-import semver
-
-from gitflow import cli, const, filesystem, repotools, _
+from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
@@ -19,6 +18,39 @@ class VersioningScheme(Enum):
     SEMVER_WITH_SEQ = 2,
     # SemVer tags tied to sequence number tags in strictly ascending order
     SEMVER_WITH_TIED_SEQ = 3,
+
+
+class BuildStepType(Enum):
+    ASSEMBLE = 'assemble',
+
+    TEST = 'test',
+    INTEGRATION_TEST = 'integration_test',
+
+    PACKAGE = 'package',
+    DEPLOY = 'deploy'
+
+
+class BuildLabels(Enum):
+    OPENSHIFT_S2I_TEST = 'com.openshift:s2i'
+
+
+class BuildStep(object):
+    name: str = None
+    commands: list = None
+    """a list of command arrays"""
+    labels: set = None
+    """contains labels for mapping to the ci tasks, effectively extending the label set in the enclosing stage"""
+
+
+class BuildStage(object):
+    type: str
+    steps: list = None
+    labels: set = None
+    """contains labels for mapping to ci tasks"""
+
+    def __init__(self):
+        self.steps = list()
+        self.labels = list()
 
 
 class Config(object):
@@ -46,6 +78,9 @@ class Config(object):
                         'fix', 'chore', 'doc', 'issue']
 
     prod_branch_types = ['fix', 'chore', 'doc', 'issue']
+
+    # build config
+    build_stages: list = None
 
     # hard config
 
@@ -146,8 +181,11 @@ class Context(object):
                     for ref in repotools.git_list_refs(context.repo):
                         cli.print(repr(ref))
                     cli.print("--------------------------------------------------------------------------------")
+                gitflow_config_file = os.path.join(context.repo.dir, context.args['--config'])
+            else:
+                context.repo = None
+                gitflow_config_file = os.path.join(context.root, context.args['--config'])
 
-            gitflow_config_file = os.path.join(context.repo.dir, context.args['--config'])
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("gitflow_config_file: " + gitflow_config_file)
 
@@ -158,9 +196,91 @@ class Context(object):
                                 None
                                 )
 
-            config = filesystem.JavaPropertyFile(gitflow_config_file).load()
+            with open(gitflow_config_file) as json_file:
+                config = json.load(fp=json_file)
         else:
-            config = dict()
+            config = object()
+
+        build_config_json = config.get(const.CONFIG_BUILD)
+
+        context.config.build_stages = list()
+
+        if build_config_json is not None:
+            stages_json = build_config_json.get('stages')
+            if stages_json is not None:
+                for stage_key, stage_json in stages_json.items():
+
+                    stage = BuildStage()
+
+                    if isinstance(stage_json, dict):
+                        stage.type = stage_json.get('type') or stage_key
+                        if stage.type not in const.BUILD_STAGE_TYPES:
+                            result_out.fail(
+                                os.EX_DATAERR,
+                                _("Configuration failed."),
+                                _("Invalid build stage type {key}."
+                                  .format(key=repr(stage.type)))
+                            )
+
+                        stage.name = stage_json.get('name') or stage_key
+
+                        stage_labels = stage_json.get('labels')
+                        if isinstance(stage_labels, list):
+                            stage.labels.extend(stage_labels)
+                        else:
+                            stage.labels.append(stage_labels)
+
+                        stage_steps_json = stage_json.get('steps')
+                        if stage_steps_json is not None:
+                            for step_key, step_json in stage_steps_json.items():
+                                step = BuildStep()
+
+                                if isinstance(step_json, dict):
+                                    step.name = step_json.get('name') or step_key
+                                    step.commands = step_json.get('commands')
+
+                                    stage_labels = stage_json.get('labels')
+                                    if isinstance(stage_labels, list):
+                                        stage.labels.extend(stage_labels)
+                                    else:
+                                        stage.labels.append(stage_labels)
+                                elif isinstance(step_json, list):
+                                    step.name = step_key
+                                    step.type = step_key
+                                    step.commands = step_json
+                                else:
+                                    result_out.fail(
+                                        os.EX_DATAERR,
+                                        _("Configuration failed."),
+                                        _("Invalid build step definition {type} {key}."
+                                          .format(type=repr(type(step_json)), key=repr(step_key)))
+                                    )
+
+                                stage.steps.append(step)
+                    elif isinstance(stage_json, list):
+                        stage.type = stage_key
+                        stage.name = stage_key
+
+                        if len(stage_json):
+                            step = BuildStep()
+                            step.name = '#'
+                            step.commands = stage_json
+                            stage.steps.append(step)
+                    else:
+                        result_out.fail(
+                            os.EX_DATAERR,
+                            _("Configuration failed."),
+                            _("Invalid build stage definition {key}."
+                              .format(key=repr(stage_key)))
+                        )
+                    context.config.build_stages.append(stage)
+
+        context.config.build_stages.sort(key=utils.cmp_to_key(lambda stage_a, stage_b:
+                                                              const.BUILD_STAGE_TYPES.index(stage_a.type)
+                                                              - const.BUILD_STAGE_TYPES.index(stage_b.type)
+                                                              ),
+                                         reverse=False
+                                         )
 
         # project properties config
 
@@ -177,7 +297,8 @@ class Context(object):
         qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:
             qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
-        qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
+        if isinstance(qualifiers, str):
+            qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
         if qualifiers != sorted(qualifiers):
             result_out.fail(
                 os.EX_DATAERR,

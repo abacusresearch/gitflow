@@ -3,8 +3,9 @@ import os
 from gitflow import utils, _, const, repotools, cli
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures import get_command_context, check_requirements, get_branch_class, get_branch_info, select_ref, \
-    git, git_or_fail
+from gitflow.procedures.common import get_command_context, check_requirements, get_branch_class, get_branch_info, \
+    select_ref, \
+    git, git_or_fail, check_in_repo
 from gitflow.repotools import BranchSelection
 
 
@@ -13,6 +14,8 @@ def call(context: Context) -> Result:
         context=context,
         object_arg=utils.get_or_default(context.args, '<base-object>', None)
     )
+
+    check_in_repo(command_context)
 
     check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,

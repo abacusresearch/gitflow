@@ -6,15 +6,17 @@ import semver
 
 from gitflow import repotools, const, cli, _, utils, version
 from gitflow.common import Result
-from gitflow.procedures import get_branch_version_component_for_version, get_discontinuation_tags, update_branch_info
-from gitflow.repotools import RepoContext
+from gitflow.procedures.common import get_branch_version_component_for_version, get_discontinuation_tags, \
+    update_branch_info, get_command_context, check_in_repo
 
 
 def call(context) -> Result:
-    result = Result()
+    command_context = get_command_context(
+        context=context,
+        object_arg=utils.get_or_default(context.args, '<work-branch>', None)
+    )
 
-    git_context = RepoContext()
-    git_context.dir = context.root
+    check_in_repo(command_context)
 
     unique_codes = set()
     unique_version_codes = list()
@@ -22,8 +24,8 @@ def call(context) -> Result:
     upstreams = repotools.git_get_upstreams(context.repo)
     branch_info_dict = dict()
 
-    for branch_ref in repotools.git_list_refs(git_context, repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                                                     context.config.remote_name)):
+    for branch_ref in repotools.git_list_refs(context.repo, repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                                      context.config.remote_name)):
         branch_match = context.release_branch_matcher.fullmatch(branch_ref.name)
         if branch_match:
             branch_version = context.release_branch_matcher.to_version(branch_ref.name)
@@ -54,9 +56,9 @@ def call(context) -> Result:
             if branch_info.local is not None:
                 local_branch_color = status_local_color
                 if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
-                    result.error(os.EX_DATAERR,
-                                 _("Local and upstream branch have a mismatching short name."),
-                                 None)
+                    command_context.error(os.EX_DATAERR,
+                                          _("Local and upstream branch have a mismatching short name."),
+                                          None)
                     local_branch_color = error_color
                 if context.verbose:
                     cli.fcwrite(sys.stdout, local_branch_color, branch_info.local.name)
@@ -75,7 +77,7 @@ def call(context) -> Result:
 
             cli.fcwriteln(sys.stdout, status_color)
 
-            tags = repotools.git_get_branch_tags(context=git_context,
+            tags = repotools.git_get_branch_tags(context=context.repo,
                                                  base=context.config.release_branch_base,
                                                  dest=branch_ref.name,
                                                  from_fork_point=False,
@@ -99,12 +101,12 @@ def call(context) -> Result:
                     unique_version_codes.append(int(unique_code))
 
                     if unique_code in unique_codes:
-                        result.error(os.EX_DATAERR,
-                                     _("Invalid sequential version tag {tag}.")
-                                     .format(tag=branch_tag_ref.name),
-                                     _("The code element of version {version_string} is not unique.")
-                                     .format(version_string=version_string)
-                                     )
+                        command_context.error(os.EX_DATAERR,
+                                              _("Invalid sequential version tag {tag}.")
+                                              .format(tag=branch_tag_ref.name),
+                                              _("The code element of version {version_string} is not unique.")
+                                              .format(version_string=version_string)
+                                              )
                     else:
                         unique_codes.add(unique_code)
 
@@ -117,14 +119,14 @@ def call(context) -> Result:
                     if version_info.major == branch_version.major and version_info.minor == branch_version.minor:
                         cli.fcwriteln(sys.stdout, status_color, "    " + version_string)
                     else:
-                        result.error(os.EX_DATAERR,
-                                     _("Invalid version tag {tag}.")
-                                     .format(tag=repr(branch_tag_ref.name)),
-                                     _("The major.minor part of the new version {new_version}"
-                                       " does not match the branch version {branch_version}.")
-                                     .format(new_version=repr(version_string),
-                                             branch_version=repr(branch_version_string))
-                                     )
+                        command_context.error(os.EX_DATAERR,
+                                              _("Invalid version tag {tag}.")
+                                              .format(tag=repr(branch_tag_ref.name)),
+                                              _("The major.minor part of the new version {new_version}"
+                                                " does not match the branch version {branch_version}.")
+                                              .format(new_version=repr(version_string),
+                                                      branch_version=repr(branch_version_string))
+                                              )
                         cli.fcwriteln(sys.stdout, status_error_color, "    " + version_string)
 
     unique_version_codes.sort(key=utils.cmp_to_key(lambda a, b: version.cmp_alnum_token(a, b)))
@@ -132,11 +134,11 @@ def call(context) -> Result:
     last_unique_code = None
     for unique_code in unique_version_codes:
         if not (last_unique_code is None or unique_code > last_unique_code):
-            result.error(os.EX_DATAERR,
-                         _("Version {version} breaks the sequence.")
-                         .format(version=unique_code),
-                         None
-                         )
+            command_context.error(os.EX_DATAERR,
+                                  _("Version {version} breaks the sequence.")
+                                  .format(version=unique_code),
+                                  None
+                                  )
         last_unique_code = unique_code
 
-    return result
+    return command_context.result
