@@ -365,7 +365,8 @@ def version_bump_prerelease(config: VersionConfig, version: str):
         prerelease_version_elements = version_info.prerelease.split(".")
         if len(prerelease_version_elements) > 0 and prerelease_version_elements[0].upper() == "SNAPSHOT":
             if len(prerelease_version_elements) == 1:
-                result.error(_("The pre-release increment has been skipped."),
+                result.error(os.EX_DATAERR,
+                             _("The pre-release increment has been skipped."),
                              _("In order to retain Maven compatibility, "
                                "the pre-release component of snapshot versions must not be versioned."))
             else:
