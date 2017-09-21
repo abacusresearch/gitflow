@@ -25,9 +25,26 @@ def call(context: Context) -> Result:
                        fail_message=_("Version creation failed.")
                        )
 
-    branch_supertype = context.args['<supertype>']
-    branch_type = context.args['<type>']
-    branch_short_name = context.args['<name>']
+    selected_work_branch = context.args.get('<work-branch>')
+    if selected_work_branch is not None:
+        selected_work_branch = utils.split_join('/', False, False, selected_work_branch)
+        if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
+            selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
+        branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
+        if branch_match is None:
+            command_context.fail(os.EX_USAGE,
+                                 _("Invalid work branch: {branch}.")
+                                 .format(branch=repr(selected_work_branch)),
+                                 None)
+        groups = branch_match.groupdict()
+
+        branch_supertype = groups['prefix']
+        branch_type = groups['type']
+        branch_short_name = groups['name']
+    else:
+        branch_supertype = context.args['<supertype>']
+        branch_type = context.args['<type>']
+        branch_short_name = context.args['<name>']
 
     if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
         command_context.fail(os.EX_USAGE,

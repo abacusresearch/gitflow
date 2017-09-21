@@ -34,9 +34,27 @@ def call(context: Context) -> Result:
     work_branch = None
 
     arg_work_branch = WorkBranch()
-    arg_work_branch.prefix = context.args['<supertype>']
-    arg_work_branch.type = context.args['<type>']
-    arg_work_branch.name = context.args['<name>']
+
+    selected_work_branch = context.args.get('<work-branch>')
+    if selected_work_branch is not None:
+        selected_work_branch = utils.split_join('/', False, False, selected_work_branch)
+        if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
+            selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
+        branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
+        if branch_match is None:
+            command_context.fail(os.EX_USAGE,
+                                 _("Invalid work branch: {branch}.")
+                                 .format(branch=repr(selected_work_branch)),
+                                 None)
+        groups = branch_match.groupdict()
+
+        arg_work_branch.prefix = groups['prefix']
+        arg_work_branch.type = groups['type']
+        arg_work_branch.name = groups['name']
+    else:
+        arg_work_branch.prefix = context.args['<supertype>']
+        arg_work_branch.type = context.args['<type>']
+        arg_work_branch.name = context.args['<name>']
 
     if arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None:
         if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
