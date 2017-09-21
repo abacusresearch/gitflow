@@ -202,38 +202,47 @@ def main(argv: list = sys.argv) -> int:
                     hook_result = e.result
                 result.errors.extend(hook_result.errors)
             else:
-                command_func = cli.get_cmd_for_subcommand([
-                    cmd_status,
-                    cmd_bump_major,
-                    cmd_bump_minor,
-                    cmd_bump_patch,
-                    cmd_bump_prerelease_type,
-                    cmd_bump_prerelease,
-                    cmd_bump_to_release,
-                    cmd_bump_to,
-                    cmd_discontinue,
-                    cmd_start,
-                    cmd_finish,
-                    cmd_log,
-                    cmd_assemble,
-                    cmd_test,
-                    cmd_integration_test,
-                    cmd_drop_cache,
-                ], context.args, 'cmd_')
+                commands = {
+                    'status': cmd_status,
+                    'bump-major': cmd_bump_major,
+                    'bump-minor': cmd_bump_minor,
+                    'bump-patch': cmd_bump_patch,
+                    'bump-prerelease-type': cmd_bump_prerelease_type,
+                    'bump-prerelease': cmd_bump_prerelease,
+                    'bump-to-release': cmd_bump_to_release,
+                    'bump-to': cmd_bump_to,
+                    'discontinue': cmd_discontinue,
+                    'start': cmd_start,
+                    'finish': cmd_finish,
+                    'log': cmd_log,
+                    'assemble': cmd_assemble,
+                    'test': cmd_test,
+                    'integration-test': cmd_integration_test,
+                    'drop-cache': cmd_drop_cache,
+                }
 
-                if command_func is None:
+                command_funcs = list()
+
+                for command_name, command_func in commands.items():
+                    if args[command_name]:
+                        command_funcs.append(command_func)
+
+                if not len(command_funcs):
                     cli.fail(os.EX_SOFTWARE, "unimplemented command")
 
                 if context.verbose >= const.TRACE_VERBOSITY:
-                    cli.print("command: " + cli.if_none(command_func))
+                    cli.print("commands: " + repr(command_funcs))
 
                 start_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
 
-                try:
-                    command_result = command_func(context)
-                except GitFlowException as e:
-                    command_result = e.result
-                result.errors.extend(command_result.errors)
+                for command_func in command_funcs:
+                    try:
+                        command_result = command_func(context)
+                    except GitFlowException as e:
+                        command_result = e.result
+                    result.errors.extend(command_result.errors)
+                    if result.has_errors():
+                        break
 
                 current_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
                 if current_branch is not None and current_branch != start_branch:
