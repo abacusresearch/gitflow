@@ -129,15 +129,7 @@ def cmd_status(context):
     return gitflow.procedures.status.call(context)
 
 
-def cmd_assemble(context):
-    return gitflow.procedures.build.call(context)
-
-
-def cmd_test(context):
-    return gitflow.procedures.build.call(context)
-
-
-def cmd_integration_test(context):
+def cmd_build(context):
     return gitflow.procedures.build.call(context)
 
 
@@ -215,9 +207,9 @@ def main(argv: list = sys.argv) -> int:
                     'start': cmd_start,
                     'finish': cmd_finish,
                     'log': cmd_log,
-                    'assemble': cmd_assemble,
-                    'test': cmd_test,
-                    'integration-test': cmd_integration_test,
+                    'assemble': cmd_build,
+                    'test': cmd_build,
+                    'integration-test': cmd_build,
                     'drop-cache': cmd_drop_cache,
                 }
 
