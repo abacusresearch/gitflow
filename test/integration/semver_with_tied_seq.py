@@ -437,6 +437,39 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/dev/feature/test-feature',
         ])
 
+    def test_error_begin_dev_feature_off_a_release_branch(self):
+        self.assert_head('refs/heads/master')
+
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            # 'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+            'refs/tags/version_code/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+
+        self.assert_head('refs/heads/master')
+
+        self.checkout('release/1.0')
+        self.assert_head('refs/heads/release/1.0')
+
+        exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature', 'release/1.0')
+        assert exit_code == os.EX_USAGE
+
+        self.assert_head('refs/heads/release/1.0')
+
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+            'refs/tags/version_code/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+
     def test_begin_end_prod_fix(self):
         self.assert_head('refs/heads/master')
 
