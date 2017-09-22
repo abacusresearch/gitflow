@@ -12,7 +12,7 @@ from gitflow.repotools import BranchSelection
 def call(context: Context) -> Result:
     command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<base-object>', None)
+        object_arg=context.args['<base-object>']
     )
 
     check_in_repo(command_context)
@@ -25,9 +25,26 @@ def call(context: Context) -> Result:
                        fail_message=_("Version creation failed.")
                        )
 
-    branch_supertype = context.args['<supertype>']
-    branch_type = context.args['<type>']
-    branch_short_name = context.args['<name>']
+    selected_work_branch = context.args.get('<work-branch>')
+    if selected_work_branch is not None:
+        selected_work_branch = utils.split_join('/', False, False, selected_work_branch)
+        if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
+            selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
+        branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
+        if branch_match is None:
+            command_context.fail(os.EX_USAGE,
+                                 _("Invalid work branch: {branch}.")
+                                 .format(branch=repr(selected_work_branch)),
+                                 None)
+        groups = branch_match.groupdict()
+
+        branch_supertype = groups['prefix']
+        branch_type = groups['type']
+        branch_short_name = groups['name']
+    else:
+        branch_supertype = context.args['<supertype>']
+        branch_type = context.args['<type>']
+        branch_short_name = context.args['<name>']
 
     if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
         command_context.fail(os.EX_USAGE,
@@ -52,14 +69,12 @@ def call(context: Context) -> Result:
     base_branch, base_branch_class = select_ref(command_context.result, command_context.selected_branch,
                                                 BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
-        fixed_base_branch_info = get_branch_info(command_context,
+        base_branch_info = get_branch_info(command_context,
                                                  repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                            context.config.release_branch_base))
-        fixed_base_branch, fixed_destination_branch_class = select_ref(command_context.result,
-                                                                       fixed_base_branch_info,
+        base_branch, base_branch_class = select_ref(command_context.result,
+                                                    base_branch_info,
                                                                        BranchSelection.BRANCH_PREFER_LOCAL)
-
-        base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
 
     if allowed_base_branch_class != base_branch_class:
         command_context.fail(os.EX_USAGE,

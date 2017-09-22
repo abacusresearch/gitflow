@@ -119,6 +119,24 @@ def ref_name(ref: Union[Ref, str, list]):
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
 
+def create_local_branch_name(name):
+    elements = list(filter(lambda element: len(element) > 0, name.split('/')))
+    if elements[:2] == ['refs', 'remotes']:
+        return create_ref_name(*elements[3:])
+    if elements[:2] == ['refs', 'heads']:
+        return create_ref_name(*elements[2:])
+    return None
+
+
+def create_local_branch_ref_name(name):
+    elements = list(filter(lambda element: len(element) > 0, name.split('/')))
+    if elements[:2] == ['refs', 'remotes']:
+        return create_ref_name(*(['refs', 'heads'] + elements[3:]))
+    if elements[:2] == ['refs', 'heads']:
+        return create_ref_name(*elements)
+    return None
+
+
 def create_ref_name(*strings: str):
     return utils.split_join('/', False, False, *strings)
 

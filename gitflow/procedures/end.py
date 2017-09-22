@@ -13,14 +13,14 @@ from gitflow.repotools import BranchSelection
 def call(context: Context) -> Result:
     command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<work-branch>', None)
+        object_arg=context.args['<work-branch>']
     )
 
     check_in_repo(command_context)
 
     base_command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<base-branch>', None)
+        object_arg=context.args['<base-object>']
     )
 
     check_requirements(command_context=command_context,
@@ -34,9 +34,27 @@ def call(context: Context) -> Result:
     work_branch = None
 
     arg_work_branch = WorkBranch()
-    arg_work_branch.prefix = context.args['<supertype>']
-    arg_work_branch.type = context.args['<type>']
-    arg_work_branch.name = context.args['<name>']
+
+    selected_work_branch = context.args.get('<work-branch>')
+    if selected_work_branch is not None:
+        selected_work_branch = utils.split_join('/', False, False, selected_work_branch)
+        if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
+            selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
+        branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
+        if branch_match is None:
+            command_context.fail(os.EX_USAGE,
+                                 _("Invalid work branch: {branch}.")
+                                 .format(branch=repr(selected_work_branch)),
+                                 None)
+        groups = branch_match.groupdict()
+
+        arg_work_branch.prefix = groups['prefix']
+        arg_work_branch.type = groups['type']
+        arg_work_branch.name = groups['name']
+    else:
+        arg_work_branch.prefix = context.args['<supertype>']
+        arg_work_branch.type = context.args['<type>']
+        arg_work_branch.name = context.args['<name>']
 
     if arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None:
         if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
@@ -86,14 +104,12 @@ def call(context: Context) -> Result:
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
     if not base_command_context.selected_explicitly:
         if work_branch.prefix == const.BRANCH_PREFIX_DEV:
-            fixed_base_branch_info = get_branch_info(base_command_context,
-                                                     repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
-                                                                               context.config.release_branch_base))
-            fixed_base_branch, fixed_destination_branch_class = select_ref(command_context.result,
-                                                                           fixed_base_branch_info,
-                                                                           BranchSelection.BRANCH_PREFER_LOCAL)
-
-            base_branch_ref, base_branch_class = fixed_base_branch, fixed_destination_branch_class
+            base_branch_info = get_branch_info(base_command_context,
+                                               repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
+                                                                         context.config.release_branch_base))
+            base_branch_ref, base_branch_class = select_ref(command_context.result,
+                                                            base_branch_info,
+                                                            BranchSelection.BRANCH_PREFER_LOCAL)
         elif work_branch.prefix == const.BRANCH_PREFIX_PROD:
             # discover closest merge base in release branches
 
@@ -153,12 +169,21 @@ def call(context: Context) -> Result:
                              None)
 
     if not context.dry_run and not command_context.has_errors():
-        # run merge
-        git_or_fail(context, command_context.result,
-                    ['checkout', base_branch_ref.short_name],
-                    _("Failed to checkout branch {branch_name}.")
-                    .format(branch_name=repr(base_branch_ref.short_name))
-                    )
+        # perform merge
+        local_branch_ref_name = repotools.create_local_branch_ref_name(base_branch_ref.name)
+        local_branch_name = repotools.create_local_branch_name(base_branch_ref.name)
+        if local_branch_ref_name == base_branch_ref.name:
+            git_or_fail(context, command_context.result,
+                        ['checkout', local_branch_name],
+                        _("Failed to checkout branch {branch_name}.")
+                        .format(branch_name=repr(base_branch_ref.short_name))
+                        )
+        else:
+            git_or_fail(context, command_context.result,
+                        ['checkout', '-b', local_branch_name, base_branch_ref.name],
+                        _("Failed to checkout branch {branch_name}.")
+                        .format(branch_name=repr(base_branch_ref.short_name))
+                        )
 
         git_or_fail(context, command_context.result,
                     ['merge', '--no-ff', work_branch_ref],

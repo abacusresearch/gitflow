@@ -683,7 +683,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Result:
     command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<object>', None)
+        object_arg=context.args['<object>']
     )
 
     check_in_repo(command_context)

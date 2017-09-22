@@ -6,7 +6,7 @@ from gitflow.procedures.common import get_command_context, execute_build_steps
 def call(context: Context):
     command_context = get_command_context(
         context=context,
-        object_arg=utils.get_or_default(context.args, '<object>', None)
+        object_arg=context.args['<object>']
     )
 
     selected_stages = list()
