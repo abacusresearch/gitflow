@@ -69,14 +69,12 @@ def call(context: Context) -> Result:
     base_branch, base_branch_class = select_ref(command_context.result, command_context.selected_branch,
                                                 BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
-        fixed_base_branch_info = get_branch_info(command_context,
+        base_branch_info = get_branch_info(command_context,
                                                  repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                            context.config.release_branch_base))
-        fixed_base_branch, fixed_destination_branch_class = select_ref(command_context.result,
-                                                                       fixed_base_branch_info,
+        base_branch, base_branch_class = select_ref(command_context.result,
+                                                    base_branch_info,
                                                                        BranchSelection.BRANCH_PREFER_LOCAL)
-
-        base_branch, base_branch_class = fixed_base_branch, fixed_destination_branch_class
 
     if allowed_base_branch_class != base_branch_class:
         command_context.fail(os.EX_USAGE,

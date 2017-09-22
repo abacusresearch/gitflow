@@ -104,14 +104,12 @@ def call(context: Context) -> Result:
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
     if not base_command_context.selected_explicitly:
         if work_branch.prefix == const.BRANCH_PREFIX_DEV:
-            fixed_base_branch_info = get_branch_info(base_command_context,
+            base_branch_info = get_branch_info(base_command_context,
                                                      repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                                context.config.release_branch_base))
-            fixed_base_branch, fixed_destination_branch_class = select_ref(command_context.result,
-                                                                           fixed_base_branch_info,
+            base_branch_ref, base_branch_class = select_ref(command_context.result,
+                                                                           base_branch_info,
                                                                            BranchSelection.BRANCH_PREFER_LOCAL)
-
-            base_branch_ref, base_branch_class = fixed_base_branch, fixed_destination_branch_class
         elif work_branch.prefix == const.BRANCH_PREFIX_PROD:
             # discover closest merge base in release branches
 
