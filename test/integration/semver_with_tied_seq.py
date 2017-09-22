@@ -379,6 +379,13 @@ class TestFlow(TestFlowBase):
 
         self.assert_head('refs/heads/dev/feature/test-feature')
 
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/dev/feature/test-feature'
+        ])
+
         for _ in itertools.repeat(None, 3):
             self.commit()
         self.push('-u', 'origin', 'dev/feature/test-feature')
@@ -386,6 +393,49 @@ class TestFlow(TestFlowBase):
         assert exit_code == os.EX_OK
 
         self.assert_head('refs/heads/master')
+
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/dev/feature/test-feature',
+            'refs/remotes/origin/dev/feature/test-feature'
+        ])
+
+    def test_begin_end_dev_feature_from_another_branch(self):
+        self.assert_head('refs/heads/master')
+
+        exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature')
+        assert exit_code == os.EX_OK
+
+        self.assert_head('refs/heads/dev/feature/test-feature')
+
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/dev/feature/test-feature',
+        ])
+
+        for _ in itertools.repeat(None, 3):
+            self.commit()
+        self.push('-u', 'origin', 'dev/feature/test-feature')
+
+        self.checkout("master")
+        self.assert_head('refs/heads/master')
+
+        exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
+        assert exit_code == os.EX_OK
+
+        self.assert_head('refs/heads/master')
+
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+
+            'refs/heads/dev/feature/test-feature',
+            'refs/remotes/origin/dev/feature/test-feature',
+        ])
 
     def test_begin_end_prod_fix(self):
         self.assert_head('refs/heads/master')
