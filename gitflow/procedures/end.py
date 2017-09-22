@@ -167,7 +167,7 @@ def call(context: Context) -> Result:
                     )
 
         git_or_fail(context, command_context.result,
-                    ['push', context.config.remote_name, base_branch_ref.short_name],
+                    ['push', context.config.remote_name, local_branch_name],
                     _("Failed to push branch {branch_name}.")
                     .format(branch_name=repr(base_branch_ref.short_name))
                     )
