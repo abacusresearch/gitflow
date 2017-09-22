@@ -44,7 +44,7 @@ DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' 
                               r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                               r'(\.(?P<prerelease_version>\d+))?)?'
 
-DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX = 'sequential_version/'
+DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX = 'version_code/'
 DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN = r'(?P<unique_code>\d+)'
 
 DEFAULT_DISCONTINUATION_TAG_PREFIX = 'discontinued/'

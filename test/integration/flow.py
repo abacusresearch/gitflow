@@ -180,7 +180,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.assert_project_properties_contain({
@@ -194,7 +194,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -212,7 +212,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         # the head commit is the base of a release branch, further bumps shall not be possible
@@ -224,7 +224,7 @@ class TestFlow:
 
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -246,12 +246,12 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             # 'refs/heads/release/1.1', # local branch
             'refs/remotes/origin/release/1.1',
-            'refs/tags/sequential_version/2',
+            'refs/tags/version_code/2',
             'refs/tags/version/1.1.0-alpha.1'
         ])
 
@@ -269,7 +269,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout('release/1.0')
@@ -280,7 +280,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -296,10 +296,10 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/sequential_version/2',
+            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1'
         ])
 
@@ -324,7 +324,7 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
@@ -336,7 +336,7 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1',
             'refs/tags/version/1.0.0-rc.1'
@@ -363,7 +363,7 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
@@ -375,7 +375,7 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1',
             'refs/tags/version/1.0.0'
@@ -395,7 +395,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
@@ -416,10 +416,10 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/sequential_version/2',
+            'refs/tags/version_code/2',
             'refs/tags/version/1.0.0-alpha.2'
         ])
 
@@ -439,7 +439,7 @@ class TestFlow:
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -457,7 +457,7 @@ class TestFlow:
             'refs/remotes/origin/release/1.0',
 
             'refs/tags/discontinued/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
@@ -476,7 +476,7 @@ class TestFlow:
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -492,7 +492,7 @@ class TestFlow:
             'refs/remotes/origin/release/1.0',
 
             'refs/tags/discontinued/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
@@ -527,7 +527,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -544,7 +544,7 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix'
@@ -570,7 +570,7 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -592,7 +592,7 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix'
@@ -613,7 +613,7 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -629,7 +629,7 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -686,10 +686,10 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/sequential_version/2',
+            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1',
             'refs/tags/version/1.0.1-beta.1',
             'refs/tags/version/1.0.1',
@@ -713,17 +713,17 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/sequential_version/1',
+            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/sequential_version/2',
+            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1',
             'refs/tags/version/1.0.1-beta.1',
             'refs/tags/version/1.0.1',
 
             # 'refs/heads/release/2.0',  # local branch
             'refs/remotes/origin/release/2.0',
-            'refs/tags/sequential_version/3',
+            'refs/tags/version_code/3',
             'refs/tags/version/2.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
