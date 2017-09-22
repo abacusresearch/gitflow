@@ -1,0 +1,17 @@
+{
+
+  "versionTypes": ["alpha", "beta", "rc"],
+
+  "build": {
+    "stages": {
+      "assemble": [
+        ["python3", "setup.py", "sdist", "--formats=gztar"],
+        ["python3", "setup.py", "bdist"]
+      ],
+      "test": [
+        ["py.test", "--verbose", "test"]
+      ]
+    }
+  }
+
+}
