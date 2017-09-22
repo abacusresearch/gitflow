@@ -105,11 +105,11 @@ def call(context: Context) -> Result:
     if not base_command_context.selected_explicitly:
         if work_branch.prefix == const.BRANCH_PREFIX_DEV:
             base_branch_info = get_branch_info(base_command_context,
-                                                     repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
-                                                                               context.config.release_branch_base))
+                                               repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
+                                                                         context.config.release_branch_base))
             base_branch_ref, base_branch_class = select_ref(command_context.result,
-                                                                           base_branch_info,
-                                                                           BranchSelection.BRANCH_PREFER_LOCAL)
+                                                            base_branch_info,
+                                                            BranchSelection.BRANCH_PREFER_LOCAL)
         elif work_branch.prefix == const.BRANCH_PREFIX_PROD:
             # discover closest merge base in release branches
 
@@ -169,12 +169,21 @@ def call(context: Context) -> Result:
                              None)
 
     if not context.dry_run and not command_context.has_errors():
-        # run merge
-        git_or_fail(context, command_context.result,
-                    ['checkout', base_branch_ref.short_name],
-                    _("Failed to checkout branch {branch_name}.")
-                    .format(branch_name=repr(base_branch_ref.short_name))
-                    )
+        # perform merge
+        local_branch_ref_name = repotools.create_local_branch_ref_name(base_branch_ref.name)
+        local_branch_name = repotools.create_local_branch_name(base_branch_ref.name)
+        if local_branch_ref_name == base_branch_ref.name:
+            git_or_fail(context, command_context.result,
+                        ['checkout', local_branch_name],
+                        _("Failed to checkout branch {branch_name}.")
+                        .format(branch_name=repr(base_branch_ref.short_name))
+                        )
+        else:
+            git_or_fail(context, command_context.result,
+                        ['checkout', '-b', local_branch_name, base_branch_ref.name],
+                        _("Failed to checkout branch {branch_name}.")
+                        .format(branch_name=repr(base_branch_ref.short_name))
+                        )
 
         git_or_fail(context, command_context.result,
                     ['merge', '--no-ff', work_branch_ref],
