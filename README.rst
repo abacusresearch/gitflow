@@ -46,16 +46,33 @@ A version property commit implies a rebuild of the corresponding hash.
 
 Configuration
 ~~~~~~~~~~~~~
-The configuration file is located at the workspace (branch) root and is named `gitflow.properties` unless overridden
+The configuration file is located at the workspace (branch) root and is named `gitflow.json` unless overridden
 with `--config=<relative-path>`.
 
-Minimal Example::
+Example::
 
-    propertyFile=project.properties
-    versionPropertyName=mavenPomVersion
-    sequentialVersionPropertyName=androidVersionCode
+    {
 
-    versionTypes=alpha,beta,rc
+      "versionTypes": ["alpha", "beta", "rc"],
+
+      "propertyFile": "project.properties",
+      "versionPropertyName": "version",
+      "sequentialVersionPropertyName": "versionCode",
+
+      "build": {
+        "stages": {
+          "assemble": [
+            ["python3", "setup.py", "sdist", "--formats=gztar"],
+            ["python3", "setup.py", "bdist"]
+          ],
+          "test": [
+            ["py.test", "--verbose", "test"]
+          ]
+        }
+      }
+
+    }
+
 
 Usage
 ~~~~~

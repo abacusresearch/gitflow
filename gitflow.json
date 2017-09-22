@@ -2,6 +2,10 @@
 
   "versionTypes": ["alpha", "beta", "rc"],
 
+  "propertyFile": "project.properties",
+  "versionPropertyName": "version",
+  "sequentialVersionPropertyName": "versionCode",
+
   "build": {
     "stages": {
       "assemble": [
