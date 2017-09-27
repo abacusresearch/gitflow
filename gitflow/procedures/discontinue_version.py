@@ -77,7 +77,7 @@ def call(context: Context) -> Result:
                         base_branch=repr(base_branch_ref.short_name)),
         )
         command_context.add_subresult(prompt_result)
-        if command_context.has_errors():
+        if command_context.has_errors() or not prompt_result.value:
             return command_context.result
 
         reintegrate = prompt_result.value

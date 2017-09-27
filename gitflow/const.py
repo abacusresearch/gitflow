@@ -81,13 +81,6 @@ BUILD_STAGE_TYPES = [
     BUILD_STAGE_TYPE_INTEGRATION_TEST
 ]
 
-# TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
-ERROR_VERBOSITY = 1
-INFO_VERBOSITY = 2
-TRACE_VERBOSITY = 3
-
-OS_IS_POSIX = os.name == 'posix'
-
 
 def __setattr__(self, name, value):
     if hasattr(self, name):
@@ -113,3 +106,13 @@ BRANCHING = {
     BranchClass.WORK_PROD: BranchClass.RELEASE,
     BranchClass.RELEASE: BranchClass.DEVELOPMENT_BASE,
 }
+
+# TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
+ERROR_VERBOSITY = 1
+INFO_VERBOSITY = 2
+TRACE_VERBOSITY = 3
+
+OS_IS_POSIX = os.name == 'posix'
+
+EX_ABORTED = 2
+EX_ABORTED_BY_USER = 3
