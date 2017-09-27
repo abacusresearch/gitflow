@@ -19,6 +19,7 @@ def call(context: Context) -> Result:
 
     check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
+                       branch_classes=None,
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
                        in_sync_with_upstream=True,

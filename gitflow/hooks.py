@@ -18,6 +18,7 @@ def pre_commit(context: Context) -> Result:
 
     common.check_requirements(command_context=command_context,
                               ref=target_ref,
+                              branch_classes=None,
                               modifiable=True,
                               with_upstream=False,
                               in_sync_with_upstream=False,
@@ -49,6 +50,7 @@ def pre_push(context: Context) -> Result:
 
         common.check_requirements(command_context=command_context,
                                   ref=command_context.selected_ref,
+                                  branch_classes=None,
                                   modifiable=True,
                                   with_upstream=False,
                                   in_sync_with_upstream=False,
