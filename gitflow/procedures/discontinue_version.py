@@ -2,6 +2,7 @@ import os
 
 from gitflow import cli, utils, repotools, _, const
 from gitflow.common import Result
+from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
     get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
@@ -30,6 +31,7 @@ def call(context: Context) -> Result:
 
     check_requirements(command_context=command_context,
                        ref=release_branch,
+                       branch_classes=[BranchClass.RELEASE],
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
                        in_sync_with_upstream=True,
@@ -77,7 +79,7 @@ def call(context: Context) -> Result:
                         base_branch=repr(base_branch_ref.short_name)),
         )
         command_context.add_subresult(prompt_result)
-        if command_context.has_errors():
+        if command_context.has_errors() or not prompt_result.value:
             return command_context.result
 
         reintegrate = prompt_result.value

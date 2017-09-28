@@ -511,7 +511,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
     if context.batch:
         result.value = context.assume_yes
         if not result.value:
-            result.fail(os.EX_TEMPFAIL, fail_title, message)
+            result.fail(const.EX_ABORTED, fail_title, message)
     else:
         if message is not None:
             cli.warn(message)
@@ -523,6 +523,9 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
             result.value = True
         else:
             result.value = cli.query_yes_no(sys.stdout, prompt, "no")
+
+        if result.value is not True:
+            result.error(const.EX_ABORTED_BY_USER, fail_title, message, False)
 
     return result
 
@@ -659,11 +662,23 @@ def check_in_repo(command_context: CommandContext):
 
 def check_requirements(command_context: CommandContext,
                        ref: repotools.Ref,
+                       branch_classes: Union[list, None],
                        modifiable: bool,
                        with_upstream: bool,
                        in_sync_with_upstream: bool,
                        fail_message: str,
                        throw=True):
+    branch_class = get_branch_class(command_context.context, ref)
+
+    if branch_classes is not None and branch_class not in branch_classes:
+        command_context.error(os.EX_USAGE,
+                              fail_message,
+                              _("The branch {branch} is of type {type} must be one of these types: \n{allowed_types}")
+                              .format(branch=repr(ref.name),
+                                      type=repr(branch_class.name if branch_class is not None else None),
+                                      allowed_types='- \n'.join(branch_class.name for branch_class in branch_classes)),
+                              throw)
+
     if ref.local_branch_name is not None:
         # check, whether the  selected branch/commit is on remote
 

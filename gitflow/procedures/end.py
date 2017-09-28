@@ -4,6 +4,7 @@ import semver
 
 from gitflow import utils, _, const, repotools, cli
 from gitflow.common import Result
+from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, check_requirements, WorkBranch, get_branch_info, \
     select_ref, git, git_or_fail, check_in_repo
@@ -25,6 +26,7 @@ def call(context: Context) -> Result:
 
     check_requirements(command_context=command_context,
                        ref=command_context.selected_ref,
+                       branch_classes=[BranchClass.WORK_DEV, BranchClass.WORK_PROD],
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
                        in_sync_with_upstream=True,

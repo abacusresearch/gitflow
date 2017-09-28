@@ -5,6 +5,7 @@ import semver
 
 from gitflow import utils, _, version, repotools, cli, const
 from gitflow.common import Result
+from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, check_requirements, get_branch_name_for_version, \
     fetch_all_and_ff, \
@@ -688,17 +689,18 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
 
     check_in_repo(command_context)
 
-    check_requirements(command_context=command_context,
-                       ref=command_context.selected_ref,
-                       modifiable=True,
-                       with_upstream=True,  # not context.config.push_to_local
-                       in_sync_with_upstream=True,
-                       fail_message=_("Version creation failed.")
-                       )
-
     # determine the type of operation to be performed and run according subroutines
     if operation == version.version_bump_major \
             or operation == version.version_bump_minor:
+
+        check_requirements(command_context=command_context,
+                           ref=command_context.selected_ref,
+                           branch_classes=[BranchClass.DEVELOPMENT_BASE],
+                           modifiable=True,
+                           with_upstream=True,  # not context.config.push_to_local
+                           in_sync_with_upstream=True,
+                           fail_message=_("Version creation failed.")
+                           )
 
         tag_result = create_version_branch(command_context, operation)
         command_context.add_subresult(tag_result)
@@ -708,10 +710,27 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
             or operation == version.version_bump_prerelease \
             or operation == version.version_bump_to_release:
 
+        check_requirements(command_context=command_context,
+                           ref=command_context.selected_ref,
+                           branch_classes=[BranchClass.RELEASE],
+                           modifiable=True,
+                           with_upstream=True,  # not context.config.push_to_local
+                           in_sync_with_upstream=True,
+                           fail_message=_("Version creation failed.")
+                           )
+
         tag_result = create_version_tag(command_context, operation)
         command_context.add_subresult(tag_result)
 
     elif isinstance(operation, version.version_set):
+        check_requirements(command_context=command_context,
+                           ref=command_context.selected_ref,
+                           branch_classes=None,
+                           modifiable=True,
+                           with_upstream=True,  # not context.config.push_to_local
+                           in_sync_with_upstream=True,
+                           fail_message=_("Version creation failed.")
+                           )
 
         version_result = operation(context.config.version_config, None)
         command_context.add_subresult(version_result)
