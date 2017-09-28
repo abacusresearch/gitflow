@@ -13,7 +13,7 @@ class RepoContext(object):
     git = 'git'
     dir = '.'
     tags = None  # dict
-    verbose = False  # TODO use parent context
+    verbose = const.NO_VERBOSITY  # TODO use parent context
     use_root_dir_arg = False
 
 
@@ -157,7 +157,7 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
     env = os.environ.copy()
     env["LANGUAGE"] = "C"
     env["LC_ALL"] = "C"
-    if context.verbose >= const.ERROR_VERBOSITY:
+    if context.verbose >= const.TRACE_VERBOSITY:
         return subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,

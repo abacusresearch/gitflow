@@ -108,6 +108,7 @@ BRANCHING = {
 }
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
+NO_VERBOSITY = 0
 ERROR_VERBOSITY = 1
 INFO_VERBOSITY = 2
 TRACE_VERBOSITY = 3
