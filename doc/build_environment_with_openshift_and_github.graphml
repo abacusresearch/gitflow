@@ -421,7 +421,7 @@
                       <y:Geometry height="610.5250568138565" width="621.8857327978207" x="-4.700097453744121" y="-56.42214893633417"/>
                       <y:Fill color="#000000" color2="#3C679B" transparent="false"/>
                       <y:BorderStyle color="#3366FF" type="line" width="1.0"/>
-                      <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="0.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="tl" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="71.1484375" x="0.0" y="0.0">release/2.6</y:NodeLabel>
+                      <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="0.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="tl" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="120.71875" x="0.0" y="0.0">branch: release/2.6</y:NodeLabel>
                       <y:State autoResize="true" closed="false" closedHeight="50.0" closedWidth="50.0"/>
                       <y:Insets bottom="15" bottomF="15.0" left="15" leftF="15.0" right="15" rightF="15.0" top="15" topF="15.0"/>
                       <y:BorderInsets bottom="0" bottomF="0.0" left="0" leftF="0.0" right="12" rightF="12.373741604374914" top="0" topF="0.0"/>
@@ -774,13 +774,13 @@
         <y:ProxyAutoBoundsNode>
           <y:Realizers active="0">
             <y:GenericGroupNode configuration="DemoGroup">
-              <y:Geometry height="1073.9124764820517" width="558.2889002134308" x="926.2032542480632" y="-477.90625"/>
+              <y:Geometry height="1073.9124764820517" width="558.3992500486271" x="926.2032542480632" y="-477.90625"/>
               <y:Fill color="#000000" color2="#3C679B" transparent="false"/>
               <y:BorderStyle color="#3366FF" type="line" width="1.0"/>
               <y:NodeLabel alignment="center" autoSizePolicy="content" borderDistance="0.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="17.96875" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="tl" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="48.2265625" x="0.0" y="0.0">Testing</y:NodeLabel>
               <y:State autoResize="true" closed="false" closedHeight="50.0" closedWidth="50.0"/>
               <y:Insets bottom="15" bottomF="15.0" left="15" leftF="15.0" right="15" rightF="15.0" top="15" topF="15.0"/>
-              <y:BorderInsets bottom="19" bottomF="18.789217762908038" left="14" leftF="14.326612903225396" right="17" rightF="17.446163875463526" top="23" topF="22.938838551881418"/>
+              <y:BorderInsets bottom="19" bottomF="18.789217762908038" left="14" leftF="14.326612903225396" right="9" rightF="8.710654422949574" top="23" topF="22.938838551881418"/>
             </y:GenericGroupNode>
             <y:GenericGroupNode configuration="DemoGroup">
               <y:Geometry height="50.0" width="50.0" x="596.556479713362" y="-371.505859375"/>
@@ -923,15 +923,17 @@
         <node id="n3::n3">
           <data key="d6">
             <y:GenericNode configuration="com.yworks.flowchart.annotation">
-              <y:Geometry height="94.41740711236685" width="250.0442250612267" x="1193.3766059074862" y="319.37863072739964"/>
+              <y:Geometry height="136.55339388331657" width="267.5152439662546" x="1193.3766059074862" y="319.3786307273996"/>
               <y:Fill color="#E8EEF7" color2="#E8EEF7" transparent="false"/>
               <y:BorderStyle color="#000000" type="line" width="1.0"/>
-              <y:NodeLabel alignment="left" autoSizePolicy="node_width" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="87.8125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="250.0442250612267" x="0.0" y="3.3024535561834227">- Does never rely on results
+              <y:NodeLabel alignment="left" autoSizePolicy="node_width" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="115.75" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="267.5152439662546" x="0.0" y="10.401696941658315">- Does never rely on results
 obtained during development testing.
-- Bugfix requests only!
-A release branch can be
-discontinued, when a new feature
-is introduced via master.<y:LabelModel>
+- Fixes may be implemented on a release
+branch
+- Missing or incomplete features must
+be introduced via master and a new
+release branch. The previos release
+branch may then be discontinued.<y:LabelModel>
                   <y:SmartNodeLabelModel distance="4.0"/>
                 </y:LabelModel>
                 <y:ModelParameter>
@@ -940,7 +942,6 @@ is introduced via master.<y:LabelModel>
               </y:NodeLabel>
               <y:StyleProperties>
                 <y:Property class="java.lang.Byte" name="com.yworks.flowchart.style.orientation" value="0"/>
-                <y:Property class="java.lang.Byte" name="LAYER_STYLE_PROPERTY_KEY" value="1"/>
               </y:StyleProperties>
             </y:GenericNode>
           </data>
