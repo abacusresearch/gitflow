@@ -56,8 +56,8 @@ class CommitInfo(object):
 class BranchInfo(object):
     ref: repotools.Ref = None
     ref_is_local: bool = None
-    local: repotools.Ref = None
-    local_class: const.BranchClass = None
+    local: list = None
+    local_class: list = None
     upstream: repotools.Ref = None
     upstream_class: const.BranchClass = None
 
@@ -106,12 +106,12 @@ class CommandContext(object):
 
 def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
         -> [repotools.Ref, const.BranchClass]:
-    if branch_info.local is not None and branch_info.upstream is not None:
-        if branch_info.local_class != branch_info.upstream_class:
+    if branch_info.local is not None and len(branch_info.local) and branch_info.upstream is not None:
+        if branch_info.local_class[0] != branch_info.upstream_class:
             result_out.error(os.EX_DATAERR,
                              _("Local and upstream branch have a mismatching branch class."),
                              None)
-        if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
+        if not branch_info.upstream.short_name.endswith('/' + branch_info.local[0].short_name):
             result_out.error(os.EX_DATAERR,
                              _("Local and upstream branch have a mismatching short name."),
                              None)
@@ -119,14 +119,14 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
     candidate = None
     candidate_class = None
     if selection == BranchSelection.BRANCH_PREFER_LOCAL:
-        candidate = branch_info.local or branch_info.upstream
-        candidate_class = branch_info.local_class or branch_info.upstream_class
+        candidate = branch_info.local[0] or branch_info.upstream
+        candidate_class = branch_info.local_class[0] or branch_info.upstream_class
     elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
-        candidate = branch_info.local
-        candidate_class = branch_info.local_class
+        candidate = branch_info.local[0]
+        candidate_class = branch_info.local_class[0]
     elif selection == BranchSelection.BRANCH_PREFER_REMOTE:
-        candidate = branch_info.upstream or branch_info.local
-        candidate_class = branch_info.upstream_class or branch_info.local_class
+        candidate = branch_info.upstream or branch_info.local[0]
+        candidate_class = branch_info.upstream_class or branch_info.local_class[0]
     elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
         candidate = branch_info.upstream
         candidate_class = branch_info.upstream_class
@@ -222,7 +222,7 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
 
     if branch_ref.local_branch_name:
         branch_info = BranchInfo()
-        branch_info.local = branch_ref
+        branch_info.local = [branch_ref]
 
         upstream = upstreams.get(branch_ref.name)
         if upstream is not None:
@@ -232,15 +232,18 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
         branch_info = BranchInfo()
         branch_info.upstream = branch_ref
 
+        branch_info.local = list()
+
         for ref, upstream in upstreams.items():
             if upstream == branch_ref.name:
-                branch_info.local = repotools.get_ref_by_name(context.repo, ref)
-                break
+                branch_info.local.append(repotools.get_ref_by_name(context.repo, ref))
 
     if branch_info is not None:
         if branch_info.local is not None:
-            branch_info.local_class = get_branch_class(context, branch_info.local.name)
-            branch_info_out[branch_info.local.name] = branch_info
+            branch_info.local_class = list()
+            for local in branch_info.local:
+                branch_info.local_class.append(get_branch_class(context, local.name))
+                branch_info_out[local.name] = branch_info
         if branch_info.upstream is not None:
             branch_info.upstream_class = get_branch_class(context, branch_info.upstream.name)
             branch_info_out[branch_info.upstream.name] = branch_info
