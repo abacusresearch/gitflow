@@ -33,14 +33,7 @@ def call(context: Context) -> Result:
         arg_work_branch.type = context.args['<type>']
         arg_work_branch.name = context.args['<name>']
 
-    if arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None:
-        if arg_work_branch.prefix not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
-            context.fail(os.EX_USAGE,
-                                 _("Invalid branch super type: {supertype}.")
-                                 .format(supertype=repr(arg_work_branch.prefix)),
-                                 None)
-
-    else:
+    if not (arg_work_branch.prefix is not None and arg_work_branch.type is not None and arg_work_branch.name is not None):
         arg_work_branch = None
 
     command_context = get_command_context(
