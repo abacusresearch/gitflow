@@ -103,7 +103,7 @@ def ref_target(ref: Union[Object, str, list]):
     elif isinstance(ref, Object):
         return ref.obj_name
     elif isinstance(ref, list):
-        return utils.split_join('/', False, False, *ref)
+        return create_ref_name(*ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
@@ -114,7 +114,7 @@ def ref_name(ref: Union[Ref, str, list]):
     elif isinstance(ref, Ref):
         return ref.name
     elif isinstance(ref, list):
-        return utils.split_join('/', False, False, *ref)
+        return create_ref_name(*ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 

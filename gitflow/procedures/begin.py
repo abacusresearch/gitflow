@@ -28,7 +28,7 @@ def call(context: Context) -> Result:
 
     selected_work_branch = context.args.get('<work-branch>')
     if selected_work_branch is not None:
-        selected_work_branch = utils.split_join('/', False, False, selected_work_branch)
+        selected_work_branch = repotools.create_ref_name(selected_work_branch)
         if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
             selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
         branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
@@ -53,8 +53,8 @@ def call(context: Context) -> Result:
                              .format(supertype=repr(branch_supertype)),
                              None)
 
-    work_branch_name = utils.split_join('/', False, False, branch_supertype, branch_type, branch_short_name)
-    work_branch_ref_name = utils.split_join('/', False, False, const.LOCAL_BRANCH_PREFIX, work_branch_name)
+    work_branch_name = repotools.create_ref_name(branch_supertype, branch_type, branch_short_name)
+    work_branch_ref_name = repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, work_branch_name)
     work_branch_class = get_branch_class(context, work_branch_ref_name)
 
     if True:

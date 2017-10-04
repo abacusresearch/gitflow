@@ -39,7 +39,7 @@ def call(context: Context) -> Result:
 
     selected_work_branch = context.args.get('<work-branch>')
     if selected_work_branch is not None:
-        selected_work_branch = utils.split_join('/', False, False, selected_work_branch)
+        selected_work_branch = repotools.create_ref_name(selected_work_branch)
         if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
             selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
         branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
