@@ -12,36 +12,11 @@ from gitflow.repotools import BranchSelection
 
 
 def call(context: Context) -> Result:
-    command_context = get_command_context(
-        context=context,
-        object_arg=context.args['<work-branch>']
-    )
-
-    check_in_repo(command_context)
-
-    base_command_context = get_command_context(
-        context=context,
-        object_arg=context.args['<base-object>']
-    )
-
-    check_requirements(command_context=command_context,
-                       ref=command_context.selected_ref,
-                       branch_classes=[BranchClass.WORK_DEV, BranchClass.WORK_PROD],
-                       modifiable=True,
-                       with_upstream=True,  # not context.config.push_to_local
-                       in_sync_with_upstream=True,
-                       fail_message=_("Version creation failed.")
-                       )
-
-    work_branch = None
-
     arg_work_branch = WorkBranch()
 
     selected_work_branch = context.args.get('<work-branch>')
     if selected_work_branch is not None:
         selected_work_branch = repotools.create_ref_name(selected_work_branch)
-        if not selected_work_branch.startswith(const.LOCAL_BRANCH_PREFIX):
-            selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
         branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
         if branch_match is None:
             context.fail(os.EX_USAGE,
@@ -67,6 +42,27 @@ def call(context: Context) -> Result:
 
     else:
         arg_work_branch = None
+
+    command_context = get_command_context(
+        context=context,
+        object_arg=arg_work_branch.branch_name() if arg_work_branch is not None else None
+    )
+
+    check_in_repo(command_context)
+
+    base_command_context = get_command_context(
+        context=context,
+        object_arg=context.args['<base-object>']
+    )
+
+    check_requirements(command_context=command_context,
+                       ref=command_context.selected_ref,
+                       branch_classes=[BranchClass.WORK_DEV, BranchClass.WORK_PROD],
+                       modifiable=True,
+                       with_upstream=True,  # not context.config.push_to_local
+                       in_sync_with_upstream=True,
+                       fail_message=_("Version creation failed.")
+                       )
 
     ref_work_branch = WorkBranch()
     selected_ref_match = context.work_branch_matcher.fullmatch(command_context.selected_ref.name)
