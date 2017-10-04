@@ -673,10 +673,10 @@ def check_requirements(command_context: CommandContext,
     if branch_classes is not None and branch_class not in branch_classes:
         command_context.error(os.EX_USAGE,
                               fail_message,
-                              _("The branch {branch} is of type {type} must be one of these types: \n{allowed_types}")
+                              _("The branch {branch} is of type {type} must be one of these types:{allowed_types}")
                               .format(branch=repr(ref.name),
                                       type=repr(branch_class.name if branch_class is not None else None),
-                                      allowed_types='- \n'.join(branch_class.name for branch_class in branch_classes)),
+                                      allowed_types='\n - ' + '\n - '.join(branch_class.name for branch_class in branch_classes)),
                               throw)
 
     if ref.local_branch_name is not None:
