@@ -80,7 +80,7 @@ def call(context: Context) -> Result:
         )
         command_context.add_subresult(prompt_result)
         if command_context.has_errors() or not prompt_result.value:
-            return command_context.result
+            return context.result
 
         reintegrate = prompt_result.value
 
@@ -90,7 +90,7 @@ def call(context: Context) -> Result:
         clone_result = create_shared_clone_repository(context)
         command_context.add_subresult(clone_result)
         if command_context.has_errors():
-            return command_context.result
+            return context.result
 
         clone_context: Context = clone_result.value
 
@@ -123,7 +123,7 @@ def call(context: Context) -> Result:
         )
         command_context.add_subresult(prompt_result)
         if command_context.has_errors() or not prompt_result.value:
-            return command_context.result
+            return context.result
 
         push_command = ['push', '--atomic']
         if context.dry_run:
@@ -144,4 +144,4 @@ def call(context: Context) -> Result:
 
         fetch_all_and_ff(context, command_context.result, context.config.remote_name)
 
-    return command_context.result
+    return context.result

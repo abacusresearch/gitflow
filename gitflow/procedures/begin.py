@@ -117,4 +117,4 @@ def call(context: Context) -> Result:
                     .format(branch_name=work_branch_name)
                     )
 
-    return command_context.result
+    return context.result

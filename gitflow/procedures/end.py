@@ -156,7 +156,7 @@ def call(context: Context) -> Result:
     if work_branch_ref.obj_name == merge_base:
         cli.print(_("Branch {branch} is already merged.")
                   .format(branch=repr(work_branch_ref.name)))
-        return command_context.result
+        return context.result
 
     # check for staged changes
     index_status = git(context, ['diff-index', 'HEAD', '--'])
@@ -201,4 +201,4 @@ def call(context: Context) -> Result:
                     .format(branch_name=repr(base_branch_ref.short_name))
                     )
 
-    return command_context.result
+    return context.result

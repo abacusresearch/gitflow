@@ -81,28 +81,27 @@ class CommandContext(object):
 
     def __init__(self):
         self.branch_info_dict = dict()
-        self.result = Result()
 
     def warn(self, message, reason):
-        self.result.warn(message, reason)
+        self.context.warn(message, reason)
 
     def error(self, exit_code, message, reason, throw: bool = False):
-        self.result.error(exit_code, message, reason, throw)
+        self.context.error(exit_code, message, reason, throw)
 
     def fail(self, exit_code, message, reason):
-        self.result.fail(exit_code, message, reason)
+        self.context.fail(exit_code, message, reason)
 
     def add_subresult(self, subresult):
-        self.result.add_subresult(subresult)
+        self.context.add_subresult(subresult)
 
     def has_errors(self):
-        return self.result.has_errors()
+        return self.context.has_errors()
 
     def abort_on_error(self):
-        return self.result.abort_on_error()
+        return self.context.abort_on_error()
 
     def abort(self):
-        return self.result.abort()
+        return self.context.abort()
 
 
 def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \

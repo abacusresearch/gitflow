@@ -112,7 +112,35 @@ class Config(object):
                and self.sequential_versioning
 
 
-class Context(object):
+class AbstractContext(object):
+    result: Result = None
+
+    def __init__(self):
+        self.result = Result()
+
+    def warn(self, message, reason):
+        self.result.warn(message, reason)
+
+    def error(self, exit_code, message, reason, throw: bool = False):
+        self.result.error(exit_code, message, reason, throw)
+
+    def fail(self, exit_code, message, reason):
+        self.result.fail(exit_code, message, reason)
+
+    def add_subresult(self, subresult):
+        self.result.add_subresult(subresult)
+
+    def has_errors(self):
+        return self.result.has_errors()
+
+    def abort_on_error(self):
+        return self.result.abort_on_error()
+
+    def abort(self):
+        return self.result.abort()
+
+
+class Context(AbstractContext):
     config: Config = None
     repo: RepoContext = None
 
@@ -143,6 +171,7 @@ class Context(object):
     git_version: str = None
 
     def __init__(self):
+        super().__init__()
         atexit.register(self.cleanup)
 
     @staticmethod

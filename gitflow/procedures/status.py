@@ -141,4 +141,4 @@ def call(context) -> Result:
                                   )
         last_unique_code = unique_code
 
-    return command_context.result
+    return context.result

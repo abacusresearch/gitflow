@@ -17,4 +17,4 @@ def call(context: Context):
 
     execute_build_steps(command_context, context, selected_stages)
 
-    return command_context.result
+    return context.result
