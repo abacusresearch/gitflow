@@ -33,7 +33,7 @@ def call(context: Context) -> Result:
             selected_work_branch = const.LOCAL_BRANCH_PREFIX + selected_work_branch
         branch_match = context.work_branch_matcher.fullmatch(selected_work_branch)
         if branch_match is None:
-            command_context.fail(os.EX_USAGE,
+            context.fail(os.EX_USAGE,
                                  _("Invalid work branch: {branch}.")
                                  .format(branch=repr(selected_work_branch)),
                                  None)
@@ -48,7 +48,7 @@ def call(context: Context) -> Result:
         branch_short_name = context.args['<name>']
 
     if branch_supertype not in [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD]:
-        command_context.fail(os.EX_USAGE,
+        context.fail(os.EX_USAGE,
                              _("Invalid branch super type: {supertype}.")
                              .format(supertype=repr(branch_supertype)),
                              None)
@@ -60,7 +60,7 @@ def call(context: Context) -> Result:
     if True:
         work_branch_info = get_branch_info(command_context, work_branch_ref_name)
         if work_branch_info is not None:
-            command_context.fail(os.EX_USAGE,
+            context.fail(os.EX_USAGE,
                                  _("The branch {branch} already exists locally or remotely.")
                                  .format(branch=repr(work_branch_name)),
                                  None)
@@ -78,14 +78,14 @@ def call(context: Context) -> Result:
                                                                        BranchSelection.BRANCH_PREFER_LOCAL)
 
     if allowed_base_branch_class != base_branch_class:
-        command_context.fail(os.EX_USAGE,
+        context.fail(os.EX_USAGE,
                              _("The branch {branch} is not a valid base for {supertype} branches.")
                              .format(branch=repr(base_branch.name),
                                      supertype=repr(branch_supertype)),
                              None)
 
     if base_branch is None:
-        command_context.fail(os.EX_USAGE,
+        context.fail(os.EX_USAGE,
                              _("Base branch undetermined."),
                              None)
 
@@ -97,12 +97,12 @@ def call(context: Context) -> Result:
     if not context.dry_run and not command_context.has_errors():
         index_status = git(context, ['diff-index', 'HEAD', '--'])
         if index_status == 1:
-            command_context.fail(os.EX_USAGE,
+            context.fail(os.EX_USAGE,
                                  _("Branch creation aborted."),
                                  _("You have staged changes in your workspace.\n"
                                    "Unstage, commit or stash them and try again."))
         elif index_status != 0:
-            command_context.fail(os.EX_DATAERR,
+            context.fail(os.EX_DATAERR,
                                  _("Failed to determine index status."),
                                  None)
 
