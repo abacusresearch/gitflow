@@ -807,6 +807,22 @@ def download_file(source_uri: str, dest_file: str, hash_hex: str):
     return result
 
 
+def __var_subst(match, vars: dict):
+    subst = ''
+    if match.group(1) is not None:
+        subst += match.group(1)[:len(match.group(1)) >> 1]
+    if match.group(2) is not None:
+        if match.group(3) is None:
+            subst += vars[match.group(5) or match.group(6)]
+        else:
+            subst += match.group(4)
+    return subst
+
+
+def expand_vars(s: str, vars: dict):
+    return re.sub(r'((?:\\\\)+)|((\\)?(\$(?:{([^}]*)}|(\w+))))', lambda match: __var_subst(match, vars), s)
+
+
 def execute_build_steps(command_context, context, types: list = None):
     if types is not None:
         stages = filter(lambda stage: stage.type in types, context.config.build_stages)
@@ -820,6 +836,8 @@ def execute_build_steps(command_context, context, types: list = None):
             for command in step.commands:
                 if context.verbose >= const.TRACE_VERBOSITY:
                     print(' '.join(shlex.quote(token) for token in command))
+
+                command = [expand_vars(token, os.environ) for token in command]
 
                 if not context.dry_run:
                     try:

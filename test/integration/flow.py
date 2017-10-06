@@ -132,7 +132,15 @@ class TestFlow:
                         'assemble': [['echo', 'assemble#1']],
                         'test': {
                             'steps': {
-                                'app': [['echo', 'test#1']]
+                                'app': [
+                                    ['echo', 'test#1'],
+                                    ['echo', '\\$HOME: $HOME'],
+                                    ['echo', '\\\\\\$HOME: \\$HOME'],
+                                    ['echo', '\\\\\\\\\\$HOME: \\\\$HOME'],
+                                    ['echo', '\\${HOME}: ${HOME}'],
+                                    ['echo', '\\\\\\${HOME}: \\${HOME}'],
+                                    ['echo', '\\\\\\\\\\${HOME}: \\\\${HOME}']
+                                ]
                             }
                         },
                         'google_testing_lab': {
