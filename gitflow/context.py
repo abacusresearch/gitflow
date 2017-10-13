@@ -55,7 +55,7 @@ class BuildStage(object):
 
 class Config(object):
     # versioning scheme
-    versioning_scheme: VersioningScheme = VersioningScheme.SEMVER_WITH_TIED_SEQ
+    versioning_scheme: VersioningScheme = None
     commit_version_property = False
     commit_sequential_version_property = True
 
@@ -293,6 +293,14 @@ class Context(object):
             const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
 
         # version config
+
+        versioning_schemes = {
+            'semver': VersioningScheme.SEMVER,
+            'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
+            'semverWithTiedSeq': VersioningScheme.SEMVER_WITH_TIED_SEQ
+        }
+
+        context.config.versioning_scheme = versioning_schemes[config.get(const.CONFIG_VERSIONING_SCHEME) or 'semverWithTiedSeq']
 
         qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:
