@@ -366,7 +366,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         prompt_result = prompt_for_confirmation(
             context=context,
-            fail_title=_("Failed to create release tag based on {branch} in batch mode.")
+            fail_title=_("Failed to create release tag based on {branch}.")
                 .format(branch=repr(command_context.selected_ref.name)),
             message=_("The tags are about to be pushed."),
             prompt=_("Continue?"),
@@ -553,7 +553,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             and len(existing_release_branches):
         prompt_result = prompt_for_confirmation(
             context=context,
-            fail_title=_("Failed to create release branch based on {branch} in batch mode.")
+            fail_title=_("Failed to create release branch based on {branch}.")
                 .format(branch=repr(command_context.selected_ref.name)),
             message=_("This operation disables version increments except for pre-release increments "
                       "on all existing branches.\n"
@@ -642,7 +642,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         prompt_result = prompt_for_confirmation(
             context=context,
-            fail_title=_("Failed to create release branch based on {branch} in batch mode.")
+            fail_title=_("Failed to create release branch based on {branch}.")
                 .format(branch=repr(command_context.selected_ref.name)),
             message=_("The branch and tags are about to be pushed."),
             prompt=_("Continue?"),

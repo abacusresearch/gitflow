@@ -72,7 +72,7 @@ def call(context: Context) -> Result:
     if reintegrate is None:
         prompt_result = prompt_for_confirmation(
             context=context,
-            fail_title=_("Failed to determine merge mode for {branch} in batch mode."),
+            fail_title=_("Failed to determine merge mode for {branch}."),
             message=_("Branches may be reintegrated upon discontinuation."),
             prompt=_("Do you want to reintegrate {branch} into {base_branch}?")
                 .format(branch=repr(release_branch.short_name),
@@ -116,7 +116,7 @@ def call(context: Context) -> Result:
         changes.append(_("Discontinuation tag"))
         prompt_result = prompt_for_confirmation(
             context=context,
-            fail_title=_("Failed to discontinue {branch} in batch mode.")
+            fail_title=_("Failed to discontinue {branch}.")
                 .format(branch=repr(release_branch.name)),
             message=(" - " + (os.linesep + " - ").join([_("Changes to be pushed:")] + changes)),
             prompt=_("Continue?"),
