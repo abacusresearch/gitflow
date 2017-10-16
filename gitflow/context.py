@@ -56,8 +56,6 @@ class BuildStage(object):
 class Config(object):
     # versioning scheme
     versioning_scheme: VersioningScheme = None
-    commit_version_property = False
-    commit_sequential_version_property = True
 
     # project properties
     property_file: str = None
@@ -96,13 +94,22 @@ class Config(object):
 
     # properties
     @property
-    def sequential_versioning(self):
+    def sequential_versioning(self) -> bool:
         return self.versioning_scheme in (VersioningScheme.SEMVER_WITH_SEQ,
                                           VersioningScheme.SEMVER_WITH_TIED_SEQ)
 
     @property
-    def tie_sequential_version_to_semantic_version(self):
+    def tie_sequential_version_to_semantic_version(self) -> bool:
         return self.versioning_scheme == VersioningScheme.SEMVER_WITH_TIED_SEQ
+
+    @property
+    def commit_version_property(self) -> bool:
+        return self.version_property_name is not None
+
+    @property
+    def commit_sequential_version_property(self) -> bool:
+        return self.sequential_version_property_name is not None \
+               and self.sequential_versioning
 
 
 class Context(object):
@@ -300,7 +307,8 @@ class Context(object):
             'semverWithTiedSeq': VersioningScheme.SEMVER_WITH_TIED_SEQ
         }
 
-        context.config.versioning_scheme = versioning_schemes[config.get(const.CONFIG_VERSIONING_SCHEME) or 'semverWithTiedSeq']
+        context.config.versioning_scheme = versioning_schemes[
+            config.get(const.CONFIG_VERSIONING_SCHEME) or 'semverWithTiedSeq']
 
         qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:

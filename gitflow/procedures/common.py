@@ -279,7 +279,7 @@ def update_project_property_file(context: Context,
     sequential_version_property_name = context.config.sequential_version_property_name
 
     property_store = None
-    if context.config.property_file is not None and version_property_name is not None:
+    if context.config.property_file is not None:
         if context.config.property_file.endswith(".properties"):
             property_store = filesystem.JavaPropertyFile(context.config.property_file)
         else:
@@ -317,7 +317,7 @@ def update_project_property_file(context: Context,
 
             result.value += 1
 
-        if context.config.commit_sequential_version_property and sequential_version_property_name is not None:
+        if context.config.commit_sequential_version_property:
             sequential_version = properties.get(sequential_version_property_name)
 
             if sequential_version_property_name not in properties:

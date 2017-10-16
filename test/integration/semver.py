@@ -18,8 +18,9 @@ class TestFlow(TestFlowBase):
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
         with open(config_file, 'w+') as property_file:
             config = {
-                const.CONFIG_VERSIONING_SCHEME: 'semverWithTiedSeq',
+                const.CONFIG_VERSIONING_SCHEME: 'semver',
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
+                const.CONFIG_VERSION_PROPERTY_NAME: 'version',
                 const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq'
             }
             json.dump(obj=config, fp=property_file)
@@ -50,7 +51,6 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.assert_project_properties_contain({
@@ -64,14 +64,12 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
     def test_bump_minor(self):
@@ -82,7 +80,6 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         # the head commit is the base of a release branch, further bumps shall not be possible
@@ -94,14 +91,12 @@ class TestFlow(TestFlowBase):
 
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
         self.checkout("master")
@@ -116,19 +111,16 @@ class TestFlow(TestFlowBase):
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             # 'refs/heads/release/1.1', # local branch
             'refs/remotes/origin/release/1.1',
-            'refs/tags/version_code/2',
             'refs/tags/version/1.1.0-alpha.1'
         ])
 
         self.checkout("release/1.1")
         self.assert_project_properties_contain({
-            # 'version': '1.1.0-alpha.1',
-            'seq': '2',
+            'version': '1.1.0-alpha.1'
         })
 
     def test_bump_patch(self):
@@ -139,7 +131,6 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout('release/1.0')
@@ -150,7 +141,6 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -166,17 +156,14 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.1-alpha.1',
-            'seq': '2',
+            'version': '1.0.1-alpha.1'
         })
 
     def test_bump_prerelease_type(self):
@@ -194,7 +181,6 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
@@ -206,7 +192,6 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1',
             'refs/tags/version/1.0.0-rc.1'
@@ -214,8 +199,7 @@ class TestFlow(TestFlowBase):
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-beta.1',
-            'seq': '1',
+            'version': '1.0.0-rc.1'
         })
 
     def test_bump_to_release(self):
@@ -233,7 +217,6 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
@@ -245,7 +228,6 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1',
             'refs/tags/version/1.0.0'
@@ -253,8 +235,7 @@ class TestFlow(TestFlowBase):
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0',
-            'seq': '1',
+            'version': '1.0.0'
         })
 
     def test_bump_prerelease(self):
@@ -265,13 +246,11 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
         self.commit()
@@ -286,17 +265,14 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.0-alpha.2'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.2',
-            'seq': '2',
+            'version': '1.0.0-alpha.2'
         })
 
     def test_discontinue_implicitly(self):
@@ -309,7 +285,6 @@ class TestFlow(TestFlowBase):
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -327,13 +302,11 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/release/1.0',
 
             'refs/tags/discontinued/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
     def test_discontinue_explicitly(self):
@@ -346,7 +319,6 @@ class TestFlow(TestFlowBase):
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -362,13 +334,11 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/release/1.0',
 
             'refs/tags/discontinued/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
     def test_begin_end_dev_feature(self):
@@ -397,7 +367,6 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -414,7 +383,6 @@ class TestFlow(TestFlowBase):
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix'
@@ -440,7 +408,6 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -449,8 +416,7 @@ class TestFlow(TestFlowBase):
         self.checkout('release/1.0')
         self.assert_head('refs/heads/release/1.0')
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
         # hotfix
@@ -462,7 +428,6 @@ class TestFlow(TestFlowBase):
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix'
@@ -483,7 +448,6 @@ class TestFlow(TestFlowBase):
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -499,7 +463,6 @@ class TestFlow(TestFlowBase):
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -529,8 +492,7 @@ class TestFlow(TestFlowBase):
 
         self.checkout('release/1.0')
         self.assert_project_properties_contain({
-            # 'version': '1.0.1-alpha.1',
-            'seq': '2',
+            'version': '1.0.1'
         })
 
         # new feature
@@ -556,10 +518,8 @@ class TestFlow(TestFlowBase):
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1',
             'refs/tags/version/1.0.1-beta.1',
             'refs/tags/version/1.0.1',
@@ -583,17 +543,14 @@ class TestFlow(TestFlowBase):
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1',
             'refs/tags/version/1.0.1-beta.1',
             'refs/tags/version/1.0.1',
 
             # 'refs/heads/release/2.0',  # local branch
             'refs/remotes/origin/release/2.0',
-            'refs/tags/version_code/3',
             'refs/tags/version/2.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -607,6 +564,5 @@ class TestFlow(TestFlowBase):
         ])
         self.checkout('release/2.0')
         self.assert_project_properties_contain({
-            # 'version': '2.0.0-alpha.1',
-            'seq': '3',
+            'version': '2.0.0-alpha.1'
         })
