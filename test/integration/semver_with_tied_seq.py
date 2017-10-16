@@ -1,7 +1,6 @@
 import itertools
 import json
 import os
-import subprocess
 
 import pytest
 
@@ -19,34 +18,10 @@ class TestFlow(TestFlowBase):
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
         with open(config_file, 'w+') as property_file:
             config = {
+                const.CONFIG_VERSIONING_SCHEME: 'semverWithTiedSeq',
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
                 const.CONFIG_VERSION_PROPERTY_NAME: 'version',
-                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq',
-                const.CONFIG_BUILD: {
-                    'stages': {
-                        'assemble': [['echo', 'assemble#1']],
-                        'test': {
-                            'steps': {
-                                'app': [
-                                    ['echo', 'test#1'],
-                                    ['echo', '\\$HOME: $HOME'],
-                                    ['echo', '\\\\\\$HOME: \\$HOME'],
-                                    ['echo', '\\\\\\\\\\$HOME: \\\\$HOME'],
-                                    ['echo', '\\${HOME}: ${HOME}'],
-                                    ['echo', '\\\\\\${HOME}: \\${HOME}'],
-                                    ['echo', '\\\\\\\\\\${HOME}: \\\\${HOME}']
-                                ]
-                            }
-                        },
-                        'google_testing_lab': {
-                            'type': 'integration_test',
-                            'steps': {
-                                'monkey_test': [['echo', 'monkey_test']],
-                                'instrumentation_test': [['echo', 'instrumentation_test']]
-                            }
-                        }
-                    }
-                }
+                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq'
             }
             json.dump(obj=config, fp=property_file)
 
@@ -636,28 +611,3 @@ class TestFlow(TestFlowBase):
             # 'version': '2.0.0-alpha.1',
             'seq': '3',
         })
-
-    def test_assemble(self):
-        exit_code, out_lines = self.git_flow_for_lines('assemble')
-
-        assert exit_code == os.EX_OK
-        assert out_lines == [
-            "assemble:#: OK"
-        ]
-
-    def test_test(self):
-        exit_code, out_lines = self.git_flow_for_lines('test')
-
-        assert exit_code == os.EX_OK
-        assert out_lines == [
-            "test:app: OK"
-        ]
-
-    def test_integration_test(self):
-        exit_code, out_lines = self.git_flow_for_lines('integration-test')
-
-        assert exit_code == os.EX_OK
-        assert out_lines == [
-            "google_testing_lab:monkey_test: OK",
-            "google_testing_lab:instrumentation_test: OK"
-        ]
