@@ -314,8 +314,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         # run version change hooks on release branch
         if (context.config.commit_version_property and new_version is not None) \
-                or (
-                            context.config.commit_sequential_version_property and new_sequential_version is not None):
+                or (context.config.commit_sequential_version_property and new_sequential_version is not None):
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
                 result.fail(os.EX_DATAERR,
                             _("Failed to commit version update."),
@@ -598,8 +597,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         has_local_commit = False
 
         if (context.config.commit_version_property and new_version is not None) \
-                or (
-                            context.config.commit_sequential_version_property and new_sequential_version is not None):
+                or (context.config.commit_sequential_version_property and new_sequential_version is not None):
             # if commit != selected_ref.target.obj_name:
             #     result.fail(os.EX_DATAERR,
             #                 _("Failed to commit version update."),

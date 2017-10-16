@@ -1,157 +1,27 @@
 import itertools
 import json
 import os
-import subprocess
-import sys
-from io import StringIO
-from tempfile import TemporaryDirectory
-from typing import Tuple
 
 import pytest
 
-from gitflow import __main__, const
-from gitflow.filesystem import JavaPropertyFile
+from gitflow import const
+from test.integration.base import TestFlowBase
 
 
 @pytest.mark.slow
-class TestFlow:
-    tempdir: TemporaryDirectory
-    orig_cwd: str
-    git_origin: str
-    git_working_copy: str
-    project_property_file: str
-
-    def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-B'] + [*args])
-
-    def git_flow_for_lines(self, *args) -> Tuple[int, str]:
-        prev_stdout = sys.stdout
-        sys.stdout = stdout_buf = StringIO()
-
-        exit_code = __main__.main([__name__, '-B'] + [*args])
-
-        sys.stdout.flush()
-        out_lines = stdout_buf.getvalue().splitlines()
-
-        sys.stdout = prev_stdout
-
-        return exit_code, out_lines
-
-    def git(self, *args) -> int:
-        proc = subprocess.Popen(args=['git'] + [*args])
-        proc.wait()
-        return proc.returncode
-
-    def git_get_commit_count(self) -> int:
-        proc = subprocess.Popen(args=['git', 'rev-list', '--all', '--count'],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        return int(out.decode('utf-8').splitlines()[0])
-
-    def list_refs(self, *args) -> list:
-        proc = subprocess.Popen(args=['git', 'for-each-ref', '--format', '%(refname)'] + [*args],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        return out.decode('utf-8').splitlines()
-
-    def commit(self, message: str = None):
-        if message is None:
-            message = "Test Commit #" + str(self.git_get_commit_count())
-        exit_code = self.git('commit', '--allow-empty', '-m', message)
-        assert exit_code == os.EX_OK
-
-    def add(self, *files: str):
-        exit_code = self.git('add', *files)
-        assert exit_code == os.EX_OK
-
-    def push(self, *args):
-        exit_code = self.git('push', *args)
-        assert exit_code == os.EX_OK
-
-    def checkout(self, branch: str):
-        exit_code = self.git('checkout', branch)
-        assert exit_code == os.EX_OK
-
-    def current_head(self):
-        proc = subprocess.Popen(args=['git', 'rev-parse', '--revs-only', '--symbolic-full-name', 'HEAD'],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        current_head = out.decode('utf-8').splitlines()[0]
-        return current_head
-
-    def assert_same_elements(self, expected: list, actual: list):
-        expected = sorted(expected)
-        actual = sorted(actual)
-        if expected != actual:
-            pytest.fail("Comparison assertion failed")
-
-    def assert_refs(self, expected: list, actual: list = None):
-        if actual is None:
-            actual = self.list_refs()
-        self.assert_same_elements(expected, actual)
-
-    def assert_head(self, expected: str):
-        current_head = self.current_head()
-        assert current_head == expected
-
-    def assert_project_properties_contain(self, expected: dict):
-        property_reader = JavaPropertyFile(self.project_property_file)
-        actual = property_reader.load()
-        assert all(property_entry in actual.items() for property_entry in expected.items())
-
+class TestFlow(TestFlowBase):
     def setup_method(self, method):
-        self.orig_cwd = os.getcwd()
-        self.tempdir = TemporaryDirectory()
-
-        self.git_origin = os.path.join(self.tempdir.name, 'origin.git')
-        self.git_working_copy = os.path.join(self.tempdir.name, 'working_copy.git')
-
-        proc = subprocess.Popen(args=['git', 'init', '--bare', self.git_origin])
-        proc.wait()
-        assert proc.returncode == os.EX_OK
-        proc = subprocess.Popen(args=['git', 'clone', self.git_origin, self.git_working_copy])
-        proc.wait()
-        assert proc.returncode == os.EX_OK
-
-        # switch to the working copy
-        os.chdir(self.git_working_copy)
+        TestFlowBase.setup_method(self, method)
 
         # create the config file
         self.project_property_file = const.DEFAULT_PROJECT_PROPERTY_FILE
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
         with open(config_file, 'w+') as property_file:
             config = {
+                const.CONFIG_VERSIONING_SCHEME: 'semver',
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
                 const.CONFIG_VERSION_PROPERTY_NAME: 'version',
-                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq',
-                const.CONFIG_BUILD: {
-                    'stages': {
-                        'assemble': [['echo', 'assemble#1']],
-                        'test': {
-                            'steps': {
-                                'app': [
-                                    ['echo', 'test#1'],
-                                    ['echo', '\\$HOME: $HOME'],
-                                    ['echo', '\\\\\\$HOME: \\$HOME'],
-                                    ['echo', '\\\\\\\\\\$HOME: \\\\$HOME'],
-                                    ['echo', '\\${HOME}: ${HOME}'],
-                                    ['echo', '\\\\\\${HOME}: \\${HOME}'],
-                                    ['echo', '\\\\\\\\\\${HOME}: \\\\${HOME}']
-                                ]
-                            }
-                        },
-                        'google_testing_lab': {
-                            'type': 'integration_test',
-                            'steps': {
-                                'monkey_test': [['echo', 'monkey_test']],
-                                'instrumentation_test': [['echo', 'instrumentation_test']]
-                            }
-                        }
-                    }
-                }
+                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq'
             }
             json.dump(obj=config, fp=property_file)
 
@@ -164,13 +34,6 @@ class TestFlow:
             'refs/heads/master',
             'refs/remotes/origin/master'
         ])
-
-    def teardown_method(self, method):
-        exit_code = self.git_flow('status')
-        assert exit_code == os.EX_OK
-
-        self.tempdir.cleanup()
-        os.chdir(self.orig_cwd)
 
     def test_status(self):
         exit_code = self.git_flow('status')
@@ -188,7 +51,6 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.assert_project_properties_contain({
@@ -202,14 +64,12 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
     def test_bump_minor(self):
@@ -220,7 +80,6 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         # the head commit is the base of a release branch, further bumps shall not be possible
@@ -232,14 +91,12 @@ class TestFlow:
 
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
         self.checkout("master")
@@ -254,19 +111,16 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             # 'refs/heads/release/1.1', # local branch
             'refs/remotes/origin/release/1.1',
-            'refs/tags/version_code/2',
             'refs/tags/version/1.1.0-alpha.1'
         ])
 
         self.checkout("release/1.1")
         self.assert_project_properties_contain({
-            # 'version': '1.1.0-alpha.1',
-            'seq': '2',
+            'version': '1.1.0-alpha.1'
         })
 
     def test_bump_patch(self):
@@ -277,7 +131,6 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0', # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout('release/1.0')
@@ -288,7 +141,6 @@ class TestFlow:
             'refs/remotes/origin/master',
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -304,17 +156,14 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.1-alpha.1',
-            'seq': '2',
+            'version': '1.0.1-alpha.1'
         })
 
     def test_bump_prerelease_type(self):
@@ -332,7 +181,6 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
@@ -344,7 +192,6 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1',
             'refs/tags/version/1.0.0-rc.1'
@@ -352,8 +199,7 @@ class TestFlow:
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-beta.1',
-            'seq': '1',
+            'version': '1.0.0-rc.1'
         })
 
     def test_bump_to_release(self):
@@ -371,7 +217,6 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1'
         ])
@@ -383,7 +228,6 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
             'refs/tags/version/1.0.0-beta.1',
             'refs/tags/version/1.0.0'
@@ -391,8 +235,7 @@ class TestFlow:
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0',
-            'seq': '1',
+            'version': '1.0.0'
         })
 
     def test_bump_prerelease(self):
@@ -403,13 +246,11 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
         self.commit()
@@ -424,17 +265,14 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.0-alpha.2'
         ])
 
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.2',
-            'seq': '2',
+            'version': '1.0.0-alpha.2'
         })
 
     def test_discontinue_implicitly(self):
@@ -447,7 +285,6 @@ class TestFlow:
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -465,13 +302,11 @@ class TestFlow:
             'refs/remotes/origin/release/1.0',
 
             'refs/tags/discontinued/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
     def test_discontinue_explicitly(self):
@@ -484,7 +319,6 @@ class TestFlow:
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -500,13 +334,11 @@ class TestFlow:
             'refs/remotes/origin/release/1.0',
 
             'refs/tags/discontinued/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
     def test_begin_end_dev_feature(self):
@@ -535,7 +367,6 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -552,7 +383,6 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix'
@@ -578,7 +408,6 @@ class TestFlow:
             'refs/remotes/origin/master',
             # 'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1'
         ])
 
@@ -587,8 +416,7 @@ class TestFlow:
         self.checkout('release/1.0')
         self.assert_head('refs/heads/release/1.0')
         self.assert_project_properties_contain({
-            # 'version': '1.0.0-alpha.1',
-            'seq': '1',
+            'version': '1.0.0-alpha.1'
         })
 
         # hotfix
@@ -600,7 +428,6 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix'
@@ -621,7 +448,6 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -637,7 +463,6 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -667,8 +492,7 @@ class TestFlow:
 
         self.checkout('release/1.0')
         self.assert_project_properties_contain({
-            # 'version': '1.0.1-alpha.1',
-            'seq': '2',
+            'version': '1.0.1'
         })
 
         # new feature
@@ -694,10 +518,8 @@ class TestFlow:
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
 
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1',
             'refs/tags/version/1.0.1-beta.1',
             'refs/tags/version/1.0.1',
@@ -721,17 +543,14 @@ class TestFlow:
 
             'refs/heads/release/1.0',  # local branch
             'refs/remotes/origin/release/1.0',
-            'refs/tags/version_code/1',
             'refs/tags/version/1.0.0-alpha.1',
 
-            'refs/tags/version_code/2',
             'refs/tags/version/1.0.1-alpha.1',
             'refs/tags/version/1.0.1-beta.1',
             'refs/tags/version/1.0.1',
 
             # 'refs/heads/release/2.0',  # local branch
             'refs/remotes/origin/release/2.0',
-            'refs/tags/version_code/3',
             'refs/tags/version/2.0.0-alpha.1',
 
             'refs/heads/prod/fix/test-fix',
@@ -745,31 +564,5 @@ class TestFlow:
         ])
         self.checkout('release/2.0')
         self.assert_project_properties_contain({
-            # 'version': '2.0.0-alpha.1',
-            'seq': '3',
+            'version': '2.0.0-alpha.1'
         })
-
-    def test_assemble(self):
-        exit_code, out_lines = self.git_flow_for_lines('assemble')
-
-        assert exit_code == os.EX_OK
-        assert out_lines == [
-            "assemble:#: OK"
-        ]
-
-    def test_test(self):
-        exit_code, out_lines = self.git_flow_for_lines('test')
-
-        assert exit_code == os.EX_OK
-        assert out_lines == [
-            "test:app: OK"
-        ]
-
-    def test_integration_test(self):
-        exit_code, out_lines = self.git_flow_for_lines('integration-test')
-
-        assert exit_code == os.EX_OK
-        assert out_lines == [
-            "google_testing_lab:monkey_test: OK",
-            "google_testing_lab:instrumentation_test: OK"
-        ]
