@@ -281,9 +281,8 @@ def update_project_property_file(context: Context,
 
     property_store: PropertyFile = None
     if context.config.property_file is not None:
-        if context.config.property_file.endswith(".properties"):
-            property_store = PropertyFile.newInstance(context.config.property_file)
-        else:
+        property_store = PropertyFile.newInstance(context.config.property_file)
+        if property_store is None:
             result.fail(os.EX_DATAERR,
                         _("Property file not supported: {path}\n"
                           "Currently supported:\n"
