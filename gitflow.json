@@ -1,21 +1,34 @@
 {
-
-  "versionTypes": ["alpha", "beta", "rc"],
-
-  "propertyFile": "project.properties",
+  "versioningScheme": "semver",
+  "versionTypes": [
+    "alpha",
+    "beta",
+    "rc"
+  ],
+  "propertyFile": "config.ini",
   "versionPropertyName": "version",
-  "sequentialVersionPropertyName": "versionCode",
-
   "build": {
     "stages": {
       "assemble": [
-        ["python3", "setup.py", "sdist", "--formats=gztar"],
-        ["python3", "setup.py", "bdist"]
+        [
+          "python3",
+          "setup.py",
+          "sdist",
+          "--formats=gztar"
+        ],
+        [
+          "python3",
+          "setup.py",
+          "bdist"
+        ]
       ],
       "test": [
-        ["py.test", "--verbose", "test"]
+        [
+          "py.test",
+          "--verbose",
+          "test"
+        ]
       ]
     }
   }
-
 }
