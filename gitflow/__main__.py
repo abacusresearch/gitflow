@@ -3,28 +3,28 @@ Git Flow CLI
 
 Usage:
  flow status
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow log [<object>] [-- [<git-arg>]]...
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+ flow log [<object>] [-- <git-arg>...]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow (assemble|test|integration-test) [-d|--dry-run] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow drop-cache [-d|--dry-run]
-        [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow (-h|--help)
  flow --version
- flow --hook=<hook-name> [<hook-args>]...
+ flow --hook=<hook-name> [<hook-args>...]
 
 Options:
  -h --help              Shows this screen.
@@ -43,7 +43,6 @@ Execution Mode Options:
 
 Output Options:
  -v --verbose           Enables detailed output.
-                        This option can be specified twice to enable the output of underlying commands.
  -p --pretty            Enables formatted and colored output.
 
 Hook Options:
