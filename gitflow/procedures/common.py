@@ -24,6 +24,7 @@ from gitflow import repotools
 from gitflow import version
 from gitflow.common import Result
 from gitflow.context import Context
+from gitflow.properties import JavaPropertyFile
 from gitflow.repotools import BranchSelection
 
 
@@ -281,7 +282,7 @@ def update_project_property_file(context: Context,
     property_store = None
     if context.config.property_file is not None:
         if context.config.property_file.endswith(".properties"):
-            property_store = filesystem.JavaPropertyFile(context.config.property_file)
+            property_store = JavaPropertyFile(context.config.property_file)
         else:
             result.fail(os.EX_DATAERR,
                         _("Property file not supported: {path}\n"

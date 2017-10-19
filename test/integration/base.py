@@ -8,7 +8,7 @@ from typing import Tuple
 import pytest
 
 from gitflow import __main__
-from gitflow.filesystem import JavaPropertyFile
+from gitflow.properties import JavaPropertyFile
 
 
 class TestFlowBase(object):
