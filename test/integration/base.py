@@ -8,7 +8,7 @@ from typing import Tuple
 import pytest
 
 from gitflow import __main__
-from gitflow.properties import JavaPropertyFile
+from gitflow.properties import PropertyFile
 
 
 class TestFlowBase(object):
@@ -128,6 +128,6 @@ class TestFlowBase(object):
         assert current_head == expected
 
     def assert_project_properties_contain(self, expected: dict):
-        property_reader = JavaPropertyFile(self.project_property_file)
+        property_reader = PropertyFile.newInstance(self.project_property_file)
         actual = property_reader.load()
         assert all(property_entry in actual.items() for property_entry in expected.items())
