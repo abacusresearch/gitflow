@@ -79,6 +79,10 @@ class CommandContext(object):
     upstreams: dict = None
     downstreams: dict = None
 
+    @property
+    def selected_object(self):
+        return self.selected_ref or self.selected_commit
+
     def __init__(self):
         self.branch_info_dict = dict()
 
@@ -669,6 +673,7 @@ def check_requirements(command_context: CommandContext,
                        with_upstream: bool,
                        in_sync_with_upstream: bool,
                        fail_message: str,
+                       allow_unversioned_changes: bool = None,
                        throw=True):
     branch_class = get_branch_class(command_context.context, ref)
 
@@ -678,7 +683,8 @@ def check_requirements(command_context: CommandContext,
                               _("The branch {branch} is of type {type} must be one of these types:{allowed_types}")
                               .format(branch=repr(ref.name),
                                       type=repr(branch_class.name if branch_class is not None else None),
-                                      allowed_types='\n - ' + '\n - '.join(branch_class.name for branch_class in branch_classes)),
+                                      allowed_types='\n - ' + '\n - '.join(
+                                          branch_class.name for branch_class in branch_classes)),
                               throw)
 
     if ref.local_branch_name is not None:
@@ -727,6 +733,16 @@ def check_requirements(command_context: CommandContext,
                               _("{branch} is discontinued.")
                               .format(branch=repr(ref.name)),
                               throw)
+
+    if not allow_unversioned_changes:
+        returncode = git(command_context.context, ['diff-index', '--name-status', '--exit-code', 'HEAD'])
+
+        if returncode != os.EX_OK:
+            command_context.error(os.EX_USAGE,
+                                  fail_message,
+                                  _("{branch} has uncommitted changes.")
+                                  .format(branch=repr(ref.name)),
+                                  throw)
 
 
 class WorkBranch(object):
@@ -825,27 +841,27 @@ def expand_vars(s: str, vars: dict):
     return re.sub(r'((?:\\\\)+)|((\\)?(\$(?:{([^}]*)}|(\w+))))', lambda match: __var_subst(match, vars), s)
 
 
-def execute_build_steps(command_context, context, types: list = None):
+def execute_build_steps(command_context: CommandContext, types: list = None):
     if types is not None:
-        stages = filter(lambda stage: stage.type in types, context.config.build_stages)
+        stages = filter(lambda stage: stage.type in types, command_context.context.config.build_stages)
     else:
-        stages = context.config.build_stages
+        stages = command_context.context.config.build_stages
 
     for stage in stages:
         for step in stage.steps:
             step_errors = 0
 
             for command in step.commands:
-                if context.verbose >= const.TRACE_VERBOSITY:
+                if command_context.context.verbose >= const.TRACE_VERBOSITY:
                     print(' '.join(shlex.quote(token) for token in command))
 
                 command = [expand_vars(token, os.environ) for token in command]
 
-                if not context.dry_run:
+                if not command_context.context.dry_run:
                     try:
                         proc = subprocess.Popen(args=command,
                                                 stdin=subprocess.PIPE,
-                                                cwd=context.root)
+                                                cwd=command_context.context.root)
                         proc.wait()
                         if proc.returncode != os.EX_OK:
                             command_context.fail(os.EX_DATAERR,

@@ -67,6 +67,15 @@ class TestBuild(TestFlowBase):
             "assemble:#: OK"
         ]
 
+    def test_assemble_inplace(self):
+        exit_code, out_lines = self.git_flow_for_lines('assemble', '--inplace')
+
+        assert exit_code == os.EX_OK
+        assert out_lines == [
+            "assemble:#: OK",
+            "You are now on None."
+        ]
+
     def test_test(self):
         exit_code, out_lines = self.git_flow_for_lines('test')
 
