@@ -1,16 +1,19 @@
 import json
 import os
 
-import pytest
-
 from gitflow import const
-from test.integration.base import TestFlowBase
+from test.integration.base import TestInTempDir
 
 
-@pytest.mark.slow
-class TestBuild(TestFlowBase):
+class TestBuildWithoutRepo(TestInTempDir):
+    git_working_copy: str = None
+    project_property_file: str = None
+
     def setup_method(self, method):
-        TestFlowBase.setup_method(self, method)
+        super().setup_method(method)
+
+        self.git_working_copy = os.path.join(self.tempdir.name, 'exported_working_copy')
+        os.makedirs(self.git_working_copy, exist_ok=True)
 
         # create the config file
         self.project_property_file = const.DEFAULT_PROJECT_PROPERTY_FILE
@@ -49,15 +52,7 @@ class TestBuild(TestFlowBase):
             }
             json.dump(obj=config, fp=property_file)
 
-        # create & push the initial commit
-        self.add(config_file)
-        self.commit('initial commit: gitflow config file')
-        self.push()
-
-        self.assert_refs([
-            'refs/heads/master',
-            'refs/remotes/origin/master'
-        ])
+            os.chdir(self.git_working_copy)
 
     def test_assemble(self):
         exit_code, out_lines = self.git_flow_for_lines('assemble')
@@ -72,8 +67,7 @@ class TestBuild(TestFlowBase):
 
         assert exit_code == os.EX_OK
         assert out_lines == [
-            "assemble:#: OK",
-            "You are now on None."
+            "assemble:#: OK"
         ]
 
     def test_test(self):

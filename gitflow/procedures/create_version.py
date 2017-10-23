@@ -756,4 +756,4 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
             and not context.config.push_to_local:
         fetch_all_and_ff(context, command_context.result, context.config.remote_name)
 
-    return command_context.result
+    return context.result
