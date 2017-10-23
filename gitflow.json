@@ -5,7 +5,7 @@
     "beta",
     "rc"
   ],
-  "propertyFile": "config.ini",
+  "propertyFile": "gitflow/config.ini",
   "versionPropertyName": "version",
   "build": {
     "stages": {
