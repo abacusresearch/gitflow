@@ -2,12 +2,10 @@ import os
 from configparser import ConfigParser
 from enum import Enum
 
-import pkg_resources
-
 NAME = 'gitflow'
 AUTHOR = 'samuel.oggier@gmail.com'
 
-with open(pkg_resources.resource_filename(__name__, '/../config.ini'), 'r') as __config_file:
+with open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'config.ini')), 'r') as __config_file:
     __config = ConfigParser()
     __config.read_file(f=__config_file)
     VERSION = __config.get(section=__config.default_section, option='version', fallback='0.0.0-dev')
