@@ -517,6 +517,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
     if context.batch:
         result.value = context.assume_yes
         if not result.value:
+            sys.stdout.write(prompt + ' -' + os.linesep)
             result.fail(const.EX_ABORTED, fail_title, _("Operation aborted in batch mode."))
     else:
         if message is not None:
@@ -532,6 +533,29 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
 
         if result.value is not True:
             result.error(const.EX_ABORTED_BY_USER, fail_title, _("Operation aborted."), False)
+
+    return result
+
+
+def prompt(context: Context, message: str, prompt: str):
+    result = Result()
+
+    if context.batch:
+        result.value = context.assume_yes
+        if not result.value:
+            sys.stdout.write(prompt + ' -' + os.linesep)
+            result.fail(const.EX_ABORTED, _("Operation failed."), _("Operation aborted in batch mode."))
+    else:
+        if message is not None:
+            cli.warn(message)
+        sys.stderr.flush()
+        sys.stdout.flush()
+
+        if context.assume_yes:
+            sys.stdout.write(prompt + ' y' + os.linesep)
+            result.value = True
+        else:
+            result.value = cli.query_yes_no(sys.stdout, prompt, "no")
 
     return result
 
