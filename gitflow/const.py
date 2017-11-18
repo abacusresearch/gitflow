@@ -45,11 +45,13 @@ DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
+DEFAULT_VERSION_VAR_NAME = 'version'
 DEFAULT_VERSION_TAG_PREFIX = 'version/'
 DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
                               r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                               r'(\.(?P<prerelease_version>\d+))?)?'
 
+DEFAULT_SEQUENTIAL_VERSION_VAR_NAME = 'version_code'
 DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX = 'version_code/'
 DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN = r'(?P<unique_code>\d+)'
 

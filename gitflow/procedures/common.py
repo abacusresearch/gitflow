@@ -279,8 +279,8 @@ def update_project_property_file(context: Context,
                                  commit_out: CommitInfo):
     result = Result()
 
-    commit_out.add_message("#version     : " + cli.if_none(new_version))
-    commit_out.add_message("#seq_version : " + cli.if_none(new_sequential_version))
+    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + "     : " + cli.if_none(new_version))
+    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + " : " + cli.if_none(new_sequential_version))
 
     version_property_name = context.config.version_property_name
     sequential_version_property_name = context.config.sequential_version_property_name
