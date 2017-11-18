@@ -876,8 +876,9 @@ def execute_build_steps(command_context: CommandContext, types: list = None):
             step_errors = 0
 
             for command in step.commands:
+                command_string = ' '.join(shlex.quote(token) for token in command)
                 if command_context.context.verbose >= const.TRACE_VERBOSITY:
-                    print(' '.join(shlex.quote(token) for token in command))
+                    print(command_string)
 
                 command = [expand_vars(token, os.environ) for token in command]
 
@@ -889,15 +890,20 @@ def execute_build_steps(command_context: CommandContext, types: list = None):
                         proc.wait()
                         if proc.returncode != os.EX_OK:
                             command_context.fail(os.EX_DATAERR,
-                                                 _("Build failed."),
-                                                 _("Stage {stage}:{step} returned with an error.")
-                                                 .format(stage=stage.name, step=step.name))
+                                                 _("{stage}:{step} failed.")
+                                                 .format(stage=stage.name, step=step.name),
+                                                 _("{command}\n"
+                                                   "returned with an error.")
+                                                 .format(command=command_string))
                     except FileNotFoundError as e:
                         step_errors += 1
                         command_context.fail(os.EX_DATAERR,
-                                             _("Build failed."),
-                                             _("Stage {stage}:{step} could not be executed.")
-                                             .format(stage=stage.name, step=step.name))
+                                             _("{stage}:{step} failed.")
+                                             .format(stage=stage.name, step=step.name),
+                                             _("{command}\n"
+                                               "could not be executed.\n"
+                                               "File not found: {file}")
+                                             .format(command=command_string, file=e.filename))
 
             if not step_errors:
                 cli.print(stage.name + ":" + step.name + ": OK")
