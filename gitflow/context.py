@@ -61,6 +61,7 @@ class Config(object):
     property_file: str = None
     version_property_name: str = None
     sequential_version_property_name: str = None
+    opaque_version_property_name: str = None
 
     # validation mode
     strict_mode = True
@@ -109,6 +110,11 @@ class Config(object):
     @property
     def commit_sequential_version_property(self) -> bool:
         return self.sequential_version_property_name is not None \
+               and self.sequential_versioning
+
+    @property
+    def commit_opaque_version_property(self) -> bool:
+        return self.opaque_version_property_name is not None \
                and self.sequential_versioning
 
 
@@ -327,6 +333,8 @@ class Context(AbstractContext):
         context.config.version_property_name = config.get(const.CONFIG_VERSION_PROPERTY_NAME)
         context.config.sequential_version_property_name = config.get(
             const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
+        context.config.opaque_version_property_name = config.get(
+            const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
 
         # version config
 

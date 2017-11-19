@@ -14,6 +14,7 @@ CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
 CONFIG_VERSIONING_SCHEME = 'versioningScheme'
 CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
 CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
+CONFIG_OPAQUE_VERSION_PROPERTY_NAME = 'opaqueVersionPropertyName'
 CONFIG_BUILD = 'build'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
@@ -67,6 +68,8 @@ TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
 DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
+
+DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}+{version_code}"
 
 # prefixes with a trailing slash for proper prefix matching
 LOCAL_BRANCH_PREFIX = 'refs/heads/'
