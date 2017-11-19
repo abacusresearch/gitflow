@@ -25,7 +25,7 @@ from gitflow import version
 from gitflow.common import Result
 from gitflow.context import Context
 from gitflow.properties import PropertyFile
-from gitflow.repotools import BranchSelection
+from gitflow.repotools import BranchSelection, git_get_current_branch
 
 
 class CommitInfo(object):
@@ -759,14 +759,16 @@ def check_requirements(command_context: CommandContext,
                               throw)
 
     if not allow_unversioned_changes:
-        returncode = git(command_context.context, ['diff-index', '--name-status', '--exit-code', 'HEAD'])
+        current_branch = git_get_current_branch(command_context.context.repo)
+        if ref == current_branch:
+            returncode = git(command_context.context, ['diff-index', '--name-status', '--exit-code', current_branch])
 
-        if returncode != os.EX_OK:
-            command_context.error(os.EX_USAGE,
-                                  fail_message,
-                                  _("{branch} has uncommitted changes.")
-                                  .format(branch=repr(ref.name)),
-                                  throw)
+            if returncode != os.EX_OK:
+                command_context.error(os.EX_USAGE,
+                                      fail_message,
+                                      _("{branch} has uncommitted changes.")
+                                      .format(branch=repr(ref.name)),
+                                      throw)
 
 
 class WorkBranch(object):
