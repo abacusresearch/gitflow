@@ -459,7 +459,7 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Ob
     return None
 
 
-def git_list_commits(context: RepoContext, start: Union[Object, str], end: Union[Object, str], reverse=False):
+def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False):
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str

@@ -46,15 +46,15 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     sequential_version_tags_on_same_commit = list()
     subsequent_sequential_version_tags = list()
 
-    # merge_base = context.config.release_branch_base
-    merge_base = repotools.git_merge_base(context.repo, context.config.release_branch_base,
-                                          command_context.selected_commit)
-    if merge_base is None:
-        result.fail(os.EX_USAGE,
-                    _("Cannot bump version."),
-                    _("{branch} has no merge base with {base_branch}.")
-                    .format(branch=repr(command_context.selected_ref.name),
-                            base_branch=repr(context.config.release_branch_base)))
+    # fork_point = repotools.git_merge_base(context.repo, context.config.release_branch_base,
+    #                                       command_context.selected_commit)
+    # if fork_point is None:
+    #     result.fail(os.EX_USAGE,
+    #                 _("Cannot bump version."),
+    #                 _("{branch} has no fork point on {base_branch}.")
+    #                 .format(branch=repr(command_context.selected_ref.name),
+    #                         base_branch=repr(context.config.release_branch_base)))
+    fork_point = None
 
     # abort scan, when a preceding commit for each tag type has been processed.
     # enclosing_versions now holds enough information for operation validation,
@@ -64,35 +64,36 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     abort_sequential_version_scan = False
 
     before_commit = False
-    for history_commit in repotools.git_list_commits(context.repo, merge_base, command_context.selected_ref):
+    for history_commit in repotools.git_list_commits(context.repo, fork_point, command_context.selected_ref):
         at_commit = history_commit == command_context.selected_commit
-        at_merge_base = history_commit == merge_base
         version_tag_refs = None
         sequential_version_tag_refs = None
 
         assert not at_commit if before_commit else not before_commit
-        assert not at_merge_base if not allow_merge_base_tags else True
 
         for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit):
             version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
             if version_info is not None:
-                if at_merge_base:
-                    # ignore apparent stray tags on potentially shared merge base
-                    if version_info.major != branch_base_version_info.major \
-                            or version_info.minor != branch_base_version_info.minor:
-                        continue
+                tag_matches = version_info.major == branch_base_version_info.major \
+                              and version_info.minor == branch_base_version_info.minor
+
+                if tag_matches:
+                    if version_tag_refs is None:
+                        version_tag_refs = list()
+                    version_tag_refs.append(tag_ref)
                 else:
-                    # fail stray tags on exclusive branch commits
-                    if version_info.major != branch_base_version_info.major \
-                            or version_info.minor != branch_base_version_info.minor:
+                    if fork_point is not None:
+                        # fail stray tags on exclusive branch commits
                         result.fail(os.EX_DATAERR,
                                     _("Cannot bump version."),
                                     _("Found stray version tag: {version}.")
                                     .format(version=repr(version.format_version_info(version_info)))
                                     )
-                if version_tag_refs is None:
-                    version_tag_refs = list()
-                version_tag_refs.append(tag_ref)
+                    else:
+                        # when no merge base is used, abort at the first mismatching tag
+                        abort_version_scan = True
+                        abort_sequential_version_scan = True
+                        break
 
             match = context.sequential_version_tag_matcher.fullmatch(tag_ref.name)
             if match is not None:
