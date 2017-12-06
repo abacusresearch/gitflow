@@ -69,7 +69,7 @@ DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
 
-DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}+{version_code}"
+DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}-{version_code}"
 
 # prefixes with a trailing slash for proper prefix matching
 LOCAL_BRANCH_PREFIX = 'refs/heads/'
