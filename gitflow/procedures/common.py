@@ -633,7 +633,9 @@ def get_command_context(context, object_arg: str) -> CommandContext:
         # determine affected branches
         affected_main_branches = list(
             filter(lambda ref:
-                   (ref.name not in command_context.downstreams),
+                   (ref.name not in command_context.downstreams
+                    and commit in repotools.git_list_commits(context=context.repo, start=None, end=ref,
+                                                             options=['--first-parent'])),
                    repotools.git_list_refs(context.repo,
                                            '--contains', commit,
                                            repotools.create_ref_name(const.REMOTES_PREFIX,
@@ -656,7 +658,7 @@ def get_command_context(context, object_arg: str) -> CommandContext:
                                      )
             else:
                 command_context.fail(os.EX_USAGE,
-                                     _("Failed to resolve unique release branch for object: {object}")
+                                     _("Failed to resolve unique branch for object: {object}")
                                      .format(object=repr(object_arg)),
                                      _("Multiple different branches contain this commit:\n"
                                        "{listing}")

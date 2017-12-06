@@ -459,7 +459,8 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Ob
     return None
 
 
-def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False):
+def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False,
+                     options: list = None):
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str
@@ -468,6 +469,8 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
     args = ['rev-list']
     if reverse:
         args.append('--reverse')
+    if options is not None:
+        args.extend(options)
     args.append((ref_target(start) + '..' if start is not None else '') + ref_target(end))
 
     proc = git(context, *args)
