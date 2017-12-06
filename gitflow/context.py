@@ -157,7 +157,7 @@ class Context(AbstractContext):
     batch = False
     assume_yes = False
     dry_run = False
-    verbose = False
+    verbose = const.ERROR_VERBOSITY
     pretty = False
 
     # matchers

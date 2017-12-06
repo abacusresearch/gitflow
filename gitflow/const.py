@@ -118,7 +118,7 @@ BRANCHING = {
     BranchClass.RELEASE: BranchClass.DEVELOPMENT_BASE,
 }
 
-# TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
+# TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed.
 NO_VERBOSITY = 0
 ERROR_VERBOSITY = 1
 INFO_VERBOSITY = 2
