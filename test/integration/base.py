@@ -147,6 +147,14 @@ class TestFlowBase(TestInTempDir):
         current_head = out.decode('utf-8').splitlines()[0]
         return current_head
 
+    def current_head_commit(self):
+        proc = subprocess.Popen(args=['git', 'rev-parse', '--revs-only', 'HEAD'],
+                                stdout=subprocess.PIPE)
+        out, err = proc.communicate()
+        assert proc.returncode == os.EX_OK
+        current_head = out.decode('utf-8').splitlines()[0]
+        return current_head
+
     def assert_same_elements(self, expected: list, actual: list):
         expected = sorted(expected)
         actual = sorted(actual)

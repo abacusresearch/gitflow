@@ -299,6 +299,51 @@ class TestFlow(TestFlowBase):
             'seq': '2',
         })
 
+    def test_bump_prerelease_type_behind_branch_tip(self):
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            # 'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+            'refs/tags/version_code/1',
+            'refs/tags/version/1.0.0-alpha.1'
+        ])
+        self.checkout("release/1.0")
+        self.assert_project_properties_contain({
+            # 'version': '1.0.0-alpha.1',
+            'seq': '1',
+        })
+
+        tagged_commit = self.current_head_commit()
+
+        self.commit()
+        self.push()
+
+        exit_code = self.git_flow('bump-prerelease-type', '--assume-yes', tagged_commit)
+        assert exit_code == os.EX_OK
+        self.assert_refs([
+            'refs/heads/master',
+            'refs/remotes/origin/master',
+            'refs/heads/release/1.0',  # local branch
+            'refs/remotes/origin/release/1.0',
+
+            'refs/tags/version_code/1',
+            'refs/tags/version/1.0.0-alpha.1',
+            'refs/tags/version/1.0.0-beta.1'
+        ])
+
+        self.checkout("release/1.0")
+
+        self.commit()
+        self.push()
+
+        self.assert_project_properties_contain({
+            # 'version': '1.0.0-alpha.2',
+            'seq': '1',
+        })
+
     def test_discontinue_implicitly(self):
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
