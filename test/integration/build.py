@@ -54,10 +54,10 @@ class TestBuild(TestFlowBase):
         self.commit('initial commit: gitflow config file')
         self.push()
 
-        self.assert_refs([
+        self.assert_refs({
             'refs/heads/master',
             'refs/remotes/origin/master'
-        ])
+        })
 
     def test_assemble(self):
         exit_code, out_lines = self.git_flow_for_lines('assemble')

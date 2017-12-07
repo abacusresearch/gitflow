@@ -11,6 +11,66 @@ from gitflow import __main__
 from gitflow.properties import PropertyFile
 
 
+class DictDiffer(object):
+    """
+    Calculate the difference between two dictionaries as:
+    (1) items added
+    (2) items removed
+    (3) keys same in both but changed values
+    (4) keys same in both and unchanged values
+    """
+
+    def __init__(self, a: dict, b: dict):
+        self.a = a
+        self.b = b
+        self.intersect = set(self.a.keys()).intersection(self.b.keys())
+
+    def has_changed(self) -> bool:
+        return self.a != self.b
+
+    def added(self) -> dict:
+        return dict(
+            (key, self.a[key]) for key in (self.b.keys() - self.intersect)
+        )
+
+    def removed(self) -> dict:
+        return dict(
+            (key, self.a[key]) for key in (self.a.keys() - self.intersect)
+        )
+
+    def changed(self) -> dict:
+        return dict(
+            (key, self.a[key]) for key in self.intersect if self.a[key] != self.b[key]
+        )
+
+    def unchanged(self) -> dict:
+        return dict(
+            (key, self.a[key]) for key in self.intersect if self.a[key] == self.b[key]
+        )
+
+
+class SetDiffer(object):
+    """
+    Calculate the difference between two sets as:
+    (1) items added
+    (2) items removed
+    """
+
+    def __init__(self, a: set, b: set):
+        self.a = a
+        self.b = b
+        self.intersect = self.a.intersection(self.b)
+
+    def has_changed(self) -> bool:
+        return self.b != self.a
+
+    def added(self) -> set:
+        return self.b - self.intersect
+
+    def removed(self) -> set:
+        return self.a - self.intersect
+
+
 class TestInTempDir(object):
     tempdir: TemporaryDirectory = None
     orig_cwd: str = None
@@ -42,11 +102,30 @@ class TestInTempDir(object):
 
         return exit_code, out_lines
 
-    def assert_same_elements(self, expected: list, actual: list):
-        expected = sorted(expected)
-        actual = sorted(actual)
-        if expected != actual:
-            pytest.fail("Comparison assertion failed")
+    def assert_same_elements(self, expected: set, actual: set):
+        diff = SetDiffer(expected, actual)
+        if diff.has_changed():
+            self.eprint("extra:")
+            self.eprint(*["    " + value for value in diff.added()], sep='\n')
+            self.eprint("missing:")
+            self.eprint(*["    " + value for value in diff.removed()], sep='\n')
+
+            pytest.fail("Mismatching lists")
+
+    def assert_same_pairs(self, expected: dict, actual: dict):
+        diff = DictDiffer(expected, actual)
+        if diff.has_changed():
+            self.eprint("extra:")
+            self.eprint(*["    " + key + ": " + value for key, value in diff.added().items()], sep='\n')
+            self.eprint("missing:")
+            self.eprint(*["    " + key + ": " + value for key, value in diff.removed()], sep='\n')
+            self.eprint("changed:")
+            self.eprint(*["    " + key + ": " + value for key, value in diff.changed()], sep='\n')
+
+            pytest.fail("Mismatching dictionaries")
+
+    def eprint(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
 
 
 class TestFlowBase(TestInTempDir):
@@ -114,12 +193,12 @@ class TestFlowBase(TestInTempDir):
         assert proc.returncode == os.EX_OK
         return int(out.decode('utf-8').splitlines()[0])
 
-    def list_refs(self, *args) -> list:
+    def list_refs(self, *args) -> set:
         proc = subprocess.Popen(args=['git', 'for-each-ref', '--format', '%(refname)'] + [*args],
                                 stdout=subprocess.PIPE)
         out, err = proc.communicate()
         assert proc.returncode == os.EX_OK
-        return out.decode('utf-8').splitlines()
+        return set(out.decode('utf-8').splitlines())
 
     def commit(self, message: str = None):
         if message is None:
@@ -155,13 +234,7 @@ class TestFlowBase(TestInTempDir):
         current_head = out.decode('utf-8').splitlines()[0]
         return current_head
 
-    def assert_same_elements(self, expected: list, actual: list):
-        expected = sorted(expected)
-        actual = sorted(actual)
-        if expected != actual:
-            pytest.fail("Comparison assertion failed")
-
-    def assert_refs(self, expected: list, actual: list = None):
+    def assert_refs(self, expected: set, actual: set = None):
         if actual is None:
             actual = self.list_refs()
         self.assert_same_elements(expected, actual)
@@ -173,4 +246,5 @@ class TestFlowBase(TestInTempDir):
     def assert_project_properties_contain(self, expected: dict):
         property_reader = PropertyFile.newInstance(self.project_property_file)
         actual = property_reader.load()
-        assert all(property_entry in actual.items() for property_entry in expected.items())
+
+        self.assert_same_pairs(expected, actual)
