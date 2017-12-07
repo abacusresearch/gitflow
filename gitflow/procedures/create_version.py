@@ -371,11 +371,12 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         #                                                                   command_context.selected_branch.ref):
 
         # show info and prompt for confirmation
-        print("ref                 : " + cli.if_none(command_context.selected_ref.name))
-        print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
-        print("new_tag             : " + cli.if_none(tag_name))
-        print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
-        print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("ref                 : " + cli.if_none(command_context.selected_ref.name))
+        cli.print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
+        cli.print("new_tag             : " + cli.if_none(tag_name))
+        cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
+        cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
         prompt_result = prompt_for_confirmation(
             context=context,
@@ -657,6 +658,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         cli.print("new_branch          : " + cli.if_none(branch_name))
         cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
         cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
         prompt_result = prompt_for_confirmation(
             context=context,
