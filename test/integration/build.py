@@ -72,8 +72,7 @@ class TestBuild(TestFlowBase):
 
         assert exit_code == os.EX_OK
         assert out_lines == [
-            "assemble:#: OK",
-            "You are now on None."
+            "assemble:#: OK"
         ]
 
     def test_test(self):

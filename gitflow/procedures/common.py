@@ -79,10 +79,6 @@ class CommandContext(object):
     upstreams: dict = None
     downstreams: dict = None
 
-    @property
-    def selected_object(self):
-        return self.selected_ref or self.selected_commit
-
     def __init__(self):
         self.branch_info_dict = dict()
 
