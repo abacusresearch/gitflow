@@ -24,7 +24,7 @@ from gitflow import repotools
 from gitflow import version
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.properties import PropertyFile
+from gitflow.properties import PropertyReader
 from gitflow.repotools import BranchSelection, git_get_current_branch
 
 
@@ -303,7 +303,7 @@ def update_project_property_file(context: Context,
     opaque_version_property_name = context.config.opaque_version_property_name
 
     if context.config.property_file is not None:
-        property_store = PropertyFile.newInstance(context.config.property_file)
+        property_store = PropertyReader.get_instance_by_filename(context.config.property_file)
         if property_store is None:
             result.fail(os.EX_DATAERR,
                         _("Property file not supported: {path}\n"
@@ -314,7 +314,7 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        prev_properties = property_store.load()
+        prev_properties = property_store.load(context.config.property_file)
         properties = prev_properties.copy()
 
         assert properties == prev_properties
@@ -359,7 +359,7 @@ def update_project_property_file(context: Context,
             commit_out.add_message('#properties[' + utils.quote(opaque_version_property_name, '"') + ']' + var_separator
                                    + new_opaque_version)
 
-        property_store.store(properties)
+        property_store.store(context.config.property_file, properties)
         commit_out.add_file(context.config.property_file)
         result.value = True
 

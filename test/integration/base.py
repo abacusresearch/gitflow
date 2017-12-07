@@ -8,7 +8,7 @@ from typing import Tuple
 import pytest
 
 from gitflow import __main__
-from gitflow.properties import PropertyFile
+from gitflow.properties import PropertyReader
 
 
 def eprint(*args, **kwargs):
@@ -245,7 +245,7 @@ class TestFlowBase(TestInTempDir):
         assert current_head == expected
 
     def assert_project_properties_contain(self, expected: dict):
-        property_reader = PropertyFile.newInstance(self.project_property_file)
-        actual = property_reader.load()
+        property_reader = PropertyReader.get_instance_by_filename(self.project_property_file)
+        actual = property_reader.load(self.project_property_file)
 
         self.assert_same_pairs(expected, actual)

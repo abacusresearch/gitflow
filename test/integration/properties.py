@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from gitflow.properties import PropertyFile
+from gitflow.properties import PropertyReader
 
 
 @pytest.mark.slow
@@ -27,19 +27,19 @@ class TestLoadStore(object):
         self.__test_load_store('test.ini')
 
     def __test_load_store(self, file_name: str):
-        property_file: PropertyFile = PropertyFile.newInstance(file_name)
-        properties = property_file.load()
+        property_file: PropertyReader = PropertyReader.get_instance_by_filename(file_name)
+        properties = property_file.load(file_name)
 
         assert len(properties) == 0
 
         properties['bla'] = 'blub'
-        property_file.store(properties)
+        property_file.store(file_name, properties)
 
         print('---------- FILE CONTENTS ----------')
         with open(file_name, 'r') as file:
             print(file.read())
         print('-----------------------------------')
 
-        stored_properties = property_file.load()
+        stored_properties = property_file.load(file_name)
 
         assert stored_properties == properties
