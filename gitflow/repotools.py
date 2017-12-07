@@ -537,3 +537,60 @@ def git_branch(context: RepoContext, tag_name: str, obj: Union[Object, str]) -> 
     out, err = proc.communicate()
 
     return proc.returncode == os.EX_OK
+
+
+class TreeEntry(object):
+    file_flags: str
+    object_type: str
+    object_hash: str
+    object_size: str
+    file_path: str
+
+
+def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry:
+    files = git_for_lines(context, *['ls-tree', '-rlz', object, path])
+
+    if files is None:
+        raise RuntimeError("File lookup failed")
+
+    if len(files) == 0:
+        raise RuntimeError("Not such file: " + path)
+    elif len(files) > 1:
+        raise RuntimeError("Not a unique regular file: " + path)
+    else:
+        entry = TreeEntry()
+
+        parts = files[0].split('\t')
+        assert len(parts) == 2
+
+        attrs = parts[0].split()
+        assert len(attrs) == 4
+
+        assert parts[1][-1] == '\0'
+        parts[1] = parts[:-1]
+
+        entry.file_flags = attrs[0]
+        entry.object_type = attrs[1]
+        entry.object_hash = attrs[2]
+        entry.object_size = attrs[3]
+        entry.file_path = parts[1]
+
+        return entry
+
+    return None
+
+
+def get_file_entry_contents(context: RepoContext, tree_entry: TreeEntry):
+    proc = git(context, *['cat-file', 'blob', tree_entry.object_hash])
+
+    out, err = proc.communicate()
+
+    return out
+
+
+def get_file_contents(context: RepoContext, commit_object: Union[Object, str], file_path: str):
+    entry = get_file_entry(context, commit_object, file_path)
+    if entry is None:
+        return None
+
+    return get_file_entry_contents(context, entry)
