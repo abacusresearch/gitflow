@@ -303,8 +303,8 @@ def update_project_property_file(context: Context,
     opaque_version_property_name = context.config.opaque_version_property_name
 
     if context.config.property_file is not None:
-        property_store = PropertyReader.get_instance_by_filename(context.config.property_file)
-        if property_store is None:
+        property_reader = PropertyReader.get_instance_by_filename(context.config.property_file)
+        if property_reader is None:
             result.fail(os.EX_DATAERR,
                         _("Property file not supported: {path}\n"
                           "Currently supported:\n"
@@ -314,17 +314,17 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        prev_properties = property_store.load(context.config.property_file)
-        properties = prev_properties.copy()
+        try:
+            prev_properties = property_reader.read_file(context.config.property_file)
+            properties = prev_properties.copy()
 
-        assert properties == prev_properties
-
-        if properties is None:
-            result.fail(os.EX_DATAERR,
-                        _("Failed to load properties from file: {path}")
+            assert properties == prev_properties
+        except FileNotFoundError:
+            result.warn(_("Property file not found: {path}")
                         .format(path=repr(context.config.property_file)),
-                        None
-                        )
+                        None)
+            properties = dict()
+
         if context.config.commit_version_property:
             if version_property_name not in properties:
                 result.warn(_("Missing version property."),
@@ -344,8 +344,9 @@ def update_project_property_file(context: Context,
                                     file=repr(context.config.property_file))
                             )
             properties[sequential_version_property_name] = str(new_sequential_version)
-            commit_out.add_message('#properties[' + utils.quote(sequential_version_property_name, '"') + ']' + var_separator
-                                   + str(new_sequential_version))
+            commit_out.add_message(
+                '#properties[' + utils.quote(sequential_version_property_name, '"') + ']' + var_separator
+                + str(new_sequential_version))
 
         if context.config.commit_opaque_version_property:
             if opaque_version_property_name not in properties:
@@ -359,7 +360,7 @@ def update_project_property_file(context: Context,
             commit_out.add_message('#properties[' + utils.quote(opaque_version_property_name, '"') + ']' + var_separator
                                    + new_opaque_version)
 
-        property_store.store(context.config.property_file, properties)
+        property_reader.write_file(context.config.property_file, properties)
         commit_out.add_file(context.config.property_file)
         result.value = True
 

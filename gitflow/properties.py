@@ -1,10 +1,8 @@
-import os
+import io
 from abc import abstractmethod, ABC
 from configparser import ConfigParser
 
-from pyjavaprops.javaproperties import JavaProperties
-
-from gitflow.filesystem import replace_file
+from gitflow.java_properties import JavaProperties
 
 
 class PropertyReader(ABC):
@@ -12,12 +10,35 @@ class PropertyReader(ABC):
     __python_config_property_reader = None
 
     @abstractmethod
-    def load(self, property_file: str) -> dict:
+    def from_stream(self, stream: io.TextIOBase) -> dict:
         pass
 
     @abstractmethod
-    def store(self, property_file: str, properties: dict):
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
         pass
+
+    def read_file(self, property_file: str) -> dict:
+        with open(property_file, "r") as input_stream:
+            return self.from_stream(input_stream)
+
+    def write_file(self, property_file: str, properties: dict):
+        with open(property_file, "w") as output_stream:
+            return self.to_stream(output_stream, properties)
+
+    def from_str(self, string: str) -> dict:
+        with io.StringIO(string) as input_stream:
+            return self.from_stream(input_stream)
+
+    def to_str(self, properties: dict) -> str:
+        with io.StringIO() as output_stream:
+            self.to_stream(output_stream, properties)
+            return output_stream.getvalue()
+
+    def from_bytes(self, string: bytes, encoding: str) -> dict:
+        return self.from_str(str(string, encoding))
+
+    def to_bytes(self, properties: dict, encoding: str) -> bytes:
+        return self.to_str(properties).encode(encoding)
 
     @classmethod
     def get_instance_by_filename(cls, file_name: str):
@@ -34,32 +55,26 @@ class PropertyReader(ABC):
 
 
 class JavaPropertyReader(PropertyReader):
-    def load(self, property_file: str) -> dict:
+    def from_stream(self, stream: io.TextIOBase) -> dict:
         java_properties = JavaProperties()
-        if os.path.exists(property_file):
-            java_properties.load(open(property_file, "r"))
+        java_properties.load(stream)
         return java_properties.get_property_dict()
 
-    def store(self, property_file: str, properties: dict):
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
         java_properties = JavaProperties()
         for key, value in properties.items():
             java_properties.set_property(key, value)
-        temp_file = property_file + ".~"
-        java_properties.store(open(temp_file, "w"))
-        replace_file(temp_file, property_file)
+        java_properties.store(stream)
 
 
 class PythonConfigPropertyReader(PropertyReader):
-    def load(self, property_file: str) -> dict:
+    def from_stream(self, stream: io.TextIOBase) -> dict:
         config = ConfigParser()
-        if os.path.exists(property_file):
-            config.read_file(f=open(property_file, 'r'))
+        config.read_file(stream)
         return dict(config.items(section=config.default_section))
 
-    def store(self, property_file: str, properties: dict):
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
         config = ConfigParser()
-        if os.path.exists(property_file):
-            config.read_file(f=open(property_file, 'r'))
         for key, value in properties.items():
             config.set(section=config.default_section, option=key, value=value)
-        config.write(fp=open(property_file, 'w+'), space_around_delimiters=True)
+        config.write(stream)
