@@ -11,6 +11,10 @@ from gitflow import __main__
 from gitflow.properties import PropertyFile
 
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
 class DictDiffer(object):
     """
     Calculate the difference between two dictionaries as:
@@ -105,27 +109,24 @@ class TestInTempDir(object):
     def assert_same_elements(self, expected: set, actual: set):
         diff = SetDiffer(expected, actual)
         if diff.has_changed():
-            self.eprint("extra:")
-            self.eprint(*["    " + value for value in diff.added()], sep='\n')
-            self.eprint("missing:")
-            self.eprint(*["    " + value for value in diff.removed()], sep='\n')
+            eprint("extra:")
+            eprint(*["    " + value for value in diff.added()], sep='\n')
+            eprint("missing:")
+            eprint(*["    " + value for value in diff.removed()], sep='\n')
 
             pytest.fail("Mismatching lists")
 
     def assert_same_pairs(self, expected: dict, actual: dict):
         diff = DictDiffer(expected, actual)
         if diff.has_changed():
-            self.eprint("extra:")
-            self.eprint(*["    " + key + ": " + value for key, value in diff.added().items()], sep='\n')
-            self.eprint("missing:")
-            self.eprint(*["    " + key + ": " + value for key, value in diff.removed()], sep='\n')
-            self.eprint("changed:")
-            self.eprint(*["    " + key + ": " + value for key, value in diff.changed()], sep='\n')
+            eprint("extra:")
+            eprint(*["    " + key + ": " + value for key, value in diff.added().items()], sep='\n')
+            eprint("missing:")
+            eprint(*["    " + key + ": " + value for key, value in diff.removed()], sep='\n')
+            eprint("changed:")
+            eprint(*["    " + key + ": " + value for key, value in diff.changed()], sep='\n')
 
             pytest.fail("Mismatching dictionaries")
-
-    def eprint(*args, **kwargs):
-        print(*args, file=sys.stderr, **kwargs)
 
 
 class TestFlowBase(TestInTempDir):
