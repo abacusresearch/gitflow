@@ -205,6 +205,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             and not len(sequential_version_tags_on_same_commit):
         new_sequential_version = create_sequence_number_for_version(context, new_version)
         sequential_version_tag_name = create_sequential_version_tag_name(context, new_sequential_version)
+
+        assert new_sequential_version is not None
+        assert sequential_version_tag_name is not None
     else:
         new_sequential_version = None
         sequential_version_tag_name = None

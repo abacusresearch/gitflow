@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from gitflow.java_properties import JavaProperties
 
 
-class PropertyReader(ABC):
+class PropertyIO(ABC):
     __java_property_reader = None
     __python_config_property_reader = None
 
@@ -44,17 +44,17 @@ class PropertyReader(ABC):
     def get_instance_by_filename(cls, file_name: str):
         if file_name.endswith('.properties'):
             if cls.__java_property_reader is None:
-                cls.__java_property_reader = JavaPropertyReader()
+                cls.__java_property_reader = JavaPropertyIO()
             return cls.__java_property_reader
         elif file_name.endswith('.ini'):
             if cls.__python_config_property_reader is None:
-                cls.__python_config_property_reader = PythonConfigPropertyReader()
+                cls.__python_config_property_reader = PythonConfigPropertyIO()
             return cls.__python_config_property_reader
         else:
             raise RuntimeError('unsupported property file: ' + file_name)
 
 
-class JavaPropertyReader(PropertyReader):
+class JavaPropertyIO(PropertyIO):
     def from_stream(self, stream: io.TextIOBase) -> dict:
         java_properties = JavaProperties()
         java_properties.load(stream)
@@ -67,7 +67,7 @@ class JavaPropertyReader(PropertyReader):
         java_properties.store(stream)
 
 
-class PythonConfigPropertyReader(PropertyReader):
+class PythonConfigPropertyIO(PropertyIO):
     def from_stream(self, stream: io.TextIOBase) -> dict:
         config = ConfigParser()
         config.read_file(stream)

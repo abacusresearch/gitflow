@@ -18,13 +18,13 @@ from typing import Union
 
 import semver
 
-from gitflow import cli, _, filesystem
+from gitflow import cli, _, filesystem, utils
 from gitflow import const
 from gitflow import repotools
 from gitflow import version
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.properties import PropertyReader
+from gitflow.properties import PropertyIO
 from gitflow.repotools import BranchSelection, git_get_current_branch
 
 
@@ -270,32 +270,33 @@ def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, s
     return branch_info
 
 
-def update_properties(context, properties, new_opaque_version, new_sequential_version, new_version):
+def update_project_properties(context: Context,
+                              prev_properties: dict,
+                              new_version: str,
+                              new_sequential_version: int) -> dict:
+    new_version_info = semver.parse_version_info(new_version)
+
+    if new_version_info.build is not None:
+        raise ValueError("build info must not be set in version tag")
+
+    new_opaque_version = const.DEFAULT_OPAQUE_VERSION_FORMAT.format(
+        major=new_version_info.major,
+        minor=new_version_info.minor,
+        patch=new_version_info.patch,
+        prerelease=new_version_info.prerelease,
+        version_code=str(new_sequential_version)
+    )
+
+    properties = prev_properties.copy()
+
     if context.config.commit_version_property:
-        if context.config.version_property_name not in properties:
-            context.warn(_("Missing version property."),
-                         _("Missing property {property} in file {file}.")
-                         .format(property=repr(context.config.version_property_name),
-                                 file=repr(context.config.property_file))
-                         )
         properties[context.config.version_property_name] = new_version
     if context.config.commit_sequential_version_property:
-        if context.config.sequential_version_property_name not in properties:
-            context.warn(_("Missing version property."),
-                         _("Missing property {property} in file {file}.")
-                         .format(property=repr(context.config.sequential_version_property_name),
-                                 file=repr(context.config.property_file))
-                         )
         properties[context.config.sequential_version_property_name] = str(new_sequential_version)
     if context.config.commit_opaque_version_property:
-        if context.config.opaque_version_property_name not in properties:
-            context.warn(_("Missing version property."),
-                         _("Missing property {property} in file {file}.")
-                         .format(property=repr(context.config.opaque_version_property_name),
-                                 file=repr(context.config.property_file))
-                         )
-
         properties[context.config.opaque_version_property_name] = new_opaque_version
+
+    return properties
 
 
 def update_project_property_file(context: Context,
@@ -306,29 +307,8 @@ def update_project_property_file(context: Context,
     result = Result()
     result.value = False
 
-    new_version_info = semver.parse_version_info(new_version)
-
-    if new_version_info.build is not None:
-        result.fail(os.EX_SOFTWARE,
-                    _("property update failed"),
-                    _("build info must not be set in tagged version"))
-
-    new_opaque_version = const.DEFAULT_OPAQUE_VERSION_FORMAT.format(
-        major=new_version_info.major,
-        minor=new_version_info.minor,
-        patch=new_version_info.patch,
-        prerelease=new_version_info.prerelease,
-        version_code=str(new_sequential_version)
-    )
-
-    var_separator = ' : '
-    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_version))
-    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_sequential_version))
-
     if context.config.property_file is not None:
-        property_reader = PropertyReader.get_instance_by_filename(context.config.property_file)
+        property_reader = PropertyIO.get_instance_by_filename(context.config.property_file)
         if property_reader is None:
             result.fail(os.EX_DATAERR,
                         _("Property file not supported: {path}\n"
@@ -339,13 +319,30 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        properties = prev_properties.copy()
-
-        update_properties(context, properties, new_opaque_version, new_sequential_version, new_version)
+        properties = update_project_properties(context, prev_properties.copy(), new_version, new_sequential_version)
 
         property_reader.write_file(context.config.property_file, properties)
         commit_out.add_file(context.config.property_file)
         result.value = True
+    else:
+        properties = None
+
+    var_separator = ' : '
+    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
+                           + cli.if_none(new_version))
+    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
+                           + cli.if_none(new_sequential_version))
+
+    if properties is not None:
+        def log_property(properties: dict, key: str):
+            if key is not None:
+                commit_out.add_message('#properties[' + utils.quote(key, '"') + ']'
+                                       + var_separator + cli.if_none(properties.get(key), "null"))
+
+        for property_key in [context.config.version_property_name,
+                             context.config.sequential_version_property_name,
+                             context.config.opaque_version_property_name]:
+            log_property(properties, property_key)
 
     if context.verbose and result.value != 0:
         print("properties have changed")
@@ -800,7 +797,7 @@ def read_properties_in_commit(context: Context, commit: str):
         if properties_bytes is None:
             return
 
-        property_reader = PropertyReader.get_instance_by_filename(property_reader)
+        property_reader = PropertyIO.get_instance_by_filename(property_reader)
         properties = property_reader.from_bytes(properties_bytes, const.DEFAULT_PROPERTY_ENCODING)
 
         if properties is None:
