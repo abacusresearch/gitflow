@@ -376,6 +376,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         cli.print("new_tag             : " + cli.if_none(tag_name))
         cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
         cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("selected object     : " + cli.if_none(command_context.selected_commit))
         cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
         prompt_result = prompt_for_confirmation(
@@ -658,6 +659,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         cli.print("new_branch          : " + cli.if_none(branch_name))
         cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
         cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("selected object     : " + cli.if_none(command_context.selected_commit))
         cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
         prompt_result = prompt_for_confirmation(
