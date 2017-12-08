@@ -241,6 +241,23 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
     valid_tag = False
 
+    # validate the commit
+    if len(version_tags_on_same_commit):
+        if config_in_selected_commit is None:
+            result.fail(os.EX_DATAERR,
+                        _("Tag creation failed."),
+                        _("The selected commit does not contain a configuration file.")
+                        )
+
+        opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
+        if opaque_version_property_name is not None \
+                and properties_in_selected_commit.get(opaque_version_property_name) is not None:
+            result.fail(os.EX_DATAERR,
+                        _("Tag creation failed."),
+                        _("The selected commit does not contain an opaque version property: {property_name}.")
+                        .format(property_name=opaque_version_property_name)
+                        )
+
     if len(version_tags_on_same_commit):
         if context.config.allow_qualifier_increments_within_commit:
             preceding_commit_version = context.version_tag_matcher.format(
