@@ -13,7 +13,7 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     CommandContext, create_sequence_number_for_version, \
     create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo, read_properties_in_commit
+    check_in_repo, read_properties_in_commit, read_config_in_commit
 from gitflow.repotools import BranchSelection
 from gitflow.version import VersionConfig
 
@@ -223,8 +223,15 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                     )
 
     try:
-        properties_in_selected_commit = read_properties_in_commit(context, command_context.selected_commit) \
-                                        or dict()
+        config_in_selected_commit = read_config_in_commit(context.repo, command_context.selected_commit)
+    except FileNotFoundError:
+        config_in_selected_commit = dict()
+
+    try:
+        properties_in_selected_commit = read_properties_in_commit(context,
+                                                                  context.repo,
+                                                                  config_in_selected_commit,
+                                                                  command_context.selected_commit)
     except FileNotFoundError:
         properties_in_selected_commit = dict()
 
@@ -575,8 +582,15 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         sequential_version_tag_name = None
 
     try:
-        properties_in_selected_commit = read_properties_in_commit(context, command_context.selected_commit) \
-                                        or dict()
+        config_in_selected_commit = read_config_in_commit(context.repo, command_context.selected_commit)
+    except FileNotFoundError:
+        config_in_selected_commit = dict()
+
+    try:
+        properties_in_selected_commit = read_properties_in_commit(context,
+                                                                  context.repo,
+                                                                  config_in_selected_commit,
+                                                                  command_context.selected_commit)
     except FileNotFoundError:
         properties_in_selected_commit = dict()
 
