@@ -13,7 +13,7 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     CommandContext, create_sequence_number_for_version, \
     create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo
+    check_in_repo, read_properties_in_commit
 from gitflow.repotools import BranchSelection
 from gitflow.version import VersionConfig
 
@@ -219,6 +219,16 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                                 "%d.%d" % (branch_base_version_info.major, branch_base_version_info.minor)))
                     )
 
+    try:
+        properties_in_selected_commit = read_properties_in_commit(context, command_context.selected_commit) \
+                                        or dict()
+    except FileNotFoundError:
+        properties_in_selected_commit = dict()
+
+    if context.verbose:
+        print("properties in selected commit:")
+        print(json.dumps(obj=properties_in_selected_commit, indent=2))
+
     valid_tag = False
 
     if len(version_tags_on_same_commit):
@@ -341,6 +351,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
             commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
+                                                         properties_in_selected_commit,
                                                          new_version,
                                                          new_sequential_version,
                                                          commit_info)
@@ -560,6 +571,12 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         new_sequential_version = None
         sequential_version_tag_name = None
 
+    try:
+        properties_in_selected_commit = read_properties_in_commit(context, command_context.selected_commit) \
+                                        or dict()
+    except FileNotFoundError:
+        properties_in_selected_commit = dict()
+
     if not context.config.allow_shared_release_branch_base and len(branch_points_on_same_commit):
         result.fail(os.EX_USAGE,
                     _("Branch creation failed."),
@@ -631,7 +648,10 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                         _("Failed to check out release branch."))
 
             commit_info = CommitInfo()
-            update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
+            update_result = update_project_property_file(clone_context,
+                                                         properties_in_selected_commit,
+                                                         new_version,
+                                                         new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
             if result.has_errors():

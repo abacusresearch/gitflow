@@ -554,9 +554,9 @@ def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry
         raise RuntimeError("File lookup failed")
 
     if len(files) == 0:
-        raise RuntimeError("Not such file: " + path)
+        raise FileNotFoundError("Not such file: " + path)
     elif len(files) > 1:
-        raise RuntimeError("Not a unique regular file: " + path)
+        raise FileNotFoundError("Not a unique regular file: " + path)
     else:
         entry = TreeEntry()
 
