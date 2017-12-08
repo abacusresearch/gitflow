@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Callable
 
@@ -218,14 +219,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                                 "%d.%d" % (branch_base_version_info.major, branch_base_version_info.minor)))
                     )
 
-    if len(subsequent_version_tags):
-        result.fail(os.EX_USAGE,
-                    _("Tag creation failed."),
-                    _("There are version tags in branch history following the selected commit {commit}:\n"
-                      "{listing}")
-                    .format(commit=command_context.selected_commit,
-                            listing='\n'.join(' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
-                    )
+    valid_tag = False
 
     if len(version_tags_on_same_commit):
         if context.config.allow_qualifier_increments_within_commit:
@@ -254,11 +248,24 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             _("The selected commit already has version tags.\n"
                               "Operations on such a commit are limited to pre-release type increments.")
                             )
+
+            valid_tag = True
         else:
             result.fail(os.EX_USAGE,
                         _("Tag creation failed."),
                         _("There are version tags pointing to the selected commit {commit}.\n"
                           "Consider reusing these versions or bumping them to stable."
+                          "{listing}")
+                        .format(commit=command_context.selected_commit,
+                                listing='\n'.join(
+                                    ' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
+                        )
+
+    if not valid_tag:
+        if len(subsequent_version_tags):
+            result.fail(os.EX_USAGE,
+                        _("Tag creation failed."),
+                        _("There are version tags in branch history following the selected commit {commit}:\n"
                           "{listing}")
                         .format(commit=command_context.selected_commit,
                                 listing='\n'.join(
@@ -351,9 +358,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
-                result.fail(os.EX_DATAERR,
+                result.fail(os.EX_USAGE,
                             _("Failed to commit version update."),
-                            _("The selected commit {commit} does not represent the tip of {branch}.")
+                            _("The selected parent commit {commit} does not represent the tip of {branch}.")
                             .format(commit=command_context.selected_commit,
                                     branch=repr(command_context.selected_ref.name))
                             )
@@ -640,9 +647,9 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
-                result.fail(os.EX_DATAERR,
+                result.fail(os.EX_USAGE,
                             _("Failed to commit version update."),
-                            _("The selected commit {commit} does not represent the tip of {branch}.")
+                            _("The selected parent commit {commit} does not represent the tip of {branch}.")
                             .format(commit=command_context.selected_commit,
                                     branch=repr(command_context.selected_ref.name))
                             )

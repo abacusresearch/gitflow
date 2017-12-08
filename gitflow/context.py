@@ -117,6 +117,12 @@ class Config(object):
         return self.opaque_version_property_name is not None \
                and self.sequential_versioning
 
+    @property
+    def requires_property_commits(self) -> bool:
+        return self.commit_version_property \
+               or self.commit_sequential_version_property \
+               or self.commit_opaque_version_property
+
 
 class AbstractContext(object):
     result: Result = None

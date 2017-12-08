@@ -316,14 +316,12 @@ def update_project_property_file(context: Context,
 
         try:
             prev_properties = property_reader.read_file(context.config.property_file)
-            properties = prev_properties.copy()
-
-            assert properties == prev_properties
         except FileNotFoundError:
             result.warn(_("Property file not found: {path}")
                         .format(path=repr(context.config.property_file)),
                         None)
-            properties = dict()
+            prev_properties = dict()
+        properties = prev_properties.copy()
 
         if context.config.commit_version_property:
             if version_property_name not in properties:
