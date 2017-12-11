@@ -64,7 +64,11 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     abort_sequential_version_scan = False
 
     before_commit = False
-    for history_commit in repotools.git_list_commits(context.repo, fork_point, command_context.selected_ref):
+    for history_commit in repotools.git_list_commits(
+            context=context.repo,
+            start=fork_point,
+            end=command_context.selected_ref,
+            options=['--first-parent']):
         at_commit = history_commit == command_context.selected_commit
         version_tag_refs = None
         sequential_version_tag_refs = None
@@ -90,6 +94,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                                     .format(version=repr(version.format_version_info(version_info)))
                                     )
                     else:
+                        print(" xx " + repr(tag_ref))
                         # when no merge base is used, abort at the first mismatching tag
                         abort_version_scan = True
                         abort_sequential_version_scan = True
@@ -462,7 +467,11 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     branch_points_on_same_commit = list()
     subsequent_branches = list()
 
-    for history_commit in repotools.git_list_commits(context.repo, None, command_context.selected_commit):
+    for history_commit in repotools.git_list_commits(
+            context=context.repo,
+            start=None,
+            end=command_context.selected_commit,
+            options=['--first-parent']):
         branch_refs = release_branch_merge_bases.get(history_commit)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
