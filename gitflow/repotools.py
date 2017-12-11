@@ -103,7 +103,7 @@ def ref_target(ref: Union[Object, str, list]):
     elif isinstance(ref, Object):
         return ref.obj_name
     elif isinstance(ref, list):
-        return utils.split_join('/', False, False, *ref)
+        return create_ref_name(*ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
@@ -114,7 +114,7 @@ def ref_name(ref: Union[Ref, str, list]):
     elif isinstance(ref, Ref):
         return ref.name
     elif isinstance(ref, list):
-        return utils.split_join('/', False, False, *ref)
+        return create_ref_name(*ref)
     else:
         raise ValueError('invalid type: ' + str(type(ref).__name__))
 
@@ -216,15 +216,25 @@ def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, bran
     return repo
 
 
-def git_export(context: RepoContext, target_dir: str, branch: Union[Ref, str] = None):
-    command = ['clone', '--depth', '1', '--shallow-submodules']
-    if branch is not None:
-        command.extend(['--branch', branch.short_name if isinstance(branch, Ref) else branch])
-    command.extend([context.dir, target_dir])
+def git_export(context: RepoContext, target_dir: str, object: Union[Ref, str] = None) -> [RepoContext, None]:
+    clone_command = ['clone', '--depth', '1', '--shallow-submodules', '--no-checkout', context.dir, target_dir]
 
     repo = RepoContext()
+    repo.dir = target_dir
     repo.verbose = context.verbose
-    proc = git(repo, *command)
+    proc = git(repo, *clone_command)
+    proc.wait()
+
+    if proc.returncode != os.EX_OK:
+        return None
+
+    checkout_command = ['checkout']
+    if object is not None:
+        checkout_command.extend([object])
+    else:
+        checkout_command.extend(['master'])
+
+    proc = git(repo, *checkout_command)
     proc.wait()
 
     if proc.returncode != os.EX_OK:
@@ -449,7 +459,8 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Ob
     return None
 
 
-def git_list_commits(context: RepoContext, start: Union[Object, str], end: Union[Object, str], reverse=False):
+def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False,
+                     options: list = None):
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str
@@ -458,6 +469,8 @@ def git_list_commits(context: RepoContext, start: Union[Object, str], end: Union
     args = ['rev-list']
     if reverse:
         args.append('--reverse')
+    if options is not None:
+        args.extend(options)
     args.append((ref_target(start) + '..' if start is not None else '') + ref_target(end))
 
     proc = git(context, *args)

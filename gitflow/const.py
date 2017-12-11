@@ -14,6 +14,7 @@ CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
 CONFIG_VERSIONING_SCHEME = 'versioningScheme'
 CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
 CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
+CONFIG_OPAQUE_VERSION_PROPERTY_NAME = 'opaqueVersionPropertyName'
 CONFIG_BUILD = 'build'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
@@ -45,11 +46,13 @@ DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
+DEFAULT_VERSION_VAR_NAME = 'version'
 DEFAULT_VERSION_TAG_PREFIX = 'version/'
 DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
                               r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                               r'(\.(?P<prerelease_version>\d+))?)?'
 
+DEFAULT_SEQUENTIAL_VERSION_VAR_NAME = 'version_code'
 DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX = 'version_code/'
 DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN = r'(?P<unique_code>\d+)'
 
@@ -65,6 +68,8 @@ TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
 DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
+
+DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}-{version_code}"
 
 # prefixes with a trailing slash for proper prefix matching
 LOCAL_BRANCH_PREFIX = 'refs/heads/'
@@ -113,7 +118,7 @@ BRANCHING = {
     BranchClass.RELEASE: BranchClass.DEVELOPMENT_BASE,
 }
 
-# TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed or clarified.
+# TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed.
 NO_VERBOSITY = 0
 ERROR_VERBOSITY = 1
 INFO_VERBOSITY = 2

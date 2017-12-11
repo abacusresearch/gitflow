@@ -43,4 +43,4 @@ def call(context: Context) -> Result:
     proc = repotools.git_interactive(context.repo, *(log_command + args))
     proc.wait()
 
-    return command_context.result
+    return context.result

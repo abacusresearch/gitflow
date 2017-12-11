@@ -54,18 +54,23 @@ def call(context) -> Result:
 
             cli.fcwrite(sys.stdout, status_color, "version: " + branch_version_string + ' [')
             if branch_info.local is not None:
-                local_branch_color = status_local_color
-                if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
-                    command_context.error(os.EX_DATAERR,
-                                          _("Local and upstream branch have a mismatching short name."),
-                                          None)
-                    local_branch_color = error_color
-                if context.verbose:
-                    cli.fcwrite(sys.stdout, local_branch_color, branch_info.local.name)
-                else:
-                    cli.fcwrite(sys.stdout, local_branch_color, branch_info.local.short_name)
+                i = 0
+                for local in branch_info.local:
+                    local_branch_color = status_local_color
+                    if not branch_info.upstream.short_name.endswith('/' + local.short_name):
+                        command_context.error(os.EX_DATAERR,
+                                              _("Local and upstream branch have a mismatching short name."),
+                                              None)
+                        local_branch_color = error_color
+                    if i:
+                        cli.fcwrite(sys.stdout, status_color, ', ')
+                    if context.verbose:
+                        cli.fcwrite(sys.stdout, local_branch_color, local.name)
+                    else:
+                        cli.fcwrite(sys.stdout, local_branch_color, local.short_name)
+                    i += 1
             if branch_info.upstream is not None:
-                if branch_info.local is not None:
+                if branch_info.local is not None and len(branch_info.local):
                     cli.fcwrite(sys.stdout, status_color, ' => ')
                 if context.verbose:
                     cli.fcwrite(sys.stdout, status_remote_color, branch_info.upstream.name)
@@ -141,4 +146,4 @@ def call(context) -> Result:
                                   )
         last_unique_code = unique_code
 
-    return command_context.result
+    return context.result

@@ -46,15 +46,15 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     sequential_version_tags_on_same_commit = list()
     subsequent_sequential_version_tags = list()
 
-    # merge_base = context.config.release_branch_base
-    merge_base = repotools.git_merge_base(context.repo, context.config.release_branch_base,
-                                          command_context.selected_commit)
-    if merge_base is None:
-        result.fail(os.EX_USAGE,
-                    _("Cannot bump version."),
-                    _("{branch} has no merge base with {base_branch}.")
-                    .format(branch=repr(command_context.selected_ref.name),
-                            base_branch=repr(context.config.release_branch_base)))
+    # fork_point = repotools.git_merge_base(context.repo, context.config.release_branch_base,
+    #                                       command_context.selected_commit)
+    # if fork_point is None:
+    #     result.fail(os.EX_USAGE,
+    #                 _("Cannot bump version."),
+    #                 _("{branch} has no fork point on {base_branch}.")
+    #                 .format(branch=repr(command_context.selected_ref.name),
+    #                         base_branch=repr(context.config.release_branch_base)))
+    fork_point = None
 
     # abort scan, when a preceding commit for each tag type has been processed.
     # enclosing_versions now holds enough information for operation validation,
@@ -64,35 +64,41 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     abort_sequential_version_scan = False
 
     before_commit = False
-    for history_commit in repotools.git_list_commits(context.repo, merge_base, command_context.selected_ref):
+    for history_commit in repotools.git_list_commits(
+            context=context.repo,
+            start=fork_point,
+            end=command_context.selected_ref,
+            options=['--first-parent']):
         at_commit = history_commit == command_context.selected_commit
-        at_merge_base = history_commit == merge_base
         version_tag_refs = None
         sequential_version_tag_refs = None
 
         assert not at_commit if before_commit else not before_commit
-        assert not at_merge_base if not allow_merge_base_tags else True
 
         for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit):
             version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
             if version_info is not None:
-                if at_merge_base:
-                    # ignore apparent stray tags on potentially shared merge base
-                    if version_info.major != branch_base_version_info.major \
-                            or version_info.minor != branch_base_version_info.minor:
-                        continue
+                tag_matches = version_info.major == branch_base_version_info.major \
+                              and version_info.minor == branch_base_version_info.minor
+
+                if tag_matches:
+                    if version_tag_refs is None:
+                        version_tag_refs = list()
+                    version_tag_refs.append(tag_ref)
                 else:
-                    # fail stray tags on exclusive branch commits
-                    if version_info.major != branch_base_version_info.major \
-                            or version_info.minor != branch_base_version_info.minor:
+                    if fork_point is not None:
+                        # fail stray tags on exclusive branch commits
                         result.fail(os.EX_DATAERR,
                                     _("Cannot bump version."),
                                     _("Found stray version tag: {version}.")
                                     .format(version=repr(version.format_version_info(version_info)))
                                     )
-                if version_tag_refs is None:
-                    version_tag_refs = list()
-                version_tag_refs.append(tag_ref)
+                    else:
+                        print(" xx " + repr(tag_ref))
+                        # when no merge base is used, abort at the first mismatching tag
+                        abort_version_scan = True
+                        abort_sequential_version_scan = True
+                        break
 
             match = context.sequential_version_tag_matcher.fullmatch(tag_ref.name)
             if match is not None:
@@ -303,8 +309,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
-        has_local_commit = False
-
         clone_result = create_shared_clone_repository(context)
         result.add_subresult(clone_result)
         if result.has_errors():
@@ -315,14 +319,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         # run version change hooks on release branch
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
-            if command_context.selected_commit != command_context.selected_ref.target.obj_name:
-                result.fail(os.EX_DATAERR,
-                            _("Failed to commit version update."),
-                            _("The selected commit {commit} does not represent the tip of {branch}.")
-                            .format(commit=command_context.selected_commit,
-                                    branch=repr(command_context.selected_ref.name))
-                            )
-
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
                                 repotools.create_ref_name(const.REMOTES_PREFIX,
                                                           context.config.remote_name,
@@ -337,31 +333,49 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             )
 
             commit_info = CommitInfo()
-            commit_info.add_parent(command_context.selected_commit)
-            update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
+            update_result = update_project_property_file(clone_context,
+                                                         new_version,
+                                                         new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
-            if (result.has_errors()):
+            if result.has_errors():
                 result.fail(os.EX_DATAERR,
                             _("Version change hook run failed."),
                             _("An unexpected error occurred.")
                             )
 
-            has_local_commit = True
+            if not update_result.value:
+                commit_info = None
         else:
             commit_info = None
 
-        if has_local_commit:
+        if commit_info is not None:
+            if command_context.selected_commit != command_context.selected_ref.target.obj_name:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to commit version update."),
+                            _("The selected commit {commit} does not represent the tip of {branch}.")
+                            .format(commit=command_context.selected_commit,
+                                    branch=repr(command_context.selected_ref.name))
+                            )
+
             # commit changes
+            commit_info.add_parent(command_context.selected_commit)
             object_to_tag = create_commit(clone_context, result, commit_info)
+            new_branch_ref_object = object_to_tag
         else:
             object_to_tag = command_context.selected_commit
+            new_branch_ref_object = None
+
+        # if command_context.selected_branch not in repotools.git_list_refs(context.repo,
+        #                                                                   '--contains', object_to_tag,
+        #                                                                   command_context.selected_branch.ref):
 
         # show info and prompt for confirmation
-        print("branch              : " + cli.if_none(command_context.selected_ref.name))
-        print("branch_version      : " + cli.if_none(latest_branch_version))
+        print("ref                 : " + cli.if_none(command_context.selected_ref.name))
+        print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
         print("new_tag             : " + cli.if_none(tag_name))
-        print("new_version         : " + cli.if_none(new_version))
+        print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
+        print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
 
         prompt_result = prompt_for_confirmation(
             context=context,
@@ -382,9 +396,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             push_command.append('--verbose')
         push_command.append('origin')
         # push the release branch commit or its version increment commit
-        push_command.append(
-            repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
-                                                                                  branch_name))
+        if new_branch_ref_object is not None:
+            push_command.append(
+                new_branch_ref_object + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name))
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
                              repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
@@ -453,7 +467,11 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     branch_points_on_same_commit = list()
     subsequent_branches = list()
 
-    for history_commit in repotools.git_list_commits(context.repo, None, command_context.selected_commit):
+    for history_commit in repotools.git_list_commits(
+            context=context.repo,
+            start=None,
+            end=command_context.selected_commit,
+            options=['--first-parent']):
         branch_refs = release_branch_merge_bases.get(history_commit)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
@@ -594,16 +612,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         clone_context = clone_result.value
 
-        has_local_commit = False
-
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
-            # if commit != selected_ref.target.obj_name:
-            #     result.fail(os.EX_DATAERR,
-            #                 _("Failed to commit version update."),
-            #                 _("The selected commit {commit} does not represent the tip of {branch}.")
-            #                 .format(commit=commit, branch=repr(selected_ref.name))
-            #                 )
 
             # run version change hooks on new release branch
             git_or_fail(clone_context, result, ['checkout', '--force',
@@ -612,31 +622,41 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                         _("Failed to check out release branch."))
 
             commit_info = CommitInfo()
-            commit_info.add_parent(command_context.selected_commit)
             update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
-            if (result.has_errors()):
+            if result.has_errors():
                 result.fail(os.EX_DATAERR,
                             _("Version change hook run failed."),
                             _("An unexpected error occurred.")
                             )
 
-            has_local_commit = True
+            if not update_result.value:
+                commit_info = None
         else:
             commit_info = None
 
-        if has_local_commit:
+        if commit_info is not None:
+            if command_context.selected_commit != command_context.selected_ref.target.obj_name:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to commit version update."),
+                            _("The selected commit {commit} does not represent the tip of {branch}.")
+                            .format(commit=command_context.selected_commit,
+                                    branch=repr(command_context.selected_ref.name))
+                            )
+
             # commit changes
+            commit_info.add_parent(command_context.selected_commit)
             object_to_tag = create_commit(clone_context, result, commit_info)
         else:
             object_to_tag = command_context.selected_commit
 
         # show info and prompt for confirmation
-        cli.print("branch              : " + cli.if_none(command_context.selected_ref.name))
-        cli.print("branch_version      : " + cli.if_none(latest_branch_version))
+        cli.print("ref                 : " + cli.if_none(command_context.selected_ref.name))
+        cli.print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
         cli.print("new_branch          : " + cli.if_none(branch_name))
-        cli.print("new_version         : " + cli.if_none(new_version))
+        cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
+        cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
 
         prompt_result = prompt_for_confirmation(
             context=context,
@@ -756,4 +776,4 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
             and not context.config.push_to_local:
         fetch_all_and_ff(context, command_context.result, context.config.remote_name)
 
-    return command_context.result
+    return context.result

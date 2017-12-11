@@ -6,7 +6,7 @@ from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
     get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
-    check_in_repo
+    check_in_repo, prompt
 from gitflow.repotools import BranchSelection
 
 
@@ -70,17 +70,16 @@ def call(context: Context) -> Result:
     print("discontinued_branch : " + cli.if_none(release_branch.name))
 
     if reintegrate is None:
-        prompt_result = prompt_for_confirmation(
+        prompt_result = prompt(
             context=context,
-            fail_title=_("Failed to determine merge mode for {branch}."),
             message=_("Branches may be reintegrated upon discontinuation."),
             prompt=_("Do you want to reintegrate {branch} into {base_branch}?")
                 .format(branch=repr(release_branch.short_name),
                         base_branch=repr(base_branch_ref.short_name)),
         )
         command_context.add_subresult(prompt_result)
-        if command_context.has_errors() or not prompt_result.value:
-            return command_context.result
+        if command_context.has_errors():
+            return context.result
 
         reintegrate = prompt_result.value
 
@@ -90,7 +89,7 @@ def call(context: Context) -> Result:
         clone_result = create_shared_clone_repository(context)
         command_context.add_subresult(clone_result)
         if command_context.has_errors():
-            return command_context.result
+            return context.result
 
         clone_context: Context = clone_result.value
 
@@ -123,7 +122,7 @@ def call(context: Context) -> Result:
         )
         command_context.add_subresult(prompt_result)
         if command_context.has_errors() or not prompt_result.value:
-            return command_context.result
+            return context.result
 
         push_command = ['push', '--atomic']
         if context.dry_run:
@@ -144,4 +143,4 @@ def call(context: Context) -> Result:
 
         fetch_all_and_ff(context, command_context.result, context.config.remote_name)
 
-    return command_context.result
+    return context.result

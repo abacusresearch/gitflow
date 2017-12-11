@@ -18,7 +18,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow log [<object>] [-- <git-arg>...]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
- flow (assemble|test|integration-test) [-d|--dry-run] [<object>]
+ flow (assemble|test|integration-test) [-d|--dry-run] [--inplace] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow drop-cache [-d|--dry-run]
         [-B|--batch] [-v|--verbose] [-p|--pretty]

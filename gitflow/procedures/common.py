@@ -25,7 +25,7 @@ from gitflow import version
 from gitflow.common import Result
 from gitflow.context import Context
 from gitflow.properties import PropertyFile
-from gitflow.repotools import BranchSelection
+from gitflow.repotools import BranchSelection, git_get_current_branch
 
 
 class CommitInfo(object):
@@ -56,8 +56,8 @@ class CommitInfo(object):
 class BranchInfo(object):
     ref: repotools.Ref = None
     ref_is_local: bool = None
-    local: repotools.Ref = None
-    local_class: const.BranchClass = None
+    local: list = None
+    local_class: list = None
     upstream: repotools.Ref = None
     upstream_class: const.BranchClass = None
 
@@ -79,40 +79,43 @@ class CommandContext(object):
     upstreams: dict = None
     downstreams: dict = None
 
+    @property
+    def selected_object(self):
+        return self.selected_ref or self.selected_commit
+
     def __init__(self):
         self.branch_info_dict = dict()
-        self.result = Result()
 
     def warn(self, message, reason):
-        self.result.warn(message, reason)
+        self.context.warn(message, reason)
 
     def error(self, exit_code, message, reason, throw: bool = False):
-        self.result.error(exit_code, message, reason, throw)
+        self.context.error(exit_code, message, reason, throw)
 
     def fail(self, exit_code, message, reason):
-        self.result.fail(exit_code, message, reason)
+        self.context.fail(exit_code, message, reason)
 
     def add_subresult(self, subresult):
-        self.result.add_subresult(subresult)
+        self.context.add_subresult(subresult)
 
     def has_errors(self):
-        return self.result.has_errors()
+        return self.context.has_errors()
 
     def abort_on_error(self):
-        return self.result.abort_on_error()
+        return self.context.abort_on_error()
 
     def abort(self):
-        return self.result.abort()
+        return self.context.abort()
 
 
 def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
         -> [repotools.Ref, const.BranchClass]:
-    if branch_info.local is not None and branch_info.upstream is not None:
-        if branch_info.local_class != branch_info.upstream_class:
+    if branch_info.local is not None and len(branch_info.local) and branch_info.upstream is not None:
+        if branch_info.local_class[0] != branch_info.upstream_class:
             result_out.error(os.EX_DATAERR,
                              _("Local and upstream branch have a mismatching branch class."),
                              None)
-        if not branch_info.upstream.short_name.endswith('/' + branch_info.local.short_name):
+        if not branch_info.upstream.short_name.endswith('/' + branch_info.local[0].short_name):
             result_out.error(os.EX_DATAERR,
                              _("Local and upstream branch have a mismatching short name."),
                              None)
@@ -120,14 +123,14 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
     candidate = None
     candidate_class = None
     if selection == BranchSelection.BRANCH_PREFER_LOCAL:
-        candidate = branch_info.local or branch_info.upstream
-        candidate_class = branch_info.local_class or branch_info.upstream_class
+        candidate = branch_info.local[0] or branch_info.upstream
+        candidate_class = branch_info.local_class[0] or branch_info.upstream_class
     elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
-        candidate = branch_info.local
-        candidate_class = branch_info.local_class
+        candidate = branch_info.local[0]
+        candidate_class = branch_info.local_class[0]
     elif selection == BranchSelection.BRANCH_PREFER_REMOTE:
-        candidate = branch_info.upstream or branch_info.local
-        candidate_class = branch_info.upstream_class or branch_info.local_class
+        candidate = branch_info.upstream or branch_info.local[0]
+        candidate_class = branch_info.upstream_class or branch_info.local_class[0]
     elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
         candidate = branch_info.upstream
         candidate_class = branch_info.upstream_class
@@ -223,7 +226,7 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
 
     if branch_ref.local_branch_name:
         branch_info = BranchInfo()
-        branch_info.local = branch_ref
+        branch_info.local = [branch_ref]
 
         upstream = upstreams.get(branch_ref.name)
         if upstream is not None:
@@ -233,15 +236,18 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
         branch_info = BranchInfo()
         branch_info.upstream = branch_ref
 
+        branch_info.local = list()
+
         for ref, upstream in upstreams.items():
             if upstream == branch_ref.name:
-                branch_info.local = repotools.get_ref_by_name(context.repo, ref)
-                break
+                branch_info.local.append(repotools.get_ref_by_name(context.repo, ref))
 
     if branch_info is not None:
         if branch_info.local is not None:
-            branch_info.local_class = get_branch_class(context, branch_info.local.name)
-            branch_info_out[branch_info.local.name] = branch_info
+            branch_info.local_class = list()
+            for local in branch_info.local:
+                branch_info.local_class.append(get_branch_class(context, local.name))
+                branch_info_out[local.name] = branch_info
         if branch_info.upstream is not None:
             branch_info.upstream_class = get_branch_class(context, branch_info.upstream.name)
             branch_info_out[branch_info.upstream.name] = branch_info
@@ -269,17 +275,37 @@ def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, s
 
 
 def update_project_property_file(context: Context,
-                                 new_version: str, new_sequential_version: int,
+                                 new_version: str,
+                                 new_sequential_version: int,
                                  commit_out: CommitInfo):
     result = Result()
+    result.value = False
 
-    commit_out.add_message("#version     : " + cli.if_none(new_version))
-    commit_out.add_message("#seq_version : " + cli.if_none(new_sequential_version))
+    new_version_info = semver.parse_version_info(new_version)
+
+    if new_version_info.build is not None:
+        result.fail(os.EX_SOFTWARE,
+                    _("property update failed"),
+                    _("build info must not be set in tagged version"))
+
+    new_opaque_version = const.DEFAULT_OPAQUE_VERSION_FORMAT.format(
+        major=new_version_info.major,
+        minor=new_version_info.minor,
+        patch=new_version_info.patch,
+        prerelease=new_version_info.prerelease,
+        version_code=str(new_sequential_version)
+    )
+
+    var_separator = ' : '
+    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
+                           + cli.if_none(new_version))
+    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
+                           + cli.if_none(new_sequential_version))
 
     version_property_name = context.config.version_property_name
     sequential_version_property_name = context.config.sequential_version_property_name
+    opaque_version_property_name = context.config.opaque_version_property_name
 
-    property_store: PropertyFile = None
     if context.config.property_file is not None:
         property_store = PropertyFile.newInstance(context.config.property_file)
         if property_store is None:
@@ -292,17 +318,18 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        properties = property_store.load()
+        prev_properties = property_store.load()
+        properties = prev_properties.copy()
+
+        assert properties == prev_properties
+
         if properties is None:
             result.fail(os.EX_DATAERR,
                         _("Failed to load properties from file: {path}")
                         .format(path=repr(context.config.property_file)),
                         None
                         )
-        result.value = 0
         if context.config.commit_version_property:
-            version = properties.get(version_property_name)
-
             if version_property_name not in properties:
                 result.warn(_("Missing version property."),
                             _("Missing property {property} in file {file}.")
@@ -310,16 +337,10 @@ def update_project_property_file(context: Context,
                                     file=repr(context.config.property_file))
                             )
             properties[version_property_name] = new_version
-            commit_out.add_message('#properties[' + utils.quote(version_property_name, '"') + ']:' + new_version)
-            if context.verbose:
-                print("version     : " + cli.if_none(version))
-                print("new_version : " + cli.if_none(properties[version_property_name]))
-
-            result.value += 1
+            commit_out.add_message('#properties[' + utils.quote(version_property_name, '"') + ']' + var_separator
+                                   + new_version)
 
         if context.config.commit_sequential_version_property:
-            sequential_version = properties.get(sequential_version_property_name)
-
             if sequential_version_property_name not in properties:
                 result.warn(_("Missing version property."),
                             _("Missing property {property} in file {file}.")
@@ -327,18 +348,29 @@ def update_project_property_file(context: Context,
                                     file=repr(context.config.property_file))
                             )
             properties[sequential_version_property_name] = str(new_sequential_version)
-            commit_out.add_message('#properties[' + utils.quote(sequential_version_property_name, '"') + ']:' + str(
-                new_sequential_version))
+            commit_out.add_message('#properties[' + utils.quote(sequential_version_property_name, '"') + ']' + var_separator
+                                   + str(new_sequential_version))
 
-            if context.verbose:
-                print("sequential_version     : " + cli.if_none(sequential_version))
-                print("new_sequential_version : " + cli.if_none(properties[sequential_version_property_name]))
+        if context.config.commit_opaque_version_property:
+            if opaque_version_property_name not in properties:
+                result.warn(_("Missing version property."),
+                            _("Missing property {property} in file {file}.")
+                            .format(property=repr(opaque_version_property_name),
+                                    file=repr(context.config.property_file))
+                            )
 
-            result.value += 1
+            properties[opaque_version_property_name] = new_opaque_version
+            commit_out.add_message('#properties[' + utils.quote(opaque_version_property_name, '"') + ']' + var_separator
+                                   + new_opaque_version)
 
-        if result.value:
-            property_store.store(properties)
-            commit_out.add_file(context.config.property_file)
+        property_store.store(properties)
+        commit_out.add_file(context.config.property_file)
+        result.value = True
+
+    if context.verbose and result.value != 0:
+        print("properties have changed")
+        print("commit message:")
+        print(commit_out.message)
 
     return result
 
@@ -511,6 +543,7 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
     if context.batch:
         result.value = context.assume_yes
         if not result.value:
+            sys.stdout.write(prompt + ' -' + os.linesep)
             result.fail(const.EX_ABORTED, fail_title, _("Operation aborted in batch mode."))
     else:
         if message is not None:
@@ -526,6 +559,29 @@ def prompt_for_confirmation(context: Context, fail_title: str, message: str, pro
 
         if result.value is not True:
             result.error(const.EX_ABORTED_BY_USER, fail_title, _("Operation aborted."), False)
+
+    return result
+
+
+def prompt(context: Context, message: str, prompt: str):
+    result = Result()
+
+    if context.batch:
+        result.value = context.assume_yes
+        if not result.value:
+            sys.stdout.write(prompt + ' -' + os.linesep)
+            result.fail(const.EX_ABORTED, _("Operation failed."), _("Operation aborted in batch mode."))
+    else:
+        if message is not None:
+            cli.warn(message)
+        sys.stderr.flush()
+        sys.stdout.flush()
+
+        if context.assume_yes:
+            sys.stdout.write(prompt + ' y' + os.linesep)
+            result.value = True
+        else:
+            result.value = cli.query_yes_no(sys.stdout, prompt, "no")
 
     return result
 
@@ -576,7 +632,9 @@ def get_command_context(context, object_arg: str) -> CommandContext:
         # determine affected branches
         affected_main_branches = list(
             filter(lambda ref:
-                   (ref.name not in command_context.downstreams),
+                   (ref.name not in command_context.downstreams
+                    and commit in repotools.git_list_commits(context=context.repo, start=None, end=ref,
+                                                             options=['--first-parent'])),
                    repotools.git_list_refs(context.repo,
                                            '--contains', commit,
                                            repotools.create_ref_name(const.REMOTES_PREFIX,
@@ -599,7 +657,7 @@ def get_command_context(context, object_arg: str) -> CommandContext:
                                      )
             else:
                 command_context.fail(os.EX_USAGE,
-                                     _("Failed to resolve unique release branch for object: {object}")
+                                     _("Failed to resolve unique branch for object: {object}")
                                      .format(object=repr(object_arg)),
                                      _("Multiple different branches contain this commit:\n"
                                        "{listing}")
@@ -667,16 +725,18 @@ def check_requirements(command_context: CommandContext,
                        with_upstream: bool,
                        in_sync_with_upstream: bool,
                        fail_message: str,
+                       allow_unversioned_changes: bool = None,
                        throw=True):
     branch_class = get_branch_class(command_context.context, ref)
 
     if branch_classes is not None and branch_class not in branch_classes:
         command_context.error(os.EX_USAGE,
                               fail_message,
-                              _("The branch {branch} is of type {type} must be one of these types: \n{allowed_types}")
+                              _("The branch {branch} is of type {type} must be one of these types:{allowed_types}")
                               .format(branch=repr(ref.name),
                                       type=repr(branch_class.name if branch_class is not None else None),
-                                      allowed_types='- \n'.join(branch_class.name for branch_class in branch_classes)),
+                                      allowed_types='\n - ' + '\n - '.join(
+                                          branch_class.name for branch_class in branch_classes)),
                               throw)
 
     if ref.local_branch_name is not None:
@@ -725,6 +785,18 @@ def check_requirements(command_context: CommandContext,
                               _("{branch} is discontinued.")
                               .format(branch=repr(ref.name)),
                               throw)
+
+    if not allow_unversioned_changes:
+        current_branch = git_get_current_branch(command_context.context.repo)
+        if ref == current_branch:
+            returncode = git(command_context.context, ['diff-index', '--name-status', '--exit-code', current_branch])
+
+            if returncode != os.EX_OK:
+                command_context.error(os.EX_USAGE,
+                                      fail_message,
+                                      _("{branch} has uncommitted changes.")
+                                      .format(branch=repr(ref.name)),
+                                      throw)
 
 
 class WorkBranch(object):
@@ -823,39 +895,45 @@ def expand_vars(s: str, vars: dict):
     return re.sub(r'((?:\\\\)+)|((\\)?(\$(?:{([^}]*)}|(\w+))))', lambda match: __var_subst(match, vars), s)
 
 
-def execute_build_steps(command_context, context, types: list = None):
+def execute_build_steps(command_context: CommandContext, types: list = None):
     if types is not None:
-        stages = filter(lambda stage: stage.type in types, context.config.build_stages)
+        stages = filter(lambda stage: stage.type in types, command_context.context.config.build_stages)
     else:
-        stages = context.config.build_stages
+        stages = command_context.context.config.build_stages
 
     for stage in stages:
         for step in stage.steps:
             step_errors = 0
 
             for command in step.commands:
-                if context.verbose >= const.TRACE_VERBOSITY:
-                    print(' '.join(shlex.quote(token) for token in command))
+                command_string = ' '.join(shlex.quote(token) for token in command)
+                if command_context.context.verbose >= const.TRACE_VERBOSITY:
+                    print(command_string)
 
                 command = [expand_vars(token, os.environ) for token in command]
 
-                if not context.dry_run:
+                if not command_context.context.dry_run:
                     try:
                         proc = subprocess.Popen(args=command,
                                                 stdin=subprocess.PIPE,
-                                                cwd=context.root)
+                                                cwd=command_context.context.root)
                         proc.wait()
                         if proc.returncode != os.EX_OK:
                             command_context.fail(os.EX_DATAERR,
-                                                 _("Build failed."),
-                                                 _("Stage {stage}:{step} returned with an error.")
-                                                 .format(stage=stage.name, step=step.name))
+                                                 _("{stage}:{step} failed.")
+                                                 .format(stage=stage.name, step=step.name),
+                                                 _("{command}\n"
+                                                   "returned with an error.")
+                                                 .format(command=command_string))
                     except FileNotFoundError as e:
                         step_errors += 1
                         command_context.fail(os.EX_DATAERR,
-                                             _("Build failed."),
-                                             _("Stage {stage}:{step} could not be executed.")
-                                             .format(stage=stage.name, step=step.name))
+                                             _("{stage}:{step} failed.")
+                                             .format(stage=stage.name, step=step.name),
+                                             _("{command}\n"
+                                               "could not be executed.\n"
+                                               "File not found: {file}")
+                                             .format(command=command_string, file=e.filename))
 
             if not step_errors:
                 cli.print(stage.name + ":" + step.name + ": OK")

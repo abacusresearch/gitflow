@@ -11,16 +11,51 @@ from gitflow import __main__
 from gitflow.properties import PropertyFile
 
 
-class TestFlowBase(object):
-    tempdir: TemporaryDirectory
-    orig_cwd: str
-    git_origin: str
-    git_working_copy: str
-    project_property_file: str
+class TestInTempDir(object):
+    tempdir: TemporaryDirectory = None
+    orig_cwd: str = None
 
     def setup_method(self, method):
         self.orig_cwd = os.getcwd()
         self.tempdir = TemporaryDirectory()
+
+        # switch to the working copy
+        os.chdir(self.tempdir.name)
+
+    def teardown_method(self, method):
+        self.tempdir.cleanup()
+        os.chdir(self.orig_cwd)
+
+    def git_flow(self, *args) -> int:
+        return __main__.main([__name__, '-B'] + [*args])
+
+    def git_flow_for_lines(self, *args) -> Tuple[int, str]:
+        prev_stdout = sys.stdout
+        sys.stdout = stdout_buf = StringIO()
+
+        exit_code = __main__.main([__name__, '-B'] + [*args])
+
+        sys.stdout.flush()
+        out_lines = stdout_buf.getvalue().splitlines()
+
+        sys.stdout = prev_stdout
+
+        return exit_code, out_lines
+
+    def assert_same_elements(self, expected: list, actual: list):
+        expected = sorted(expected)
+        actual = sorted(actual)
+        if expected != actual:
+            pytest.fail("Comparison assertion failed")
+
+
+class TestFlowBase(TestInTempDir):
+    git_origin: str = None
+    git_working_copy: str = None
+    project_property_file: str = None
+
+    def setup_method(self, method):
+        super().setup_method(self)
 
         self.git_origin = os.path.join(self.tempdir.name, 'origin.git')
         self.git_working_copy = os.path.join(self.tempdir.name, 'working_copy.git')
@@ -45,11 +80,11 @@ class TestFlowBase(object):
         os.chdir(self.git_working_copy)
 
     def teardown_method(self, method):
-        exit_code = self.git_flow('status')
-        assert exit_code == os.EX_OK
-
-        self.tempdir.cleanup()
-        os.chdir(self.orig_cwd)
+        try:
+            exit_code = self.git_flow('status')
+            assert exit_code == os.EX_OK
+        finally:
+            super().teardown_method(self)
 
     def git_flow(self, *args) -> int:
         return __main__.main([__name__, '-B'] + [*args])
@@ -106,6 +141,14 @@ class TestFlowBase(object):
 
     def current_head(self):
         proc = subprocess.Popen(args=['git', 'rev-parse', '--revs-only', '--symbolic-full-name', 'HEAD'],
+                                stdout=subprocess.PIPE)
+        out, err = proc.communicate()
+        assert proc.returncode == os.EX_OK
+        current_head = out.decode('utf-8').splitlines()[0]
+        return current_head
+
+    def current_head_commit(self):
+        proc = subprocess.Popen(args=['git', 'rev-parse', '--revs-only', 'HEAD'],
                                 stdout=subprocess.PIPE)
         out, err = proc.communicate()
         assert proc.returncode == os.EX_OK
