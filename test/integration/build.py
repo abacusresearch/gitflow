@@ -54,10 +54,10 @@ class TestBuild(TestFlowBase):
         self.commit('initial commit: gitflow config file')
         self.push()
 
-        self.assert_refs([
+        self.assert_refs({
             'refs/heads/master',
             'refs/remotes/origin/master'
-        ])
+        })
 
     def test_assemble(self):
         exit_code, out_lines = self.git_flow_for_lines('assemble')
@@ -72,8 +72,7 @@ class TestBuild(TestFlowBase):
 
         assert exit_code == os.EX_OK
         assert out_lines == [
-            "assemble:#: OK",
-            "You are now on None."
+            "assemble:#: OK"
         ]
 
     def test_test(self):

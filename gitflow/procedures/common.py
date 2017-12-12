@@ -7,7 +7,7 @@
 #   - version gaps
 #   - potentially undesired effects
 #   - operations involving a push
-
+import json
 import os
 import re
 import shlex
@@ -18,14 +18,14 @@ from typing import Union
 
 import semver
 
-from gitflow import cli, utils, _, filesystem
+from gitflow import cli, _, filesystem, utils
 from gitflow import const
 from gitflow import repotools
 from gitflow import version
 from gitflow.common import Result
-from gitflow.context import Context
-from gitflow.properties import PropertyFile
-from gitflow.repotools import BranchSelection, git_get_current_branch
+from gitflow.context import Context, AbstractContext
+from gitflow.properties import PropertyIO
+from gitflow.repotools import BranchSelection, git_get_current_branch, RepoContext
 
 
 class CommitInfo(object):
@@ -78,10 +78,6 @@ class CommandContext(object):
     branch_info_dict = None
     upstreams: dict = None
     downstreams: dict = None
-
-    @property
-    def selected_object(self):
-        return self.selected_ref or self.selected_commit
 
     def __init__(self):
         self.branch_info_dict = dict()
@@ -274,19 +270,14 @@ def get_branch_info(command_context: CommandContext, ref: Union[repotools.Ref, s
     return branch_info
 
 
-def update_project_property_file(context: Context,
-                                 new_version: str,
-                                 new_sequential_version: int,
-                                 commit_out: CommitInfo):
-    result = Result()
-    result.value = False
-
+def update_project_properties(context: Context,
+                              prev_properties: dict,
+                              new_version: str,
+                              new_sequential_version: int) -> dict:
     new_version_info = semver.parse_version_info(new_version)
 
     if new_version_info.build is not None:
-        result.fail(os.EX_SOFTWARE,
-                    _("property update failed"),
-                    _("build info must not be set in tagged version"))
+        raise ValueError("build info must not be set in version tag")
 
     new_opaque_version = const.DEFAULT_OPAQUE_VERSION_FORMAT.format(
         major=new_version_info.major,
@@ -296,19 +287,29 @@ def update_project_property_file(context: Context,
         version_code=str(new_sequential_version)
     )
 
-    var_separator = ' : '
-    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_version))
-    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_sequential_version))
+    properties = prev_properties.copy()
 
-    version_property_name = context.config.version_property_name
-    sequential_version_property_name = context.config.sequential_version_property_name
-    opaque_version_property_name = context.config.opaque_version_property_name
+    if context.config.commit_version_property:
+        properties[context.config.version_property_name] = new_version
+    if context.config.commit_sequential_version_property:
+        properties[context.config.sequential_version_property_name] = str(new_sequential_version)
+    if context.config.commit_opaque_version_property:
+        properties[context.config.opaque_version_property_name] = new_opaque_version
+
+    return properties
+
+
+def update_project_property_file(context: Context,
+                                 prev_properties: dict,
+                                 new_version: str,
+                                 new_sequential_version: int,
+                                 commit_out: CommitInfo):
+    result = Result()
+    result.value = False
 
     if context.config.property_file is not None:
-        property_store = PropertyFile.newInstance(context.config.property_file)
-        if property_store is None:
+        property_reader = PropertyIO.get_instance_by_filename(context.config.property_file)
+        if property_reader is None:
             result.fail(os.EX_DATAERR,
                         _("Property file not supported: {path}\n"
                           "Currently supported:\n"
@@ -318,54 +319,30 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        prev_properties = property_store.load()
-        properties = prev_properties.copy()
+        properties = update_project_properties(context, prev_properties.copy(), new_version, new_sequential_version)
 
-        assert properties == prev_properties
-
-        if properties is None:
-            result.fail(os.EX_DATAERR,
-                        _("Failed to load properties from file: {path}")
-                        .format(path=repr(context.config.property_file)),
-                        None
-                        )
-        if context.config.commit_version_property:
-            if version_property_name not in properties:
-                result.warn(_("Missing version property."),
-                            _("Missing property {property} in file {file}.")
-                            .format(property=repr(version_property_name),
-                                    file=repr(context.config.property_file))
-                            )
-            properties[version_property_name] = new_version
-            commit_out.add_message('#properties[' + utils.quote(version_property_name, '"') + ']' + var_separator
-                                   + new_version)
-
-        if context.config.commit_sequential_version_property:
-            if sequential_version_property_name not in properties:
-                result.warn(_("Missing version property."),
-                            _("Missing property {property} in file {file}.")
-                            .format(property=repr(sequential_version_property_name),
-                                    file=repr(context.config.property_file))
-                            )
-            properties[sequential_version_property_name] = str(new_sequential_version)
-            commit_out.add_message('#properties[' + utils.quote(sequential_version_property_name, '"') + ']' + var_separator
-                                   + str(new_sequential_version))
-
-        if context.config.commit_opaque_version_property:
-            if opaque_version_property_name not in properties:
-                result.warn(_("Missing version property."),
-                            _("Missing property {property} in file {file}.")
-                            .format(property=repr(opaque_version_property_name),
-                                    file=repr(context.config.property_file))
-                            )
-
-            properties[opaque_version_property_name] = new_opaque_version
-            commit_out.add_message('#properties[' + utils.quote(opaque_version_property_name, '"') + ']' + var_separator
-                                   + new_opaque_version)
-
-        property_store.store(properties)
+        property_reader.write_file(context.config.property_file, properties)
         commit_out.add_file(context.config.property_file)
         result.value = True
+    else:
+        properties = None
+
+    var_separator = ' : '
+    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
+                           + cli.if_none(new_version))
+    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
+                           + cli.if_none(new_sequential_version))
+
+    if properties is not None:
+        def log_property(properties: dict, key: str):
+            if key is not None:
+                commit_out.add_message('#properties[' + utils.quote(key, '"') + ']'
+                                       + var_separator + cli.if_none(properties.get(key), "null"))
+
+        for property_key in [context.config.version_property_name,
+                             context.config.sequential_version_property_name,
+                             context.config.opaque_version_property_name]:
+            log_property(properties, property_key)
 
     if context.verbose and result.value != 0:
         print("properties have changed")
@@ -396,7 +373,7 @@ def get_discontinuation_tag_name_for_version(context, version: Union[semver.Vers
         context, version)
 
 
-def get_global_sequence_number(context):
+def get_global_sequence_number(context) -> int:
     sequential_tags = repotools.git_list_refs(context.repo,
                                               repotools.create_ref_name(
                                                   const.LOCAL_TAG_PREFIX,
@@ -406,8 +383,8 @@ def get_global_sequence_number(context):
     for tag in sequential_tags:
         match = context.sequential_version_tag_matcher.fullmatch(tag.name)
         if match is not None:
-            counter = max(counter,
-                          int(match.group(context.sequential_version_tag_matcher.group_unique_code)))
+            version_code = int(match.group(context.sequential_version_tag_matcher.group_unique_code))
+            counter = max(counter, version_code)
         else:
             raise Exception("invalid tag: " + tag.name)
     return counter
@@ -633,8 +610,9 @@ def get_command_context(context, object_arg: str) -> CommandContext:
         affected_main_branches = list(
             filter(lambda ref:
                    (ref.name not in command_context.downstreams
-                    and commit in repotools.git_list_commits(context=context.repo, start=None, end=ref,
-                                                             options=['--first-parent'])),
+                    and commit in [reachable_commit.obj_name for reachable_commit in
+                                   repotools.git_list_commits(context=context.repo, start=None, end=ref,
+                                                              options=['--first-parent'])]),
                    repotools.git_list_refs(context.repo,
                                            '--contains', commit,
                                            repotools.create_ref_name(const.REMOTES_PREFIX,
@@ -797,6 +775,45 @@ def check_requirements(command_context: CommandContext,
                                       _("{branch} has uncommitted changes.")
                                       .format(branch=repr(ref.name)),
                                       throw)
+
+
+def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str = const.DEFAULT_CONFIG_FILE) -> dict:
+    config_str = repotools.get_file_contents(
+        repo,
+        commit,
+        config_file_path
+    )
+
+    if config_str is not None:
+        config = json.loads(s=config_str, encoding=const.DEFAULT_PROPERTY_ENCODING)
+    else:
+        config = None
+    return config
+
+
+def read_properties_in_commit(context: AbstractContext, repo: RepoContext, config: dict, commit: str):
+    if config is not None:
+        # print(json.dumps(obj=config_in_history, indent=2))
+        property_reader = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
+
+        properties_bytes = repotools.get_file_contents(
+            repo,
+            commit,
+            property_reader
+        )
+
+        if properties_bytes is None:
+            return
+
+        property_reader = PropertyIO.get_instance_by_filename(property_reader)
+        properties = property_reader.from_bytes(properties_bytes, const.DEFAULT_PROPERTY_ENCODING)
+
+        if properties is None:
+            context.fail(os.EX_DATAERR,
+                         _("Failed to parse properties."),
+                         None)
+
+        return properties
 
 
 class WorkBranch(object):

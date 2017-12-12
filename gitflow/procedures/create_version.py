@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Callable
 
@@ -12,7 +13,7 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     CommandContext, create_sequence_number_for_version, \
     create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo
+    check_in_repo, read_properties_in_commit, read_config_in_commit
 from gitflow.repotools import BranchSelection
 from gitflow.version import VersionConfig
 
@@ -69,13 +70,13 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             start=fork_point,
             end=command_context.selected_ref,
             options=['--first-parent']):
-        at_commit = history_commit == command_context.selected_commit
+        at_commit = history_commit.obj_name == command_context.selected_commit
         version_tag_refs = None
         sequential_version_tag_refs = None
 
         assert not at_commit if before_commit else not before_commit
 
-        for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit):
+        for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit.obj_name):
             version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
             if version_info is not None:
                 tag_matches = version_info.major == branch_base_version_info.major \
@@ -204,6 +205,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             and not len(sequential_version_tags_on_same_commit):
         new_sequential_version = create_sequence_number_for_version(context, new_version)
         sequential_version_tag_name = create_sequential_version_tag_name(context, new_sequential_version)
+
+        assert new_sequential_version is not None
+        assert sequential_version_tag_name is not None
     else:
         new_sequential_version = None
         sequential_version_tag_name = None
@@ -218,14 +222,41 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                                 "%d.%d" % (branch_base_version_info.major, branch_base_version_info.minor)))
                     )
 
-    if len(subsequent_version_tags):
-        result.fail(os.EX_USAGE,
-                    _("Tag creation failed."),
-                    _("There are version tags in branch history following the selected commit {commit}:\n"
-                      "{listing}")
-                    .format(commit=command_context.selected_commit,
-                            listing='\n'.join(' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
-                    )
+    try:
+        config_in_selected_commit = read_config_in_commit(context.repo, command_context.selected_commit)
+    except FileNotFoundError:
+        config_in_selected_commit = dict()
+
+    try:
+        properties_in_selected_commit = read_properties_in_commit(context,
+                                                                  context.repo,
+                                                                  config_in_selected_commit,
+                                                                  command_context.selected_commit)
+    except FileNotFoundError:
+        properties_in_selected_commit = dict()
+
+    if context.verbose:
+        print("properties in selected commit:")
+        print(json.dumps(obj=properties_in_selected_commit, indent=2))
+
+    valid_tag = False
+
+    # validate the commit
+    if len(version_tags_on_same_commit):
+        if config_in_selected_commit is None:
+            result.fail(os.EX_DATAERR,
+                        _("Tag creation failed."),
+                        _("The selected commit does not contain a configuration file.")
+                        )
+
+        opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
+        if opaque_version_property_name is not None \
+                and properties_in_selected_commit.get(opaque_version_property_name) is not None:
+            result.fail(os.EX_DATAERR,
+                        _("Tag creation failed."),
+                        _("The selected commit does not contain an opaque version property: {property_name}.")
+                        .format(property_name=opaque_version_property_name)
+                        )
 
     if len(version_tags_on_same_commit):
         if context.config.allow_qualifier_increments_within_commit:
@@ -254,11 +285,24 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                             _("The selected commit already has version tags.\n"
                               "Operations on such a commit are limited to pre-release type increments.")
                             )
+
+            valid_tag = True
         else:
             result.fail(os.EX_USAGE,
                         _("Tag creation failed."),
                         _("There are version tags pointing to the selected commit {commit}.\n"
                           "Consider reusing these versions or bumping them to stable."
+                          "{listing}")
+                        .format(commit=command_context.selected_commit,
+                                listing='\n'.join(
+                                    ' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
+                        )
+
+    if not valid_tag:
+        if len(subsequent_version_tags):
+            result.fail(os.EX_USAGE,
+                        _("Tag creation failed."),
+                        _("There are version tags in branch history following the selected commit {commit}:\n"
                           "{listing}")
                         .format(commit=command_context.selected_commit,
                                 listing='\n'.join(
@@ -334,6 +378,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
             commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
+                                                         properties_in_selected_commit,
                                                          new_version,
                                                          new_sequential_version,
                                                          commit_info)
@@ -351,9 +396,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
-                result.fail(os.EX_DATAERR,
+                result.fail(os.EX_USAGE,
                             _("Failed to commit version update."),
-                            _("The selected commit {commit} does not represent the tip of {branch}.")
+                            _("The selected parent commit {commit} does not represent the tip of {branch}.")
                             .format(commit=command_context.selected_commit,
                                     branch=repr(command_context.selected_ref.name))
                             )
@@ -371,11 +416,13 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         #                                                                   command_context.selected_branch.ref):
 
         # show info and prompt for confirmation
-        print("ref                 : " + cli.if_none(command_context.selected_ref.name))
-        print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
-        print("new_tag             : " + cli.if_none(tag_name))
-        print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
-        print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("ref                 : " + cli.if_none(command_context.selected_ref.name))
+        cli.print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
+        cli.print("new_tag             : " + cli.if_none(tag_name))
+        cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
+        cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("selected object     : " + cli.if_none(command_context.selected_commit))
+        cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
         prompt_result = prompt_for_confirmation(
             context=context,
@@ -472,7 +519,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             start=None,
             end=command_context.selected_commit,
             options=['--first-parent']):
-        branch_refs = release_branch_merge_bases.get(history_commit)
+        branch_refs = release_branch_merge_bases.get(history_commit.obj_name)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
                 filter(lambda tag_ref: context.release_branch_matcher.format(tag_ref.name) is not None,
@@ -491,15 +538,16 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             )
             if latest_branch is None:
                 latest_branch = branch_refs[0]
-            if history_commit == command_context.selected_commit:
+            if history_commit.obj_name == command_context.selected_commit:
                 branch_points_on_same_commit.extend(branch_refs)
             # for tag_ref in tag_refs:
             #     print('<<' + tag_ref.name)
             break
 
-    for history_commit in repotools.git_list_commits(context.repo, command_context.selected_commit,
+    for history_commit in repotools.git_list_commits(context.repo,
+                                                     command_context.selected_commit,
                                                      command_context.selected_ref):
-        branch_refs = release_branch_merge_bases.get(history_commit)
+        branch_refs = release_branch_merge_bases.get(history_commit.obj_name)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
                 filter(lambda tag_ref: context.release_branch_matcher.format(tag_ref.name) is not None,
@@ -550,6 +598,19 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     else:
         new_sequential_version = None
         sequential_version_tag_name = None
+
+    try:
+        config_in_selected_commit = read_config_in_commit(context.repo, command_context.selected_commit)
+    except FileNotFoundError:
+        config_in_selected_commit = dict()
+
+    try:
+        properties_in_selected_commit = read_properties_in_commit(context,
+                                                                  context.repo,
+                                                                  config_in_selected_commit,
+                                                                  command_context.selected_commit)
+    except FileNotFoundError:
+        properties_in_selected_commit = dict()
 
     if not context.config.allow_shared_release_branch_base and len(branch_points_on_same_commit):
         result.fail(os.EX_USAGE,
@@ -622,7 +683,10 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
                         _("Failed to check out release branch."))
 
             commit_info = CommitInfo()
-            update_result = update_project_property_file(clone_context, new_version, new_sequential_version,
+            update_result = update_project_property_file(clone_context,
+                                                         properties_in_selected_commit,
+                                                         new_version,
+                                                         new_sequential_version,
                                                          commit_info)
             result.add_subresult(update_result)
             if result.has_errors():
@@ -638,9 +702,9 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
-                result.fail(os.EX_DATAERR,
+                result.fail(os.EX_USAGE,
                             _("Failed to commit version update."),
-                            _("The selected commit {commit} does not represent the tip of {branch}.")
+                            _("The selected parent commit {commit} does not represent the tip of {branch}.")
                             .format(commit=command_context.selected_commit,
                                     branch=repr(command_context.selected_ref.name))
                             )
@@ -657,6 +721,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         cli.print("new_branch          : " + cli.if_none(branch_name))
         cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
         cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
+        cli.print("selected object     : " + cli.if_none(command_context.selected_commit))
+        cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
         prompt_result = prompt_for_confirmation(
             context=context,

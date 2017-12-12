@@ -61,6 +61,8 @@ DEFAULT_DISCONTINUATION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)(?:\.(?P<p
                                       r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                                       r'(\.(?P<prerelease_version>\d+))?)?)?'
 
+DEFAULT_PROPERTY_ENCODING = 'UTF-8'
+
 TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
                              "[-<prerelease_type:(a-zA-Z)(a-zA-Z0-9)*>.<prerelease_version:uint>]" \
                              "[+<build_info:(a-zA-Z0-9)+>]"
