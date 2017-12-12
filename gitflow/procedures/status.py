@@ -83,8 +83,8 @@ def call(context) -> Result:
             cli.fcwriteln(sys.stdout, status_color)
 
             tags = repotools.git_get_branch_tags(context=context.repo,
+                                                 base_branch='master',
                                                  branch=branch_ref.name,
-                                                 reverse=True,
                                                  tag_filter=None,
                                                  commit_tag_comparator=None
                                                  )

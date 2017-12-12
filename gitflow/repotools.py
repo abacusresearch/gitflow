@@ -3,6 +3,7 @@ import os
 import re
 import shlex
 import subprocess
+import typing
 from enum import Enum
 from typing import Union, Callable, List
 
@@ -504,17 +505,58 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
         return commits
 
 
+def git_get_branch_commits(context: RepoContext,
+                           base_branch: Union[Object, str],
+                           branch_commit: Union[Object, str]) -> typing.Generator[Commit, None, None]:
+    """"
+    :returns branch commits in reverse chronological order
+    :rtype: list of str
+    """
+
+    # TODO optimize
+    base_branch_commits = git_list_commits(context=context, start=None, end=base_branch, options=['--first-parent'])
+    base_branch_commits = set([commit.obj_name for commit in base_branch_commits])
+
+    commit_buffer = []
+
+    for commit in git_list_commits(context=context,
+                                   start=None,
+                                   end=branch_commit,
+                                   reverse=False,
+                                   options=['--first-parent']):
+        # abort, when the branch commit is a base branch commit
+        if commit.obj_name in base_branch_commits:
+            break
+
+        commit_buffer.append(commit)
+
+        # a candidate for the original fork point has a parent that is reachable
+        # from the base branch through first parents.
+        if len(commit.parents) >= 2:
+            # TODO optimize
+            if not any(parent_commit in base_branch_commits for parent_commit in commit.parents[:1]):
+                commit_buffer.clear()
+                break
+
+            # yield all buffered commits
+            yield from commit_buffer
+            commit_buffer.clear()
+
+        # for len(commit.parents) == 0, the listing will end
+
+    yield from commit_buffer
+    commit_buffer.clear()
+
+
 def git_get_branch_tags(context: RepoContext,
+                        base_branch: Union[Object, str],
                         branch: Union[Object, str],
-                        reverse=False,
                         tag_filter: Callable[[Ref, Ref], int] = None,
                         commit_tag_comparator: Callable[[Ref, Ref], int] = None):
-    for commit in git_list_commits(
+    for commit in git_get_branch_commits(
             context=context,
-            start=None,
-            end=branch,
-            reverse=reverse,
-            options=['--first-parent']):
+            base_branch=base_branch,
+            branch_commit=branch):
         tag_refs = git_get_tags_by_referred_object(context, commit.obj_name)
 
         if commit_tag_comparator is not None:
