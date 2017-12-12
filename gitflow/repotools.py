@@ -4,7 +4,7 @@ import re
 import shlex
 import subprocess
 from enum import Enum
-from typing import Union, Callable
+from typing import Union, Callable, List
 
 from gitflow import const, utils
 
@@ -51,6 +51,16 @@ class Object(object):
 
     def __str__(self):
         return self.__repr__()
+
+
+class Commit(Object):
+    parents = []
+
+    def __init__(self, obj_name, parents: List[str]) -> None:
+        super().__init__()
+        self.obj_type = 'commit'
+        self.obj_name = obj_name
+        self.parents = parents
 
 
 class Ref(Object):
@@ -460,7 +470,7 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Ob
 
 
 def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False,
-                     options: list = None):
+                     options: list = None) -> itertools.chain:
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str
@@ -469,6 +479,7 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
     args = ['rev-list']
     if reverse:
         args.append('--reverse')
+    args.append('--parents')
     if options is not None:
         args.extend(options)
     args.append((ref_target(start) + '..' if start is not None else '') + ref_target(end))
@@ -476,40 +487,35 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
     proc = git(context, *args)
     out, err = proc.communicate()
 
-    commits = out.decode('utf-8').splitlines()
+    def commit_line_to_object(line: str) -> Object:
+        hashes = line.split()
+        return Commit(hashes[0], hashes[1:] if len(hashes) > 1 else [])
+
+    commits = [commit_line_to_object(line) for line in out.decode('utf-8').splitlines()]
     if start is not None:
+        start_obj = Object()
+        start_obj.obj_type = "commit"
+        start_obj.obj_name = ref_target(start)
         if reverse:
-            return itertools.chain([ref_target(start)], commits)
+            return itertools.chain([start_obj], commits)
         else:
-            return itertools.chain(commits, [ref_target(start)])
+            return itertools.chain(commits, [start_obj])
     else:
         return commits
 
 
-def git_get_branch_commits(context: RepoContext, base: Union[Object, str], obj: Union[Object, str],
-                           from_fork_point=False, reverse=False) -> list:
-    """"
-    :returns branch commits in reverse chronological order
-    :rtype: list of str
-    """
-
-    merge_base = git_merge_base(context, base, obj, from_fork_point)
-
-    if merge_base is None:
-        return []
-
-    return git_list_commits(context, merge_base, obj, reverse)
-
-
 def git_get_branch_tags(context: RepoContext,
-                        base: Union[Object, str],
-                        dest: Union[Object, str],
-                        from_fork_point=False,
+                        branch: Union[Object, str],
                         reverse=False,
                         tag_filter: Callable[[Ref, Ref], int] = None,
                         commit_tag_comparator: Callable[[Ref, Ref], int] = None):
-    for commit in git_get_branch_commits(context, base, dest, from_fork_point, reverse):
-        tag_refs = git_get_tags_by_referred_object(context, commit)
+    for commit in git_list_commits(
+            context=context,
+            start=None,
+            end=branch,
+            reverse=reverse,
+            options=['--first-parent']):
+        tag_refs = git_get_tags_by_referred_object(context, commit.obj_name)
 
         if commit_tag_comparator is not None:
             # copy and sort

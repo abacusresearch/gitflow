@@ -610,8 +610,9 @@ def get_command_context(context, object_arg: str) -> CommandContext:
         affected_main_branches = list(
             filter(lambda ref:
                    (ref.name not in command_context.downstreams
-                    and commit in repotools.git_list_commits(context=context.repo, start=None, end=ref,
-                                                             options=['--first-parent'])),
+                    and commit in [reachable_commit.obj_name for reachable_commit in
+                                   repotools.git_list_commits(context=context.repo, start=None, end=ref,
+                                                              options=['--first-parent'])]),
                    repotools.git_list_refs(context.repo,
                                            '--contains', commit,
                                            repotools.create_ref_name(const.REMOTES_PREFIX,

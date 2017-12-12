@@ -70,13 +70,13 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             start=fork_point,
             end=command_context.selected_ref,
             options=['--first-parent']):
-        at_commit = history_commit == command_context.selected_commit
+        at_commit = history_commit.obj_name == command_context.selected_commit
         version_tag_refs = None
         sequential_version_tag_refs = None
 
         assert not at_commit if before_commit else not before_commit
 
-        for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit):
+        for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit.obj_name):
             version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
             if version_info is not None:
                 tag_matches = version_info.major == branch_base_version_info.major \
@@ -519,7 +519,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             start=None,
             end=command_context.selected_commit,
             options=['--first-parent']):
-        branch_refs = release_branch_merge_bases.get(history_commit)
+        branch_refs = release_branch_merge_bases.get(history_commit.obj_name)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
                 filter(lambda tag_ref: context.release_branch_matcher.format(tag_ref.name) is not None,
@@ -538,15 +538,16 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             )
             if latest_branch is None:
                 latest_branch = branch_refs[0]
-            if history_commit == command_context.selected_commit:
+            if history_commit.obj_name == command_context.selected_commit:
                 branch_points_on_same_commit.extend(branch_refs)
             # for tag_ref in tag_refs:
             #     print('<<' + tag_ref.name)
             break
 
-    for history_commit in repotools.git_list_commits(context.repo, command_context.selected_commit,
+    for history_commit in repotools.git_list_commits(context.repo,
+                                                     command_context.selected_commit,
                                                      command_context.selected_ref):
-        branch_refs = release_branch_merge_bases.get(history_commit)
+        branch_refs = release_branch_merge_bases.get(history_commit.obj_name)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
                 filter(lambda tag_ref: context.release_branch_matcher.format(tag_ref.name) is not None,
