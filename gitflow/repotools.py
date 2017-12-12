@@ -3,8 +3,9 @@ import os
 import re
 import shlex
 import subprocess
+import typing
 from enum import Enum
-from typing import Union, Callable
+from typing import Union, Callable, List
 
 from gitflow import const, utils
 
@@ -51,6 +52,16 @@ class Object(object):
 
     def __str__(self):
         return self.__repr__()
+
+
+class Commit(Object):
+    parents = []
+
+    def __init__(self, obj_name, parents: List[str]) -> None:
+        super().__init__()
+        self.obj_type = 'commit'
+        self.obj_name = obj_name
+        self.parents = parents
 
 
 class Ref(Object):
@@ -460,7 +471,7 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Ob
 
 
 def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False,
-                     options: list = None):
+                     options: list = None) -> itertools.chain:
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str
@@ -469,6 +480,7 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
     args = ['rev-list']
     if reverse:
         args.append('--reverse')
+    args.append('--parents')
     if options is not None:
         args.extend(options)
     args.append((ref_target(start) + '..' if start is not None else '') + ref_target(end))
@@ -476,40 +488,76 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
     proc = git(context, *args)
     out, err = proc.communicate()
 
-    commits = out.decode('utf-8').splitlines()
+    def commit_line_to_object(line: str) -> Object:
+        hashes = line.split()
+        return Commit(hashes[0], hashes[1:] if len(hashes) > 1 else [])
+
+    commits = [commit_line_to_object(line) for line in out.decode('utf-8').splitlines()]
     if start is not None:
+        start_obj = Object()
+        start_obj.obj_type = "commit"
+        start_obj.obj_name = ref_target(start)
         if reverse:
-            return itertools.chain([ref_target(start)], commits)
+            return itertools.chain([start_obj], commits)
         else:
-            return itertools.chain(commits, [ref_target(start)])
+            return itertools.chain(commits, [start_obj])
     else:
         return commits
 
 
-def git_get_branch_commits(context: RepoContext, base: Union[Object, str], obj: Union[Object, str],
-                           from_fork_point=False, reverse=False) -> list:
+def git_get_branch_commits(context: RepoContext,
+                           base_branch: Union[Object, str],
+                           branch_commit: Union[Object, str]) -> typing.Generator[Commit, None, None]:
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str
     """
 
-    merge_base = git_merge_base(context, base, obj, from_fork_point)
+    # TODO optimize
+    base_branch_commits = git_list_commits(context=context, start=None, end=base_branch, options=['--first-parent'])
+    base_branch_commits = set([commit.obj_name for commit in base_branch_commits])
 
-    if merge_base is None:
-        return []
+    commit_buffer = []
 
-    return git_list_commits(context, merge_base, obj, reverse)
+    for commit in git_list_commits(context=context,
+                                   start=None,
+                                   end=branch_commit,
+                                   reverse=False,
+                                   options=['--first-parent']):
+        # abort, when the branch commit is a base branch commit
+        if commit.obj_name in base_branch_commits:
+            break
+
+        commit_buffer.append(commit)
+
+        # a candidate for the original fork point has a parent that is reachable
+        # from the base branch through first parents.
+        if len(commit.parents) >= 2:
+            # TODO optimize
+            if not any(parent_commit in base_branch_commits for parent_commit in commit.parents[:1]):
+                commit_buffer.clear()
+                break
+
+            # yield all buffered commits
+            yield from commit_buffer
+            commit_buffer.clear()
+
+        # for len(commit.parents) == 0, the listing will end
+
+    yield from commit_buffer
+    commit_buffer.clear()
 
 
 def git_get_branch_tags(context: RepoContext,
-                        base: Union[Object, str],
-                        dest: Union[Object, str],
-                        from_fork_point=False,
-                        reverse=False,
+                        base_branch: Union[Object, str],
+                        branch: Union[Object, str],
                         tag_filter: Callable[[Ref, Ref], int] = None,
                         commit_tag_comparator: Callable[[Ref, Ref], int] = None):
-    for commit in git_get_branch_commits(context, base, dest, from_fork_point, reverse):
-        tag_refs = git_get_tags_by_referred_object(context, commit)
+    for commit in git_get_branch_commits(
+            context=context,
+            base_branch=base_branch,
+            branch_commit=branch):
+        tag_refs = git_get_tags_by_referred_object(context, commit.obj_name)
 
         if commit_tag_comparator is not None:
             # copy and sort
@@ -537,3 +585,60 @@ def git_branch(context: RepoContext, tag_name: str, obj: Union[Object, str]) -> 
     out, err = proc.communicate()
 
     return proc.returncode == os.EX_OK
+
+
+class TreeEntry(object):
+    file_flags: str
+    object_type: str
+    object_hash: str
+    object_size: str
+    file_path: str
+
+
+def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry:
+    files = git_for_lines(context, *['ls-tree', '-rlz', object, path])
+
+    if files is None:
+        raise RuntimeError("File lookup failed")
+
+    if len(files) == 0:
+        raise FileNotFoundError("Not such file: " + path)
+    elif len(files) > 1:
+        raise FileNotFoundError("Not a unique regular file: " + path)
+    else:
+        entry = TreeEntry()
+
+        parts = files[0].split('\t')
+        assert len(parts) == 2
+
+        attrs = parts[0].split()
+        assert len(attrs) == 4
+
+        assert parts[1][-1] == '\0'
+        parts[1] = parts[:-1]
+
+        entry.file_flags = attrs[0]
+        entry.object_type = attrs[1]
+        entry.object_hash = attrs[2]
+        entry.object_size = attrs[3]
+        entry.file_path = parts[1]
+
+        return entry
+
+    return None
+
+
+def get_file_entry_contents(context: RepoContext, tree_entry: TreeEntry):
+    proc = git(context, *['cat-file', 'blob', tree_entry.object_hash])
+
+    out, err = proc.communicate()
+
+    return out
+
+
+def get_file_contents(context: RepoContext, commit_object: Union[Object, str], file_path: str):
+    entry = get_file_entry(context, commit_object, file_path)
+    if entry is None:
+        return None
+
+    return get_file_entry_contents(context, entry)

@@ -1,68 +1,80 @@
-import os
+import io
 from abc import abstractmethod, ABC
 from configparser import ConfigParser
 
-from pyjavaprops.javaproperties import JavaProperties
-
-from gitflow.filesystem import replace_file
+from gitflow.java_properties import JavaProperties
 
 
-class PropertyFile(ABC):
+class PropertyIO(ABC):
+    __java_property_reader = None
+    __python_config_property_reader = None
+
     @abstractmethod
-    def load(self) -> dict:
+    def from_stream(self, stream: io.TextIOBase) -> dict:
         pass
 
     @abstractmethod
-    def store(self, properties: dict):
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
         pass
+
+    def read_file(self, property_file: str) -> dict:
+        with open(property_file, "r") as input_stream:
+            return self.from_stream(input_stream)
+
+    def write_file(self, property_file: str, properties: dict):
+        with open(property_file, "w") as output_stream:
+            return self.to_stream(output_stream, properties)
+
+    def from_str(self, string: str) -> dict:
+        with io.StringIO(string) as input_stream:
+            return self.from_stream(input_stream)
+
+    def to_str(self, properties: dict) -> str:
+        with io.StringIO() as output_stream:
+            self.to_stream(output_stream, properties)
+            return output_stream.getvalue()
+
+    def from_bytes(self, string: bytes, encoding: str) -> dict:
+        return self.from_str(str(string, encoding))
+
+    def to_bytes(self, properties: dict, encoding: str) -> bytes:
+        return self.to_str(properties).encode(encoding)
 
     @classmethod
-    def newInstance(cls, property_file: str):
-        if property_file.endswith('.properties'):
-            return JavaPropertyFile(property_file)
-        elif property_file.endswith('.ini'):
-            return PythonConfigPropertyFile(property_file)
+    def get_instance_by_filename(cls, file_name: str):
+        if file_name.endswith('.properties'):
+            if cls.__java_property_reader is None:
+                cls.__java_property_reader = JavaPropertyIO()
+            return cls.__java_property_reader
+        elif file_name.endswith('.ini'):
+            if cls.__python_config_property_reader is None:
+                cls.__python_config_property_reader = PythonConfigPropertyIO()
+            return cls.__python_config_property_reader
         else:
-            raise RuntimeError('unsupported property file: ' + property_file)
+            raise RuntimeError('unsupported property file: ' + file_name)
 
 
-class JavaPropertyFile(PropertyFile):
-    __property_file = None
-
-    def __init__(self, property_file):
-        self.__property_file = property_file
-
-    def load(self) -> dict:
+class JavaPropertyIO(PropertyIO):
+    def from_stream(self, stream: io.TextIOBase) -> dict:
         java_properties = JavaProperties()
-        if os.path.exists(self.__property_file):
-            java_properties.load(open(self.__property_file, "r"))
+        java_properties.load(stream)
         return java_properties.get_property_dict()
 
-    def store(self, properties: dict):
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
         java_properties = JavaProperties()
         for key, value in properties.items():
             java_properties.set_property(key, value)
-        temp_file = self.__property_file + ".~"
-        java_properties.store(open(temp_file, "w"))
-        replace_file(temp_file, self.__property_file)
+        java_properties.store(stream)
 
 
-class PythonConfigPropertyFile(PropertyFile):
-    __property_file = None
-
-    def __init__(self, property_file):
-        self.__property_file = property_file
-
-    def load(self) -> dict:
+class PythonConfigPropertyIO(PropertyIO):
+    def from_stream(self, stream: io.TextIOBase) -> dict:
         config = ConfigParser()
-        if os.path.exists(self.__property_file):
-            config.read_file(f=open(self.__property_file, 'r'))
+        config.read_file(stream)
         return dict(config.items(section=config.default_section))
 
-    def store(self, properties: dict):
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
         config = ConfigParser()
-        if os.path.exists(self.__property_file):
-            config.read_file(f=open(self.__property_file, 'r'))
         for key, value in properties.items():
             config.set(section=config.default_section, option=key, value=value)
-        config.write(fp=open(self.__property_file, 'w+'), space_around_delimiters=True)
+        config.write(stream)

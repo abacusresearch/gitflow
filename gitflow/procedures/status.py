@@ -83,15 +83,11 @@ def call(context) -> Result:
             cli.fcwriteln(sys.stdout, status_color)
 
             tags = repotools.git_get_branch_tags(context=context.repo,
-                                                 base=context.config.release_branch_base,
-                                                 dest=branch_ref.name,
-                                                 from_fork_point=False,
-                                                 reverse=True,
+                                                 base_branch='master',
+                                                 branch=branch_ref.name,
                                                  tag_filter=None,
-                                                 commit_tag_comparator=lambda a, b:
-                                                 -1 if context.sequential_version_tag_matcher.fullmatch(
-                                                     a.name) is not None
-                                                 else 1)
+                                                 commit_tag_comparator=None
+                                                 )
 
             tags = list(tags)
 

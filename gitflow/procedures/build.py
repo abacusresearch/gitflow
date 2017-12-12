@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 from gitflow import const, repotools, _
 from gitflow.context import Context
-from gitflow.procedures.common import get_command_context, execute_build_steps, git, check_requirements
+from gitflow.procedures.common import get_command_context, execute_build_steps, check_requirements
 
 
 def call(context: Context):
@@ -15,7 +15,6 @@ def call(context: Context):
         if context.args['--inplace']:
             build_context = context
             build_command_context = command_context
-            git(build_context, ['checkout', build_command_context.selected_object])
         else:
             temp_dir = TemporaryDirectory()
 
