@@ -524,28 +524,15 @@ def git_get_branch_commits(context: RepoContext,
                                    end=branch_commit,
                                    reverse=False,
                                    options=['--first-parent']):
-        # abort, when the branch commit is a base branch commit
-        if commit.obj_name in base_branch_commits:
-            break
 
         commit_buffer.append(commit)
 
         # a candidate for the original fork point has a parent that is reachable
         # from the base branch through first parents.
-        if len(commit.parents) >= 2:
-            # TODO optimize
-            if not any(parent_commit in base_branch_commits for parent_commit in commit.parents[:1]):
-                commit_buffer.clear()
-                break
-
+        if any(parent_commit in base_branch_commits for parent_commit in commit.parents):
             # yield all buffered commits
             yield from commit_buffer
             commit_buffer.clear()
-
-        # for len(commit.parents) == 0, the listing will end
-
-    yield from commit_buffer
-    commit_buffer.clear()
 
 
 def git_get_branch_tags(context: RepoContext,
