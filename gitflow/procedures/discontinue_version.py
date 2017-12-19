@@ -91,7 +91,7 @@ def call(context: Context) -> Result:
         if command_context.has_errors():
             return context.result
 
-        clone_context: Context = clone_result.value
+        clone_context = clone_result.value
 
         changes = list()
 

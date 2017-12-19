@@ -76,9 +76,6 @@ class SetDiffer(object):
 
 
 class TestInTempDir(object):
-    tempdir: TemporaryDirectory = None
-    orig_cwd: str = None
-
     def setup_method(self, method):
         self.orig_cwd = os.getcwd()
         self.tempdir = TemporaryDirectory()
@@ -130,9 +127,9 @@ class TestInTempDir(object):
 
 
 class TestFlowBase(TestInTempDir):
-    git_origin: str = None
-    git_working_copy: str = None
-    project_property_file: str = None
+    git_origin = None
+    git_working_copy = None
+    project_property_file = None
 
     def setup_method(self, method):
         super().setup_method(self)

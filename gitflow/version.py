@@ -11,7 +11,7 @@ from gitflow.common import Result
 
 
 class VersionConfig(object):
-    qualifiers: list = None
+    qualifiers = None
 
 
 class Version(object):
@@ -82,7 +82,7 @@ class VersionMatcher(object):
     group_prefix = None
     group_unique_code = None
 
-    ref_name_infixes: list = None
+    ref_name_infixes = None
     __format = None
 
     comparator = None
@@ -259,7 +259,7 @@ def create_initial_branch_version(branch_base_version):
 
 
 class version_set(object):
-    __config: VersionConfig = None
+    __config = None
     __new_version = None
 
     def __init__(self, config: VersionConfig, new_version):

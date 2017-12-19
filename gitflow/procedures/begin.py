@@ -1,6 +1,6 @@
 import os
 
-from gitflow import utils, _, const, repotools, cli
+from gitflow import _, const, repotools, cli
 from gitflow.common import Result
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, check_requirements, get_branch_class, get_branch_info, \

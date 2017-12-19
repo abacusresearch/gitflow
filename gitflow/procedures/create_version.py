@@ -20,7 +20,7 @@ from gitflow.version import VersionConfig
 
 def create_version_tag(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]) -> Result:
     result = Result()
-    context: Context = command_context.context
+    context = command_context.context
 
     # TODO configuration
     allow_merge_base_tags = True  # context.config.allow_shared_release_branch_base
@@ -478,7 +478,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
 def create_version_branch(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]) -> Result:
     result = Result()
-    context: Context = command_context.context
+    context = command_context.context
 
     if not command_context.selected_ref.name in [
         repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, context.config.release_branch_base),

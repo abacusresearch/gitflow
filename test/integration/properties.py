@@ -5,9 +5,6 @@ from gitflow.properties import PropertyIO
 
 
 class TestLoadStore(object):
-    tempdir: TemporaryDirectory = None
-    orig_cwd: str = None
-
     def setup_method(self, method):
         self.tempdir = TemporaryDirectory()
         self.orig_cwd = os.getcwd()
@@ -36,7 +33,7 @@ class TestLoadStore(object):
         self.__test_load_store_bytes('test.ini')
 
     def __test_load_store(self, file_name: str):
-        property_file: PropertyIO = PropertyIO.get_instance_by_filename(file_name)
+        property_file = PropertyIO.get_instance_by_filename(file_name)
         properties = dict()
 
         properties['bla'] = 'blub'
@@ -52,7 +49,7 @@ class TestLoadStore(object):
         assert properties == stored_properties
 
     def __test_load_store_string(self, file_name: str):
-        property_file: PropertyIO = PropertyIO.get_instance_by_filename(file_name)
+        property_file = PropertyIO.get_instance_by_filename(file_name)
         properties = property_file.from_str("")
 
         assert len(properties) == 0
@@ -69,7 +66,7 @@ class TestLoadStore(object):
         assert properties == stored_properties
 
     def __test_load_store_bytes(self, file_name: str):
-        property_file: PropertyIO = PropertyIO.get_instance_by_filename(file_name)
+        property_file = PropertyIO.get_instance_by_filename(file_name)
         properties = property_file.from_bytes(bytes(), 'UTF-8')
 
         assert len(properties) == 0

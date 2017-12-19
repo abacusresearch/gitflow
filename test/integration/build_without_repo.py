@@ -6,8 +6,8 @@ from test.integration.base import TestInTempDir
 
 
 class TestBuildWithoutRepo(TestInTempDir):
-    git_working_copy: str = None
-    project_property_file: str = None
+    git_working_copy = None
+    project_property_file = None
 
     def setup_method(self, method):
         super().setup_method(method)
@@ -82,6 +82,7 @@ class TestBuildWithoutRepo(TestInTempDir):
         exit_code, out_lines = self.git_flow_for_lines('integration-test')
 
         assert exit_code == os.EX_OK
+        print(out_lines)
         assert out_lines == [
             "google_testing_lab:monkey_test: OK",
             "google_testing_lab:instrumentation_test: OK"

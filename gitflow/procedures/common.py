@@ -29,9 +29,9 @@ from gitflow.repotools import BranchSelection, git_get_current_branch, RepoConte
 
 
 class CommitInfo(object):
-    message_parts: list = None
-    parents: list = None
-    files: list = None
+    message_parts = None
+    parents = None
+    files = None
 
     def __init__(self):
         self.message_parts = list()
@@ -54,30 +54,30 @@ class CommitInfo(object):
 
 
 class BranchInfo(object):
-    ref: repotools.Ref = None
-    ref_is_local: bool = None
-    local: list = None
-    local_class: list = None
-    upstream: repotools.Ref = None
-    upstream_class: const.BranchClass = None
+    ref = None
+    ref_is_local = None
+    local = None
+    local_class = None
+    upstream = None
+    upstream_class = None
 
 
 class CommandContext(object):
-    object_arg: str = None
-    context: Context = None
-    result: Result = None
+    object_arg = None
+    context = None
+    result = None
 
-    selected_ref: repotools.Ref = None
-    selected_branch: BranchInfo = None
-    selected_commit: str = None
-    selected_explicitly: bool = None
+    selected_ref = None
+    selected_branch = None
+    selected_commit = None
+    selected_explicitly = None
 
-    current_branch: repotools.Ref = None
-    affected_main_branches: list = None
+    current_branch = None
+    affected_main_branches = None
 
     branch_info_dict = None
-    upstreams: dict = None
-    downstreams: dict = None
+    upstreams = None
+    downstreams = None
 
     def __init__(self):
         self.branch_info_dict = dict()
@@ -785,7 +785,7 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
     )
 
     if config_str is not None:
-        config = json.loads(s=config_str, encoding=const.DEFAULT_PROPERTY_ENCODING)
+        config = json.loads(s=config_str.decode(encoding=const.DEFAULT_PROPERTY_ENCODING))
     else:
         config = None
     return config
@@ -820,9 +820,9 @@ def read_properties_in_commit(context: AbstractContext, repo: RepoContext, confi
 
 
 class WorkBranch(object):
-    prefix: str
-    type: str
-    name: str
+    prefix = None
+    type = None
+    name = None
 
     def branch_name(self):
         return repotools.create_ref_name(self.prefix, self.type, self.name)

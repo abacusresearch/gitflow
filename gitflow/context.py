@@ -35,17 +35,17 @@ class BuildLabels(Enum):
 
 
 class BuildStep(object):
-    name: str = None
-    commands: list = None
+    name = None
+    commands = None
     """a list of command arrays"""
-    labels: set = None
+    labels = None
     """contains labels for mapping to the ci tasks, effectively extending the label set in the enclosing stage"""
 
 
 class BuildStage(object):
-    type: str
-    steps: list = None
-    labels: set = None
+    type = None
+    steps = None
+    labels = None
     """contains labels for mapping to ci tasks"""
 
     def __init__(self):
@@ -55,19 +55,19 @@ class BuildStage(object):
 
 class Config(object):
     # versioning scheme
-    versioning_scheme: VersioningScheme = None
+    versioning_scheme = None
 
     # project properties
-    property_file: str = None
-    version_property_name: str = None
-    sequential_version_property_name: str = None
-    opaque_version_property_name: str = None
+    property_file = None
+    version_property_name = None
+    sequential_version_property_name = None
+    opaque_version_property_name = None
 
     # validation mode
     strict_mode = True
 
     # version
-    version_config: VersionConfig = None
+    version_config = None
 
     # repo
     remote_name = "origin"
@@ -79,7 +79,7 @@ class Config(object):
     prod_branch_types = ['fix', 'chore', 'doc', 'issue']
 
     # build config
-    build_stages: list = None
+    build_stages = None
 
     # hard config
 
@@ -125,7 +125,7 @@ class Config(object):
 
 
 class AbstractContext(object):
-    result: Result = None
+    result = None
 
     def __init__(self):
         self.result = Result()
@@ -153,8 +153,8 @@ class AbstractContext(object):
 
 
 class Context(AbstractContext):
-    config: Config = None
-    repo: RepoContext = None
+    config = None
+    repo = None
 
     # args
     args = None
@@ -167,20 +167,20 @@ class Context(AbstractContext):
     pretty = False
 
     # matchers
-    release_base_branch_matcher: VersionMatcher = None
-    release_branch_matcher: VersionMatcher = None
-    work_branch_matcher: VersionMatcher = None
+    release_base_branch_matcher = None
+    release_branch_matcher = None
+    work_branch_matcher = None
 
-    version_tag_matcher: VersionMatcher = None
-    discontinuation_tag_matcher: VersionMatcher = None
-    sequential_version_tag_matcher: VersionMatcher = None
+    version_tag_matcher = None
+    discontinuation_tag_matcher = None
+    sequential_version_tag_matcher = None
 
     # resources
-    temp_dirs: list = None
-    clones: list = None
+    temp_dirs = None
+    clones = None
 
     # misc
-    git_version: str = None
+    git_version = None
 
     def __init__(self):
         super().__init__()
@@ -189,7 +189,7 @@ class Context(AbstractContext):
     @staticmethod
     def create(args: dict, result_out: Result) -> 'Context':
         context = Context()
-        context.config: Config = Config()
+        context.config = Config()
 
         if args is not None:
             context.args = args

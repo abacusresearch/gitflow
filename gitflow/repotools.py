@@ -580,11 +580,11 @@ def git_branch(context: RepoContext, tag_name: str, obj: Union[Object, str]) -> 
 
 
 class TreeEntry(object):
-    file_flags: str
-    object_type: str
-    object_hash: str
-    object_size: str
-    file_path: str
+    file_flags = None
+    object_type = None
+    object_hash = None
+    object_size = None
+    file_path = None
 
 
 def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry:
