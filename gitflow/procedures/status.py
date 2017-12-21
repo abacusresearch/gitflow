@@ -13,7 +13,7 @@ from gitflow.procedures.common import get_branch_version_component_for_version, 
 def call(context) -> Result:
     command_context = get_command_context(
         context=context,
-        object_arg=context.args['<work-branch>']
+        object_arg=context.args['<object>']
     )
 
     check_in_repo(command_context)
@@ -24,8 +24,13 @@ def call(context) -> Result:
     upstreams = repotools.git_get_upstreams(context.repo)
     branch_info_dict = dict()
 
-    for branch_ref in repotools.git_list_refs(context.repo, repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                                                      context.config.remote_name)):
+    if context.args['--all'] > 0:
+        selected_refs = repotools.git_list_refs(context.repo, repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                                                        context.config.remote_name))
+    else:
+        selected_refs = [command_context.selected_ref or command_context.current_branch]
+
+    for branch_ref in selected_refs:
         branch_match = context.release_branch_matcher.fullmatch(branch_ref.name)
         if branch_match:
             branch_version = context.release_branch_matcher.to_version(branch_ref.name)

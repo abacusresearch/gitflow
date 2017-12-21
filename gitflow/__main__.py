@@ -2,7 +2,7 @@
 Git Flow CLI
 
 Usage:
- flow status
+ flow status [(-a|--all) | <object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
  flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
@@ -30,10 +30,13 @@ Options:
  -h --help              Shows this screen.
  --version              Shows version information.
 
+Selection Options:
+ -a --all               Select all branches
+
 Workspace Options:
- --root=DIR                         The working copy root.
+ --root=DIR             The working copy root.
  [default: .]
- --config=FILE                      The configuration file relative to the working copy root.
+ --config=FILE          The configuration file relative to the working copy root.
  [default: gitflow.json]
 
 Execution Mode Options:
