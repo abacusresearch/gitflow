@@ -1,7 +1,7 @@
-import os
 import sys
 
 import colors
+import os
 import semver
 
 from gitflow import repotools, const, cli, _, utils, version
@@ -82,53 +82,53 @@ def call(context) -> Result:
 
             cli.fcwriteln(sys.stdout, status_color)
 
-            tags = repotools.git_get_branch_tags(context=context.repo,
-                                                 base_branch='master',
-                                                 branch=branch_ref.name,
-                                                 tag_filter=None,
-                                                 commit_tag_comparator=None
-                                                 )
+            commit_tags = repotools.git_get_branch_tags(context=context.repo,
+                                                        base_branch='master',
+                                                        branch=branch_ref.name,
+                                                        tag_filter=None,
+                                                        commit_tag_comparator=None
+                                                        )
 
-            tags = list(tags)
+            for commit, tags in commit_tags:
+                for tag in tags:
+                    # print the sequential version tag
+                    tag_match = context.sequential_version_tag_matcher.fullmatch(tag.name)
+                    if tag_match:
+                        unique_code = tag_match.group(
+                            context.sequential_version_tag_matcher.group_unique_code)
+                        version_string = unique_code
 
-            for branch_tag_ref in tags:
-                # print the sequential version tag
-                tag_match = context.sequential_version_tag_matcher.fullmatch(branch_tag_ref.name)
-                if tag_match:
-                    unique_code = tag_match.group(
-                        context.sequential_version_tag_matcher.group_unique_code)
-                    version_string = unique_code
+                        unique_version_codes.append(int(unique_code))
 
-                    unique_version_codes.append(int(unique_code))
+                        if unique_code in unique_codes:
+                            command_context.error(os.EX_DATAERR,
+                                                  _("Invalid sequential version tag {tag}.")
+                                                  .format(tag=tag.name),
+                                                  _("The code element of version {version_string} is not unique.")
+                                                  .format(version_string=version_string)
+                                                  )
+                        else:
+                            unique_codes.add(unique_code)
 
-                    if unique_code in unique_codes:
-                        command_context.error(os.EX_DATAERR,
-                                              _("Invalid sequential version tag {tag}.")
-                                              .format(tag=branch_tag_ref.name),
-                                              _("The code element of version {version_string} is not unique.")
-                                              .format(version_string=version_string)
-                                              )
-                    else:
-                        unique_codes.add(unique_code)
+                        cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
 
-                    cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
-
-                # print the version tag
-                version_string = context.version_tag_matcher.format(branch_tag_ref.name)
-                if version_string:
-                    version_info = semver.parse_version_info(version_string)
-                    if version_info.major == branch_version.major and version_info.minor == branch_version.minor:
-                        cli.fcwriteln(sys.stdout, status_color, "    " + version_string)
-                    else:
-                        command_context.error(os.EX_DATAERR,
-                                              _("Invalid version tag {tag}.")
-                                              .format(tag=repr(branch_tag_ref.name)),
-                                              _("The major.minor part of the new version {new_version}"
-                                                " does not match the branch version {branch_version}.")
-                                              .format(new_version=repr(version_string),
-                                                      branch_version=repr(branch_version_string))
-                                              )
-                        cli.fcwriteln(sys.stdout, status_error_color, "    " + version_string)
+                for tag in tags:
+                    # print the version tag
+                    version_string = context.version_tag_matcher.format(tag.name)
+                    if version_string:
+                        version_info = semver.parse_version_info(version_string)
+                        if version_info.major == branch_version.major and version_info.minor == branch_version.minor:
+                            cli.fcwriteln(sys.stdout, status_color, "    " + version_string)
+                        else:
+                            command_context.error(os.EX_DATAERR,
+                                                  _("Invalid version tag {tag}.")
+                                                  .format(tag=repr(tag.name)),
+                                                  _("The major.minor part of the new version {new_version}"
+                                                    " does not match the branch version {branch_version}.")
+                                                  .format(new_version=repr(version_string),
+                                                          branch_version=repr(branch_version_string))
+                                                  )
+                            cli.fcwriteln(sys.stdout, status_error_color, "    " + version_string)
 
     unique_version_codes.sort(key=utils.cmp_to_key(lambda a, b: version.cmp_alnum_token(a, b)))
 
