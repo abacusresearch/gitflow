@@ -794,18 +794,21 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
 def read_properties_in_commit(context: AbstractContext, repo: RepoContext, config: dict, commit: str):
     if config is not None:
         # print(json.dumps(obj=config_in_history, indent=2))
-        property_reader = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
+        property_file = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
+
+        if property_file is None:
+            return None
 
         properties_bytes = repotools.get_file_contents(
             repo,
             commit,
-            property_reader
+            property_file
         )
 
         if properties_bytes is None:
             return
 
-        property_reader = PropertyIO.get_instance_by_filename(property_reader)
+        property_reader = PropertyIO.get_instance_by_filename(property_file)
         properties = property_reader.from_bytes(properties_bytes, const.DEFAULT_PROPERTY_ENCODING)
 
         if properties is None:
