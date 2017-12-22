@@ -130,3 +130,6 @@ OS_IS_POSIX = os.name == 'posix'
 
 EX_ABORTED = 2
 EX_ABORTED_BY_USER = 3
+
+# ['--first-parent'] to ignore merged tags
+BRANCH_COMMIT_SCAN_OPTIONS = []

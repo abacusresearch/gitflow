@@ -524,7 +524,7 @@ def git_get_branch_commits(context: RepoContext,
                                    start=None,
                                    end=branch_commit,
                                    reverse=False,
-                                   options=['--first-parent']):
+                                   options=const.BRANCH_COMMIT_SCAN_OPTIONS):
 
         commit_buffer.append(commit)
 

@@ -69,7 +69,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             context=context.repo,
             start=fork_point,
             end=command_context.selected_ref,
-            options=['--first-parent']):
+            options=const.BRANCH_COMMIT_SCAN_OPTIONS):
         at_commit = history_commit.obj_name == command_context.selected_commit
         version_tag_refs = None
         sequential_version_tag_refs = None
@@ -517,7 +517,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             context=context.repo,
             start=None,
             end=command_context.selected_commit,
-            options=['--first-parent']):
+            options=const.BRANCH_COMMIT_SCAN_OPTIONS):
         branch_refs = release_branch_merge_bases.get(history_commit.obj_name)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
