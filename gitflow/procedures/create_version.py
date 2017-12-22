@@ -1,7 +1,7 @@
 import json
-import os
 from typing import Callable
 
+import os
 import semver
 
 from gitflow import utils, _, version, repotools, cli, const
@@ -251,10 +251,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
         if opaque_version_property_name is not None \
-                and properties_in_selected_commit.get(opaque_version_property_name) is not None:
-            result.fail(os.EX_DATAERR,
-                        _("Tag creation failed."),
-                        _("The selected commit does not contain an opaque version property: {property_name}.")
+                and properties_in_selected_commit.get(opaque_version_property_name) is None:
+            result.warn(_("Missing version info."),
+                        _("The selected commit does not contain an opaque version in property '{property_name}'.")
                         .format(property_name=opaque_version_property_name)
                         )
 
