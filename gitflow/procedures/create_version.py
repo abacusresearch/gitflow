@@ -441,10 +441,22 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         if context.verbose:
             push_command.append('--verbose')
         push_command.append('origin')
+
         # push the release branch commit or its version increment commit
         if new_branch_ref_object is not None:
             push_command.append(
                 new_branch_ref_object + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name))
+
+        # check, if preceding tags exist on remote
+        if preceding_version_tag is not None:
+            push_command.append('--force-with-lease='
+                                + preceding_version_tag.name + ':'
+                                + preceding_version_tag.name)
+        if preceding_sequential_version_tag is not None:
+            push_command.append('--force-with-lease='
+                                + preceding_sequential_version_tag.name + ':'
+                                + preceding_sequential_version_tag.name)
+
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
                              repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
@@ -741,8 +753,10 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         if context.verbose:
             push_command.append('--verbose')
         push_command.append('origin')
+
         # push the base branch commit
         # push_command.append(commit + ':' + const.LOCAL_BRANCH_PREFIX + selected_ref.local_branch_name)
+
         # push the new branch or fail if it exists
         push_command.extend(
             ['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name) + ':',
