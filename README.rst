@@ -11,13 +11,26 @@ Requirements
 
 Install
 =======
-To install for all users, run this script as root::
+
+For all users
+-------------
+
+Run this script as root::
 
     ./install.sh
 
-For user-specific installations, login as the respective user and run::
+Installation in User Home
+-------------------------
+
+Login as the respective user and run::
 
     ./install.sh --user
+
+Make sure, the installation location of executable python files is present in PATH.
+For bash, extend ~/.bash_profile with::
+
+    export PATH="$PATH:$HOME/.local/bin"
+
 
 
 Branching Model
