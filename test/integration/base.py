@@ -122,9 +122,9 @@ class TestInTempDir(object):
             eprint("extra:")
             eprint(*["    " + key + ": " + value for key, value in diff.added().items()], sep='\n')
             eprint("missing:")
-            eprint(*["    " + key + ": " + value for key, value in diff.removed()], sep='\n')
+            eprint(*["    " + key + ": " + value for key, value in diff.removed().items()], sep='\n')
             eprint("changed:")
-            eprint(*["    " + key + ": " + value for key, value in diff.changed()], sep='\n')
+            eprint(*["    " + key + ": " + value for key, value in diff.changed().items()], sep='\n')
 
             pytest.fail("Mismatching dictionaries")
 
