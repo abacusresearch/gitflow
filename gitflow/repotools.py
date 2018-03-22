@@ -1,14 +1,13 @@
 import itertools
+import os
+import re
 import shlex
 import subprocess
 import typing
 from enum import Enum
-from typing import Union, Callable, List
+from typing import Optional, Union, Callable, List
 
-import os
-import re
-
-from gitflow import const, utils
+from gitflow import const, utils, cli
 
 
 class RepoContext(object):
@@ -153,7 +152,7 @@ def create_ref_name(*strings: str):
     return utils.split_join('/', False, False, *strings)
 
 
-def git(context: RepoContext, *args) -> subprocess.Popen:
+def git(context: RepoContext, *args) -> typing.Tuple[int, bytes, bytes]:
     command = [context.git]
     if context.use_root_dir_arg:
         command.extend(['-C', context.dir])
@@ -164,24 +163,33 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
             command[index] = arg.name
 
     if context.verbose >= const.TRACE_VERBOSITY:
-        print(utils.command_to_str(command))
+        cli.print(utils.command_to_str(command))
 
     env = os.environ.copy()
     env["LANGUAGE"] = "C"
     env["LC_ALL"] = "C"
     if context.verbose >= const.TRACE_VERBOSITY:
-        return subprocess.Popen(args=command,
+        proc = subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 cwd=context.dir if not context.use_root_dir_arg else None,
                                 env=env)
     else:
-        return subprocess.Popen(args=command,
+        proc = subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 cwd=context.dir if not context.use_root_dir_arg else None,
                                 env=env)
+
+    out, err = proc.communicate()
+    if proc.returncode != os.EX_OK:
+        if context.verbose >= const.TRACE_VERBOSITY:
+            cli.eprint("command failed: " + utils.command_to_str(command))
+            cli.eprint("child process returned " + str(proc.returncode))
+            if err is not None:
+                cli.eprint(err.decode("utf-8"))
+    return proc.returncode, out, err
 
 
 def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
@@ -195,7 +203,7 @@ def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
             command[index] = arg.name
 
     if context.verbose >= const.TRACE_VERBOSITY:
-        print(' '.join(shlex.quote(token) for token in command))
+        cli.print(' '.join(shlex.quote(token) for token in command))
 
     return subprocess.Popen(args=command,
                             cwd=context.dir if not context.use_root_dir_arg else None)
@@ -217,10 +225,9 @@ def git_clone(context: RepoContext, target_dir: str, remote: Remote = None, bran
 
     repo = RepoContext()
     repo.verbose = context.verbose
-    proc = git(repo, *command)
-    proc.wait()
+    returncode, out, err = git(repo, *command)
 
-    if proc.returncode != os.EX_OK:
+    if returncode != os.EX_OK:
         return None
 
     repo.dir = target_dir
@@ -234,10 +241,9 @@ def git_export(context: RepoContext, target_dir: str, object: Union[Ref, str] = 
     repo = RepoContext()
     repo.dir = target_dir
     repo.verbose = context.verbose
-    proc = git(repo, *clone_command)
-    proc.wait()
+    returncode, out, err = git(repo, *clone_command)
 
-    if proc.returncode != os.EX_OK:
+    if returncode != os.EX_OK:
         return None
 
     checkout_command = ['checkout']
@@ -246,10 +252,9 @@ def git_export(context: RepoContext, target_dir: str, object: Union[Ref, str] = 
     else:
         checkout_command.extend(['master'])
 
-    proc = git(repo, *checkout_command)
-    proc.wait()
+    returncode, out, err = git(repo, *checkout_command)
 
-    if proc.returncode != os.EX_OK:
+    if returncode != os.EX_OK:
         return None
 
     repo.dir = target_dir
@@ -257,18 +262,23 @@ def git_export(context: RepoContext, target_dir: str, object: Union[Ref, str] = 
     return repo
 
 
-def git_for_lines(context: RepoContext, *args):
-    proc = git(context, *args)
-    out, err = proc.communicate()
+def git_for_lines(context: RepoContext, *args) -> Union[List[str], None]:
+    returncode, out, err = git(context, *args)
 
-    if proc.returncode == os.EX_OK:
+    if returncode == os.EX_OK:
         return out.decode("utf-8").splitlines()
     return None
 
 
 def git_for_line(context: RepoContext, *args):
     lines = git_for_lines(context, *args)
-    return lines[0] if lines is not None and len(lines) == 1 else None
+    lines = [line for line in lines if line]
+    if lines is not None and len(lines) == 1:
+        return lines[0]
+    else:
+        if context.verbose >= const.TRACE_VERBOSITY and lines is not None:
+            cli.eprint("Read an invalid number of lines: " + str(len(lines)))
+        return None
 
 
 def git_version(context: RepoContext):
@@ -282,10 +292,9 @@ def git_version(context: RepoContext):
 
 
 def git_get_remote(context: RepoContext, remote_name: str) -> Remote:
-    proc = git(context, 'remote', 'get-url', remote_name)
-    out, err = proc.communicate()
+    returncode, out, err = git(context, 'remote', 'get-url', remote_name)
 
-    if proc.returncode == os.EX_OK:
+    if returncode == os.EX_OK:
         lines = out.decode("utf-8").splitlines()
         if len(lines) == 1:
             remote = Remote()
@@ -343,12 +352,11 @@ def git_list_refs(context: RepoContext, *args):
     :rtype: list of Ref
     """
 
-    proc = git(context, 'for-each-ref', '--format',
+    returncode, out, err = git(context, 'for-each-ref', '--format',
                '%(refname);%(objecttype);%(objectname);%(*objecttype);%(*objectname);%(upstream)',
                *args)
-    out, err = proc.communicate()
 
-    if proc.returncode == os.EX_OK:
+    if returncode == os.EX_OK:
         for ref_element in out.decode("utf-8").splitlines():
             ref_element = ref_element.split(';')
 
@@ -376,12 +384,11 @@ def get_ref_by_name(context: RepoContext, ref_name):
 
 
 def git_get_upstreams(context: RepoContext, *args) -> dict:
-    proc = git(context, 'for-each-ref', '--format',
+    returncode, out, err = git(context, 'for-each-ref', '--format',
                '%(refname);%(upstream)',
                *args)
-    out, err = proc.communicate()
 
-    if proc.returncode == os.EX_OK:
+    if returncode == os.EX_OK:
         upstreams = dict()
         for ref_elements in out.decode("utf-8").splitlines():
             ref_elements = ref_elements.split(';')
@@ -397,16 +404,15 @@ def git_get_upstreams(context: RepoContext, *args) -> dict:
     return None
 
 
-def git_rev_parse(context: RepoContext, *args) -> str:
+def git_rev_parse(context: RepoContext, *args) -> Optional[str]:
     command = ['rev-parse']
     command.extend(args)
 
-    proc = git(context, *command)
-    out, err = proc.communicate()
+    returncode, out, err = git(context, *command)
 
     lines = out.decode('utf-8').splitlines()
 
-    if proc.returncode == os.EX_OK and len(lines) == 1:
+    if returncode == os.EX_OK and len(lines) == 1:
         return lines[0]
     return None
 
@@ -451,7 +457,7 @@ def git_get_tags_by_referred_object(context: RepoContext, obj_name: str) -> list
     return commit_tags if commit_tags is not None else []
 
 
-def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Object, str],
+def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Optional[Union[Object, str]],
                    determine_fork_point=False) -> str:
     command = ['merge-base']
     if determine_fork_point:
@@ -461,10 +467,9 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Union[Ob
         ref_target(ref),
     ]
 
-    proc = git(context, *command)
-    out, err = proc.communicate()
+    returncode, out, err = git(context, *command)
 
-    if proc.returncode == os.EX_OK:
+    if returncode == os.EX_OK:
         lines = out.splitlines()
         if len(lines) == 1:
             return lines[0].decode('utf-8')
@@ -486,8 +491,7 @@ def git_list_commits(context: RepoContext, start: Union[Object, str, None], end:
         args.extend(options)
     args.append((ref_target(start) + '..' if start is not None else '') + ref_target(end))
 
-    proc = git(context, *args)
-    out, err = proc.communicate()
+    returncode, out, err = git(context, *args)
 
     def commit_line_to_object(line: str) -> Object:
         hashes = line.split()
@@ -563,20 +567,18 @@ def git_get_branch_tags(context: RepoContext,
 
 
 def git_tag(context: RepoContext, tag_name: str, obj: Union[Object, str]) -> bool:
-    proc = git(context, 'tag', tag_name, ref_target(obj))
-    out, err = proc.communicate()
+    returncode, out, err = git(context, 'tag', tag_name, ref_target(obj))
 
     # invalidate cached tags
     context.tags = None
 
-    return proc.returncode == os.EX_OK
+    return returncode == os.EX_OK
 
 
 def git_branch(context: RepoContext, tag_name: str, obj: Union[Object, str]) -> bool:
-    proc = git(context, 'branch', tag_name, ref_target(obj))
-    out, err = proc.communicate()
+    returncode, out, err = git(context, 'branch', tag_name, ref_target(obj))
 
-    return proc.returncode == os.EX_OK
+    return returncode == os.EX_OK
 
 
 class TreeEntry(object):
@@ -621,11 +623,9 @@ def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry
 
 
 def get_file_entry_contents(context: RepoContext, tree_entry: TreeEntry):
-    proc = git(context, *['cat-file', 'blob', tree_entry.object_hash])
+    returncode, out, err = git(context, *['cat-file', 'blob', tree_entry.object_hash])
 
-    out, err = proc.communicate()
-
-    return out
+    return out if returncode == os.EX_OK else None
 
 
 def get_file_contents(context: RepoContext, commit_object: Union[Object, str], file_path: str):

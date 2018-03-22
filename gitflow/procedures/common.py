@@ -134,9 +134,8 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
 
 
 def git(context: Context, command: list) -> int:
-    proc = repotools.git(context.repo, *command)
-    proc.wait()
-    return proc.returncode
+    returncode, out, err = repotools.git(context.repo, *command)
+    return returncode
 
 
 def git_or_fail(context: Context, result: Result, command: list,
@@ -160,7 +159,6 @@ def git_for_line_or_fail(context: Context, result: Result, command: list,
         if error_message is not None:
             result.fail(os.EX_DATAERR, error_message, error_reason)
         else:
-            first_command_token = next(filter(lambda token: not token.startswith('-'), command))
             result.fail(os.EX_DATAERR, _("git {sub_command} failed.")
                         .format(sub_command=repr(utils.command_to_str(command))),
                         error_reason
@@ -171,16 +169,15 @@ def git_for_line_or_fail(context: Context, result: Result, command: list,
 def fetch_all_and_ff(context: Context, result_out: Result, remote: [repotools.Remote, str]):
     # attempt a complete fetch and a fast forward on the current branch
     remote_name = remote.name if isinstance(remote, repotools.Remote) else remote
-    proc = repotools.git(context.repo, 'fetch', '--tags', remote_name)
-    proc.wait()
-    if proc.returncode != os.EX_OK:
+    returncode, out, err = repotools.git(context.repo, 'fetch', '--tags', remote_name)
+    if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fetch from {remote}")
                 .format(repr(remote_name)),
             None)
-    proc = repotools.git(context.repo, 'merge', '--ff-only')
-    proc.wait()
-    if proc.returncode != os.EX_OK:
+
+    returncode, out, err = repotools.git(context.repo, 'merge', '--ff-only')
+    if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fast forward"),
             None)
@@ -471,17 +468,16 @@ def create_shared_clone_repository(context):
     os.mkdir(path=tempdir_path, mode=clone_dir_mode)
 
     if context.config.push_to_local:
-        proc = repotools.git(context.repo, 'clone', '--shared',
+        returncode, out, err = repotools.git(context.repo, 'clone', '--shared',
                              '--branch', context.config.release_branch_base,
                              '.',
                              tempdir_path)
     else:
-        proc = repotools.git(context.repo, 'clone', '--reference', '.',
+        returncode, out, err = repotools.git(context.repo, 'clone', '--reference', '.',
                              '--branch', context.config.release_branch_base,
                              remote.url,
                              tempdir_path)
-    proc.wait()
-    if proc.returncode != os.EX_OK:
+    if returncode != os.EX_OK:
         result.fail(os.EX_DATAERR,
                     _("Failed to clone repo."),
                     _("An unexpected error occurred.")

@@ -367,9 +367,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                                                           context.config.remote_name,
                                                           branch_name)]
 
-            proc = repotools.git(clone_context.repo, *checkout_command)
-            proc.wait()
-            if proc.returncode != os.EX_OK:
+            returncode, out, err = repotools.git(clone_context.repo, *checkout_command)
+            if returncode != os.EX_OK:
                 result.fail(os.EX_DATAERR,
                             _("Failed to check out release branch."),
                             _("An unexpected error occurred.")
@@ -469,9 +468,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                                      object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
                                                                                       sequential_version_tag_name)])
 
-        proc = repotools.git(clone_context.repo, *push_command)
-        proc.wait()
-        if proc.returncode != os.EX_OK:
+        returncode, out, err = repotools.git(clone_context.repo, *push_command)
+        if returncode != os.EX_OK:
             result.fail(os.EX_DATAERR,
                         _("Failed to push."),
                         _("An unexpected error occurred.")
