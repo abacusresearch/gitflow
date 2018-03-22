@@ -1,11 +1,12 @@
 import itertools
-import os
-import re
 import shlex
 import subprocess
 import typing
 from enum import Enum
 from typing import Union, Callable, List
+
+import os
+import re
 
 from gitflow import const, utils
 
@@ -523,7 +524,7 @@ def git_get_branch_commits(context: RepoContext,
                                    start=None,
                                    end=branch_commit,
                                    reverse=False,
-                                   options=['--first-parent']):
+                                   options=const.BRANCH_COMMIT_SCAN_OPTIONS):
 
         commit_buffer.append(commit)
 
@@ -539,7 +540,8 @@ def git_get_branch_tags(context: RepoContext,
                         base_branch: Union[Object, str],
                         branch: Union[Object, str],
                         tag_filter: Callable[[Ref, Ref], int] = None,
-                        commit_tag_comparator: Callable[[Ref, Ref], int] = None):
+                        commit_tag_comparator: Callable[[Ref, Ref], int] = None) \
+        -> typing.Generator[typing.Tuple[Commit, typing.List[Ref]], None, None]:
     for commit in git_get_branch_commits(
             context=context,
             base_branch=base_branch,
@@ -552,9 +554,12 @@ def git_get_branch_tags(context: RepoContext,
             tag_refs.sort(key=utils.cmp_to_key(commit_tag_comparator), reverse=False)
 
         if tag_refs is not None:
+            selected_tag_refs = list()
             for tag_ref in tag_refs:
                 if tag_ref is not None and (tag_filter is None or tag_filter(tag_ref)):
-                    yield tag_ref
+                    selected_tag_refs.append(tag_ref)
+
+            yield commit, selected_tag_refs
 
 
 def git_tag(context: RepoContext, tag_name: str, obj: Union[Object, str]) -> bool:

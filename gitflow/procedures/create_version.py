@@ -1,7 +1,7 @@
 import json
-import os
 from typing import Callable
 
+import os
 import semver
 
 from gitflow import utils, _, version, repotools, cli, const
@@ -69,7 +69,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             context=context.repo,
             start=fork_point,
             end=command_context.selected_ref,
-            options=['--first-parent']):
+            options=const.BRANCH_COMMIT_SCAN_OPTIONS):
         at_commit = history_commit.obj_name == command_context.selected_commit
         version_tag_refs = None
         sequential_version_tag_refs = None
@@ -251,10 +251,9 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
         opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
         if opaque_version_property_name is not None \
-                and properties_in_selected_commit.get(opaque_version_property_name) is not None:
-            result.fail(os.EX_DATAERR,
-                        _("Tag creation failed."),
-                        _("The selected commit does not contain an opaque version property: {property_name}.")
+                and properties_in_selected_commit.get(opaque_version_property_name) is None:
+            result.warn(_("Missing version info."),
+                        _("The selected commit does not contain an opaque version in property '{property_name}'.")
                         .format(property_name=opaque_version_property_name)
                         )
 
@@ -442,10 +441,22 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         if context.verbose:
             push_command.append('--verbose')
         push_command.append('origin')
+
         # push the release branch commit or its version increment commit
         if new_branch_ref_object is not None:
             push_command.append(
                 new_branch_ref_object + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name))
+
+        # check, if preceding tags exist on remote
+        if preceding_version_tag is not None:
+            push_command.append('--force-with-lease='
+                                + preceding_version_tag.name + ':'
+                                + preceding_version_tag.name)
+        if preceding_sequential_version_tag is not None:
+            push_command.append('--force-with-lease='
+                                + preceding_sequential_version_tag.name + ':'
+                                + preceding_sequential_version_tag.name)
+
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
                              repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
@@ -518,7 +529,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
             context=context.repo,
             start=None,
             end=command_context.selected_commit,
-            options=['--first-parent']):
+            options=const.BRANCH_COMMIT_SCAN_OPTIONS):
         branch_refs = release_branch_merge_bases.get(history_commit.obj_name)
         if branch_refs is not None and len(branch_refs):
             branch_refs = list(
@@ -742,8 +753,10 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         if context.verbose:
             push_command.append('--verbose')
         push_command.append('origin')
+
         # push the base branch commit
         # push_command.append(commit + ':' + const.LOCAL_BRANCH_PREFIX + selected_ref.local_branch_name)
+
         # push the new branch or fail if it exists
         push_command.extend(
             ['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, branch_name) + ':',
