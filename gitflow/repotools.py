@@ -164,7 +164,7 @@ def git(context: RepoContext, *args) -> subprocess.Popen:
             command[index] = arg.name
 
     if context.verbose >= const.TRACE_VERBOSITY:
-        print(' '.join(shlex.quote(token) for token in command))
+        print(utils.command_to_str(command))
 
     env = os.environ.copy()
     env["LANGUAGE"] = "C"

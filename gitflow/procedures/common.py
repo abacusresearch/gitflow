@@ -162,7 +162,7 @@ def git_for_line_or_fail(context: Context, result: Result, command: list,
         else:
             first_command_token = next(filter(lambda token: not token.startswith('-'), command))
             result.fail(os.EX_DATAERR, _("git {sub_command} failed.")
-                        .format(sub_command=repr(first_command_token)),
+                        .format(sub_command=repr(utils.command_to_str(command))),
                         error_reason
                         )
     return line
