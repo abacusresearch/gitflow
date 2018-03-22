@@ -15,7 +15,7 @@ class RepoContext(object):
     git = 'git'
     dir = '.'
     tags = None  # dict
-    verbose = const.NO_VERBOSITY  # TODO use parent context
+    verbose = const.ERROR_VERBOSITY  # TODO use parent context
     use_root_dir_arg = False
 
 

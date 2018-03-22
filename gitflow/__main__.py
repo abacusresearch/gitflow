@@ -3,25 +3,25 @@ Git Flow CLI
 
 Usage:
  flow status [(-a|--all) | <object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- <git-arg>...]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (assemble|test|integration-test) [-d|--dry-run] [--inplace| [<object>]]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow drop-cache [-d|--dry-run]
-        [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (-h|--help)
  flow --version
  flow --hook=<hook-name> [<hook-args>...]
@@ -175,11 +175,10 @@ def main(argv: list = sys.argv) -> int:
         pass  # errors are in result
     if context is not None:
         try:
-            if context.verbose >= const.TRACE_VERBOSITY:
+            if context.verbose >= const.DEBUG_VERBOSITY:
+                cli.print("GitFlow version: " + const.VERSION)
+                cli.print("Python version:" + sys.version.replace('\n', ' '))
                 cli.print("cwd: " + os.getcwd())
-
-            if context.verbose >= const.TRACE_VERBOSITY:
-                cli.print("Python version:\n" + sys.version + "\n")
 
             if args['--hook'] is not None:
                 if context.verbose >= const.TRACE_VERBOSITY:

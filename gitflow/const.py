@@ -121,9 +121,9 @@ BRANCHING = {
 }
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed.
-NO_VERBOSITY = 0
-ERROR_VERBOSITY = 1
-INFO_VERBOSITY = 2
+ERROR_VERBOSITY = 0
+INFO_VERBOSITY = 1
+DEBUG_VERBOSITY = 2
 TRACE_VERBOSITY = 3
 
 OS_IS_POSIX = os.name == 'posix'

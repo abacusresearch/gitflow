@@ -197,7 +197,8 @@ class Context(AbstractContext):
             context.batch = context.args['--batch']
             context.assume_yes = context.args.get('--assume-yes')
             context.dry_run = context.args.get('--dry-run')
-            context.verbose = context.args['--verbose']
+            #TODO remove this workaround
+            context.verbose = (context.args['--verbose'] + 1) // 2
             context.pretty = context.args['--pretty']
         else:
             context.args = dict()
