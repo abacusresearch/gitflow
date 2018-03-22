@@ -408,7 +408,7 @@ def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str])
     discontinuation_tag = repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name)
 
     discontinuation_tags = [discontinuation_tag] \
-        if repotools.git_rev_parse(context.repo, discontinuation_tag) is not None \
+        if repotools.git_rev_parse(context.repo, '--verify', discontinuation_tag) is not None \
         else []
 
     return discontinuation_tags, discontinuation_tag_name
