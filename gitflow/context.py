@@ -455,6 +455,8 @@ class Context(AbstractContext):
         atexit.unregister(self.cleanup)
         if self.temp_dirs is not None:
             for temp_dir in self.temp_dirs:
+                if self.verbose >= const.DEBUG_VERBOSITY:
+                    cli.print("deleting temp dir: " + temp_dir)
                 shutil.rmtree(temp_dir)
             self.temp_dirs = None
         if self.clones is not None:
