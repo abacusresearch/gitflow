@@ -169,3 +169,10 @@ Uninstall
 Run as the install user::
 
     ./uninstall.sh
+
+Development
+===========
+
+Install all dependencies::
+
+    pip install -r requirements.txt -r test_requirements.txt
