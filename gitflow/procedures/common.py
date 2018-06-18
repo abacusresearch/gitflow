@@ -81,6 +81,7 @@ class CommandContext(object):
 
     def __init__(self):
         self.branch_info_dict = dict()
+        self.result = Result()
 
     def warn(self, message, reason):
         self.context.warn(message, reason)
