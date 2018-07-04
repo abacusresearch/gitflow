@@ -7,7 +7,7 @@ import typing
 from enum import Enum
 from typing import Optional, Union, Callable, List
 
-from gitflow import const, utils, cli
+from gitflow import utils, cli, const
 
 
 class RepoContext(object):
@@ -353,8 +353,8 @@ def git_list_refs(context: RepoContext, *args):
     """
 
     returncode, out, err = git(context, 'for-each-ref', '--format',
-               '%(refname);%(objecttype);%(objectname);%(*objecttype);%(*objectname);%(upstream)',
-               *args)
+                               '%(refname);%(objecttype);%(objectname);%(*objecttype);%(*objectname);%(upstream)',
+                               *args)
 
     if returncode == os.EX_OK:
         for ref_element in out.decode("utf-8").splitlines():
@@ -385,8 +385,8 @@ def get_ref_by_name(context: RepoContext, ref_name):
 
 def git_get_upstreams(context: RepoContext, *args) -> dict:
     returncode, out, err = git(context, 'for-each-ref', '--format',
-               '%(refname);%(upstream)',
-               *args)
+                               '%(refname);%(upstream)',
+                               *args)
 
     if returncode == os.EX_OK:
         upstreams = dict()

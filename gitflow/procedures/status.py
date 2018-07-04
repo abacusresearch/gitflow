@@ -96,11 +96,10 @@ def call(context) -> Result:
 
             for commit, tags in commit_tags:
                 for tag in tags:
-                    # print the sequential version tag
-                    tag_match = context.sequential_version_tag_matcher.fullmatch(tag.name)
-                    if tag_match:
+                    if context.version_tag_matcher.group_unique_code is not None:
+                        tag_match = context.version_tag_matcher.fullmatch(tag.name)
                         unique_code = tag_match.group(
-                            context.sequential_version_tag_matcher.group_unique_code)
+                            context.version_tag_matcher.group_unique_code)
                         version_string = unique_code
 
                         unique_version_codes.append(int(unique_code))
@@ -117,7 +116,6 @@ def call(context) -> Result:
 
                         cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
 
-                for tag in tags:
                     # print the version tag
                     version_string = context.version_tag_matcher.format(tag.name)
                     if version_string:

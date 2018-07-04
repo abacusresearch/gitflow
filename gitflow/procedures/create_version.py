@@ -11,7 +11,7 @@ from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, check_requirements, get_branch_name_for_version, \
     fetch_all_and_ff, \
     CommandContext, create_sequence_number_for_version, \
-    create_sequential_version_tag_name, get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
+    get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
     check_in_repo, read_properties_in_commit, read_config_in_commit
 from gitflow.repotools import BranchSelection
@@ -72,7 +72,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             options=const.BRANCH_COMMIT_SCAN_OPTIONS):
         at_commit = history_commit.obj_name == command_context.selected_commit
         version_tag_refs = None
-        sequential_version_tag_refs = None
 
         assert not at_commit if before_commit else not before_commit
 
@@ -101,12 +100,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
                         abort_sequential_version_scan = True
                         break
 
-            match = context.sequential_version_tag_matcher.fullmatch(tag_ref.name)
-            if match is not None:
-                if sequential_version_tag_refs is None:
-                    sequential_version_tag_refs = list()
-                sequential_version_tag_refs.append(tag_ref)
-
         if not abort_version_scan and version_tag_refs is not None and len(version_tag_refs):
             version_tag_refs.sort(
                 reverse=True,
@@ -132,27 +125,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             if before_commit:
                 abort_version_scan = True
 
-        if not abort_sequential_version_scan and sequential_version_tag_refs is not None and len(
-                sequential_version_tag_refs):
-            sequential_version_tag_refs.sort(
-                reverse=True,
-                key=utils.cmp_to_key(
-                    lambda tag_ref_a, tag_ref_b: version.cmp_alnum_token(
-                        context.sequential_version_tag_matcher.format(tag_ref_a.name),
-                        context.sequential_version_tag_matcher.format(tag_ref_b.name)
-                    )
-                )
-            )
-            if at_commit:
-                sequential_version_tags_on_same_commit.extend(sequential_version_tag_refs)
-            elif not before_commit:
-                subsequent_sequential_version_tags.extend(sequential_version_tag_refs)
-            if at_commit or before_commit and preceding_sequential_version_tag is None:
-                preceding_sequential_version_tag = sequential_version_tag_refs[0]
-
-            if before_commit:
-                abort_sequential_version_scan = True
-
         if at_commit:
             before_commit = True
 
@@ -161,11 +133,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
     preceding_version = context.version_tag_matcher.format(
         preceding_version_tag.name) if preceding_version_tag is not None else None
-
-    preceding_sequential_version = context.sequential_version_tag_matcher.format(
-        preceding_sequential_version_tag.name) if preceding_sequential_version_tag is not None else None
-    if preceding_sequential_version is not None:
-        preceding_sequential_version = int(preceding_sequential_version)
 
     if context.verbose:
         cli.print("Tags on selected commit:\n"
@@ -204,10 +171,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     if context.config.sequential_versioning \
             and not len(sequential_version_tags_on_same_commit):
         new_sequential_version = create_sequence_number_for_version(context, new_version)
-        sequential_version_tag_name = create_sequential_version_tag_name(context, new_sequential_version)
 
         assert new_sequential_version is not None
-        assert sequential_version_tag_name is not None
     else:
         new_sequential_version = None
         sequential_version_tag_name = None
@@ -418,7 +383,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         cli.print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
         cli.print("new_tag             : " + cli.if_none(tag_name))
         cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
-        cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
         cli.print("selected object     : " + cli.if_none(command_context.selected_commit))
         cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
@@ -460,13 +424,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
                              repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
                                  const.LOCAL_TAG_PREFIX, tag_name)])
-        # push the new sequential version tag or fail if it exists
-        if sequential_version_tag_name is not None:
-            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
-                                                                                   sequential_version_tag_name) + ':',
-                                 repotools.ref_target(
-                                     object_to_tag) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
-                                                                                      sequential_version_tag_name)])
 
         returncode, out, err = repotools.git(clone_context.repo, *push_command)
         if returncode != os.EX_OK:
@@ -603,10 +560,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
 
     if context.config.sequential_versioning:
         new_sequential_version = create_sequence_number_for_version(context, new_version)
-        sequential_version_tag_name = create_sequential_version_tag_name(context, new_sequential_version)
     else:
         new_sequential_version = None
-        sequential_version_tag_name = None
 
     try:
         config_in_selected_commit = read_config_in_commit(context.repo, command_context.selected_commit)
@@ -729,7 +684,6 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         cli.print("ref_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(latest_branch_version))
         cli.print("new_branch          : " + cli.if_none(branch_name))
         cli.print("new_" + const.DEFAULT_VERSION_VAR_NAME + "         : " + cli.if_none(new_version))
-        cli.print("new_" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + "    : " + cli.if_none(new_sequential_version))
         cli.print("selected object     : " + cli.if_none(command_context.selected_commit))
         cli.print("tagged object       : " + cli.if_none(object_to_tag))
 
@@ -764,12 +718,6 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
                              repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
                                  const.LOCAL_TAG_PREFIX, tag_name)])
-        # push the new sequential version tag or fail if it exists
-        if sequential_version_tag_name is not None:
-            push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
-                                                                                   sequential_version_tag_name) + ':',
-                                 repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
-                                     const.LOCAL_TAG_PREFIX, sequential_version_tag_name)])
 
         git_or_fail(clone_context, result, push_command, _("Failed to push."))
 

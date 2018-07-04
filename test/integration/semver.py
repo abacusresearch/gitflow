@@ -14,7 +14,7 @@ class TestFlow(TestFlowBase):
         TestFlowBase.setup_method(self, method)
 
         # create the config file
-        self.project_property_file = const.DEFAULT_PROJECT_PROPERTY_FILE
+        self.project_property_file = 'project.properties'
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
         with open(config_file, 'w+') as property_file:
             config = {

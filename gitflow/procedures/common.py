@@ -328,8 +328,6 @@ def update_project_property_file(context: Context,
     var_separator = ' : '
     commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
                            + cli.if_none(new_version))
-    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_sequential_version))
 
     if properties is not None:
         def log_property(properties: dict, key: str):
@@ -375,14 +373,15 @@ def get_global_sequence_number(context) -> int:
     sequential_tags = repotools.git_list_refs(context.repo,
                                               repotools.create_ref_name(
                                                   const.LOCAL_TAG_PREFIX,
-                                                  context.sequential_version_tag_matcher.ref_name_infixes[0])
+                                                  context.version_tag_matcher.ref_name_infixes[0])
                                               )
     counter = 0
     for tag in sequential_tags:
-        match = context.sequential_version_tag_matcher.fullmatch(tag.name)
+        match = context.version_tag_matcher.fullmatch(tag.name)
         if match is not None:
-            version_code = int(match.group(context.sequential_version_tag_matcher.group_unique_code))
-            counter = max(counter, version_code)
+            if context.version_tag_matcher.group_unique_code in match.groups():
+                version_code = int(match.group(context.version_tag_matcher.group_unique_code))
+                counter = max(counter, version_code)
         else:
             raise Exception("invalid tag: " + tag.name)
     return counter
@@ -390,10 +389,6 @@ def get_global_sequence_number(context) -> int:
 
 def create_sequence_number_for_version(context, new_version: Union[semver.VersionInfo, version.Version]):
     return get_global_sequence_number(context) + 1
-
-
-def create_sequential_version_tag_name(context, counter: int):
-    return context.sequential_version_tag_matcher.ref_name_infixes[0] + str(counter)
 
 
 def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str]):

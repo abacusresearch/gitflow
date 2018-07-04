@@ -7,17 +7,9 @@ from enum import Enum
 
 from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
+from gitflow.const import VersioningScheme
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
-
-
-class VersioningScheme(Enum):
-    # SemVer tags
-    SEMVER = 1,
-    # SemVer tags, sequence number tags
-    SEMVER_WITH_SEQ = 2,
-    # SemVer tags tied to sequence number tags in strictly ascending order
-    SEMVER_WITH_TIED_SEQ = 3,
 
 
 class BuildStepType(Enum):
@@ -70,9 +62,10 @@ class Config(object):
     version_config: VersionConfig = None
 
     # repo
-    remote_name = "origin"
+    remote_name = None
 
     release_branch_base = None
+
     dev_branch_types = ['feature', 'integration',
                         'fix', 'chore', 'doc', 'issue']
 
@@ -96,12 +89,11 @@ class Config(object):
     # properties
     @property
     def sequential_versioning(self) -> bool:
-        return self.versioning_scheme in (VersioningScheme.SEMVER_WITH_SEQ,
-                                          VersioningScheme.SEMVER_WITH_TIED_SEQ)
+        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
 
     @property
     def tie_sequential_version_to_semantic_version(self) -> bool:
-        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_TIED_SEQ
+        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
 
     @property
     def commit_version_property(self) -> bool:
@@ -173,7 +165,6 @@ class Context(AbstractContext):
 
     version_tag_matcher: VersionMatcher = None
     discontinuation_tag_matcher: VersionMatcher = None
-    sequential_version_tag_matcher: VersionMatcher = None
 
     # resources
     temp_dirs: list = None
@@ -197,7 +188,7 @@ class Context(AbstractContext):
             context.batch = context.args['--batch']
             context.assume_yes = context.args.get('--assume-yes')
             context.dry_run = context.args.get('--dry-run')
-            #TODO remove this workaround
+            # TODO remove this workaround
             context.verbose = (context.args['--verbose'] + 1) // 2
             context.pretty = context.args['--pretty']
         else:
@@ -345,14 +336,8 @@ class Context(AbstractContext):
 
         # version config
 
-        versioning_schemes = {
-            'semver': VersioningScheme.SEMVER,
-            'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
-            'semverWithTiedSeq': VersioningScheme.SEMVER_WITH_TIED_SEQ
-        }
-
-        context.config.versioning_scheme = versioning_schemes[
-            config.get(const.CONFIG_VERSIONING_SCHEME) or 'semverWithTiedSeq']
+        context.config.versioning_scheme = const.VERSIONING_SCHEMES[
+            config.get(const.CONFIG_VERSIONING_SCHEME) or const.DEFAULT_VERSIONING_SCHEME]
 
         qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
         if qualifiers is None:
@@ -370,6 +355,7 @@ class Context(AbstractContext):
 
         # branch config
 
+        context.config.remote_name = "origin"
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)
 
@@ -406,7 +392,9 @@ class Context(AbstractContext):
                 const.DEFAULT_VERSION_TAG_PREFIX),
             config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
-                const.DEFAULT_VERSION_TAG_PATTERN),
+                const.DEFAULT_SEMVER_VERSION_TAG_PATTERN
+                if context.config.versioning_scheme == VersioningScheme.SEMVER
+                else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN),
         )
 
         context.discontinuation_tag_matcher = VersionMatcher(
@@ -417,17 +405,8 @@ class Context(AbstractContext):
             config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
+            '{unique_code}'
         )
-
-        context.sequential_version_tag_matcher = VersionMatcher(
-            [const.LOCAL_TAG_PREFIX],
-            config.get(
-                const.CONFIG_SEQUENTIAL_VERSION_TAG_PREFIX,
-                const.DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX),
-            config.get(
-                const.CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN,
-                const.DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN),
-            '{unique_code}')
 
         return context
 

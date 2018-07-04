@@ -77,7 +77,7 @@ Android App
 
     {
 
-      "versioningScheme": "semverWithTiedSeq",
+      "versioningScheme": "semverWithSeq",
       "versionTypes": ["alpha", "beta", "rc"],
 
       "propertyFile": "project.properties",
