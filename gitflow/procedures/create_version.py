@@ -1,5 +1,5 @@
 import json
-from typing import Callable
+from typing import Callable, Union
 
 import os
 import semver
@@ -11,14 +11,14 @@ from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, check_requirements, get_branch_name_for_version, \
     fetch_all_and_ff, \
     CommandContext, create_sequence_number_for_version, \
-    get_global_sequence_number, git_or_fail, get_tag_name_for_version, \
+    git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo, read_properties_in_commit, read_config_in_commit
+    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number
+from gitflow.procedures.scheme import scheme_procedures
 from gitflow.repotools import BranchSelection
-from gitflow.version import VersionConfig
 
 
-def create_version_tag(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]) -> Result:
+def create_version_tag(command_context: CommandContext, operation: Callable[[CommandContext, str], str]) -> Result:
     result = Result()
     context: Context = command_context.context
 
@@ -42,10 +42,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     version_tags_on_same_commit = list()
     subsequent_version_tags = list()
     enclosing_versions = set()
-
-    preceding_sequential_version_tag = None
-    sequential_version_tags_on_same_commit = list()
-    subsequent_sequential_version_tags = list()
 
     # fork_point = repotools.git_merge_base(context.repo, context.config.release_branch_base,
     #                                       command_context.selected_commit)
@@ -131,8 +127,13 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         if abort_version_scan and abort_sequential_version_scan:
             break
 
-    preceding_version = context.version_tag_matcher.format(
-        preceding_version_tag.name) if preceding_version_tag is not None else None
+    if context.config.sequential_versioning:
+        match = context.version_tag_matcher.fullmatch(preceding_version_tag.name)
+        preceding_sequential_version = match.group(context.version_tag_matcher.group_unique_code)
+    else:
+        preceding_sequential_version = None
+    if preceding_sequential_version is not None:
+        preceding_sequential_version = int(preceding_sequential_version)
 
     if context.verbose:
         cli.print("Tags on selected commit:\n"
@@ -143,20 +144,18 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
 
     if preceding_version_tag is not None:
         latest_branch_version = context.version_tag_matcher.format(preceding_version_tag.name)
-        latest_branch_version_info = semver.parse_version_info(latest_branch_version)
     else:
         latest_branch_version = None
-        latest_branch_version_info = None
 
     if latest_branch_version is not None:
-        version_result = operation(context.config.version_config, latest_branch_version)
+        version_result = operation(command_context, latest_branch_version)
         result.add_subresult(version_result)
 
         new_version = version_result.value
         if result.has_errors():
             return result
     else:
-        template_version_info = semver.parse_version_info(const.DEFAULT_INITIAL_VERSION)
+        template_version_info = semver.parse_version_info(context.config.version_config.initial_version)
         new_version = semver.format_version(
             major=branch_base_version_info.major,
             minor=branch_base_version_info.minor,
@@ -167,15 +166,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
         )
 
     new_version_info = semver.parse_version_info(new_version)
-
-    if context.config.sequential_versioning \
-            and not len(sequential_version_tags_on_same_commit):
-        new_sequential_version = create_sequence_number_for_version(context, new_version)
-
-        assert new_sequential_version is not None
-    else:
-        new_sequential_version = None
-        sequential_version_tag_name = None
+    new_sequential_version = scheme_procedures.get_sequence_number(command_context, new_version_info)
 
     if new_version_info.major != branch_base_version_info.major or new_version_info.minor != branch_base_version_info.minor:
         result.fail(os.EX_USAGE,
@@ -415,10 +406,6 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
             push_command.append('--force-with-lease='
                                 + preceding_version_tag.name + ':'
                                 + preceding_version_tag.name)
-        if preceding_sequential_version_tag is not None:
-            push_command.append('--force-with-lease='
-                                + preceding_sequential_version_tag.name + ':'
-                                + preceding_sequential_version_tag.name)
 
         # push the new version tag or fail if it exists
         push_command.extend(['--force-with-lease=' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX, tag_name) + ':',
@@ -443,11 +430,11 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Ver
     return result
 
 
-def create_version_branch(command_context: CommandContext, operation: Callable[[VersionConfig, str], str]) -> Result:
+def create_version_branch(command_context: CommandContext, operation: Callable[[CommandContext, str], str]) -> Result:
     result = Result()
     context: Context = command_context.context
 
-    if not command_context.selected_ref.name in [
+    if command_context.selected_ref.name not in [
         repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, context.config.release_branch_base),
         repotools.create_ref_name(const.REMOTES_PREFIX,
                                   context.config.remote_name,
@@ -549,14 +536,16 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         latest_branch_version_info = None
 
     if latest_branch_version is not None:
-        version_result = operation(context.config.version_config, latest_branch_version)
+        version_result = operation(command_context, latest_branch_version)
         result.add_subresult(version_result)
 
         new_version = version_result.value
         new_version_info = semver.parse_version_info(new_version)
     else:
-        new_version_info = semver.parse_version_info(const.DEFAULT_INITIAL_VERSION)
+        new_version_info = semver.parse_version_info(context.config.version_config.initial_version)
         new_version = version.format_version_info(new_version_info)
+
+    scheme_procedures.get_sequence_number(command_context, new_version_info)
 
     if context.config.sequential_versioning:
         new_sequential_version = create_sequence_number_for_version(context, new_version)
@@ -724,7 +713,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     return result
 
 
-def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Result:
+def call(context: Context, operation: Callable[[CommandContext, str], Union[str, None]]) -> Result:
     command_context = get_command_context(
         context=context,
         object_arg=context.args['<object>']
@@ -733,8 +722,8 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
     check_in_repo(command_context)
 
     # determine the type of operation to be performed and run according subroutines
-    if operation == version.version_bump_major \
-            or operation == version.version_bump_minor:
+    if operation == scheme_procedures.version_bump_major \
+            or operation == scheme_procedures.version_bump_minor:
 
         check_requirements(command_context=command_context,
                            ref=command_context.selected_ref,
@@ -748,10 +737,10 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
         tag_result = create_version_branch(command_context, operation)
         command_context.add_subresult(tag_result)
 
-    elif operation == version.version_bump_patch \
-            or operation == version.version_bump_qualifier \
-            or operation == version.version_bump_prerelease \
-            or operation == version.version_bump_to_release:
+    elif operation == scheme_procedures.version_bump_patch \
+            or operation == scheme_procedures.version_bump_qualifier \
+            or operation == scheme_procedures.version_bump_prerelease \
+            or operation == scheme_procedures.version_bump_to_release:
 
         check_requirements(command_context=command_context,
                            ref=command_context.selected_ref,
@@ -765,7 +754,7 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
         tag_result = create_version_tag(command_context, operation)
         command_context.add_subresult(tag_result)
 
-    elif isinstance(operation, version.version_set):
+    elif isinstance(operation, scheme_procedures.version_set):
         check_requirements(command_context=command_context,
                            ref=command_context.selected_ref,
                            branch_classes=None,
@@ -775,7 +764,7 @@ def call(context: Context, operation: Callable[[VersionConfig, str], str]) -> Re
                            fail_message=_("Version creation failed.")
                            )
 
-        version_result = operation(context.config.version_config, None)
+        version_result = operation(command_context, None)
         command_context.add_subresult(version_result)
         new_version = version_result.value
         if new_version is None:

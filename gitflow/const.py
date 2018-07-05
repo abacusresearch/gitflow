@@ -70,7 +70,7 @@ DEFAULT_SEMVER_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch
                                      r'(\.(?P<prerelease_version>\d+))?)?'
 
 DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
-                                              r'-((?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)?' \
+                                              r'-((?P<prerelease_type>(0|[1-9][0-9]*))?' \
                                               r'([.-](?P<prerelease_version>\d+))?)?'
 
 DEFAULT_DISCONTINUATION_TAG_PREFIX = 'discontinued/'
@@ -88,6 +88,7 @@ TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
 DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
+DEFAULT_INITIAL_SEQ_VERSION = '1.0.0-1'
 
 DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}-{version_code}"
 

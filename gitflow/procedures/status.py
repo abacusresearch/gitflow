@@ -98,23 +98,24 @@ def call(context) -> Result:
                 for tag in tags:
                     if context.version_tag_matcher.group_unique_code is not None:
                         tag_match = context.version_tag_matcher.fullmatch(tag.name)
-                        unique_code = tag_match.group(
-                            context.version_tag_matcher.group_unique_code)
-                        version_string = unique_code
+                        if tag_match is not None:
+                            unique_code = tag_match.group(
+                                context.version_tag_matcher.group_unique_code)
+                            version_string = unique_code
 
-                        unique_version_codes.append(int(unique_code))
+                            unique_version_codes.append(int(unique_code))
 
-                        if unique_code in unique_codes:
-                            command_context.error(os.EX_DATAERR,
-                                                  _("Invalid sequential version tag {tag}.")
-                                                  .format(tag=tag.name),
-                                                  _("The code element of version {version_string} is not unique.")
-                                                  .format(version_string=version_string)
-                                                  )
-                        else:
-                            unique_codes.add(unique_code)
+                            if unique_code in unique_codes:
+                                command_context.error(os.EX_DATAERR,
+                                                      _("Invalid sequential version tag {tag}.")
+                                                      .format(tag=tag.name),
+                                                      _("The code element of version {version_string} is not unique.")
+                                                      .format(version_string=version_string)
+                                                      )
+                            else:
+                                unique_codes.add(unique_code)
 
-                        cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
+                            cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
 
                     # print the version tag
                     version_string = context.version_tag_matcher.format(tag.name)

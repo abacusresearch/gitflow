@@ -23,7 +23,7 @@ from gitflow import const
 from gitflow import repotools
 from gitflow import version
 from gitflow.common import Result
-from gitflow.context import Context, AbstractContext
+from gitflow.context import Context
 from gitflow.properties import PropertyIO
 from gitflow.repotools import BranchSelection, git_get_current_branch, RepoContext
 
@@ -369,22 +369,24 @@ def get_discontinuation_tag_name_for_version(context, version: Union[semver.Vers
         context, version)
 
 
-def get_global_sequence_number(context) -> int:
+def get_global_sequence_number(context: Context) -> Union[int, None]:
     sequential_tags = repotools.git_list_refs(context.repo,
                                               repotools.create_ref_name(
                                                   const.LOCAL_TAG_PREFIX,
                                                   context.version_tag_matcher.ref_name_infixes[0])
                                               )
-    counter = 0
-    for tag in sequential_tags:
-        match = context.version_tag_matcher.fullmatch(tag.name)
-        if match is not None:
-            if context.version_tag_matcher.group_unique_code in match.groups():
+    if context.version_tag_matcher.group_unique_code:
+        counter = 0
+        for tag in sequential_tags:
+            match = context.version_tag_matcher.fullmatch(tag.name)
+            if match is not None:
                 version_code = int(match.group(context.version_tag_matcher.group_unique_code))
                 counter = max(counter, version_code)
-        else:
-            raise Exception("invalid tag: " + tag.name)
-    return counter
+            else:
+                raise Exception("invalid tag: " + tag.name)
+        return counter
+    else:
+        return None
 
 
 def create_sequence_number_for_version(context, new_version: Union[semver.VersionInfo, version.Version]):
@@ -783,7 +785,7 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
     return config
 
 
-def read_properties_in_commit(context: AbstractContext, repo: RepoContext, config: dict, commit: str):
+def read_properties_in_commit(context: Context, repo: RepoContext, config: dict, commit: str):
     if config is not None:
         # print(json.dumps(obj=config_in_history, indent=2))
         property_file = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)

@@ -12,6 +12,7 @@ from gitflow.common import Result
 
 class VersionConfig(object):
     qualifiers: list = None
+    initial_version: str = None
 
 
 class Version(object):
@@ -215,7 +216,7 @@ def validate_version(config: VersionConfig, version_string):
             prerelease_type = prerelease_version_elements[0]
             prerelease_version = prerelease_version_elements[1]
 
-            if not prerelease_type in config.qualifiers:
+            if config.qualifiers is not None and not prerelease_type in config.qualifiers:
                 result.error(os.EX_DATAERR,
                              "Invalid version.",
                              "The pre-release type \"" + prerelease_type + "\" is invalid, must be one of: "
@@ -244,9 +245,9 @@ def is_valid_semver_version(version_string):
         return False
 
 
-def create_initial_branch_version(branch_base_version):
+def create_initial_branch_version(config: VersionConfig, branch_base_version):
     branch_base_version_info = semver.parse_version_info(branch_base_version)
-    template_version_info = semver.parse_version_info(const.DEFAULT_INITIAL_VERSION)
+    template_version_info = semver.parse_version_info(config.initial_version)
     new_version = semver.format_version(
         major=branch_base_version_info.major,
         minor=branch_base_version_info.minor,
@@ -256,172 +257,6 @@ def create_initial_branch_version(branch_base_version):
         build=template_version_info.build,
     )
     return new_version
-
-
-class version_set(object):
-    __config: VersionConfig = None
-    __new_version = None
-
-    def __init__(self, config: VersionConfig, new_version):
-        self.__config = config
-        self.__new_version = new_version
-
-    def __call__(self, config: VersionConfig, version: str):
-        return validate_version(self.__config, self.__new_version)
-
-
-def version_bump_major(config: VersionConfig, version: str):
-    result = Result()
-    version_info = semver.parse_version_info(semver.bump_major(version))
-    pre_release = True
-
-    result.value = semver.format_version(
-        version_info.major,
-        version_info.minor,
-        version_info.patch,
-        config.qualifiers[0] + ".1" if pre_release else None,
-        None)
-    return result
-
-
-def version_bump_minor(config: VersionConfig, version: str):
-    result = Result()
-    version_info = semver.parse_version_info(semver.bump_minor(version))
-    pre_release = True
-
-    result.value = semver.format_version(
-        version_info.major,
-        version_info.minor,
-        version_info.patch,
-        config.qualifiers[0] + ".1" if pre_release else None,
-        None)
-    return result
-
-
-def version_bump_patch(config: VersionConfig, version: str):
-    result = Result()
-    version_info = semver.parse_version_info(semver.bump_patch(version))
-    pre_release = True
-
-    result.value = semver.format_version(
-        version_info.major,
-        version_info.minor,
-        version_info.patch,
-        config.qualifiers[0] + ".1" if pre_release else None,
-        None)
-    return result
-
-
-def version_bump_qualifier(config: VersionConfig, version: str):
-    result = Result()
-    version_info = semver.parse_version_info(version)
-
-    new_qualifier = None
-
-    if version_info.prerelease:
-        prerelease_version_elements = version_info.prerelease.split(".")
-        qualifier = prerelease_version_elements[0]
-        qualifier_index = config.qualifiers.index(qualifier) if qualifier in config.qualifiers else -1
-        if qualifier_index < 0:
-            result.error(os.EX_DATAERR,
-                         _("Failed to increment the pre-release qualifier of version {version}.")
-                         .format(version=repr(version)),
-                         _("The current qualifier is invalid: {qualifier}")
-                         .format(qualifier=repr(qualifier)))
-        else:
-            qualifier_index += 1
-            if qualifier_index < len(config.qualifiers):
-                new_qualifier = config.qualifiers[qualifier_index]
-            else:
-                result.error(os.EX_DATAERR,
-                             _("Failed to increment the pre-release qualifier {qualifier} of version {version}.")
-                             .format(qualifier=qualifier, version=repr(version)),
-                             _("There are no further qualifiers with higher precedence, configured qualifiers are:\n"
-                               "{listing}\n"
-                               "The sub command 'bump-to-release' may be used for a final bump.")
-                             .format(listing='\n'.join(' - ' + repr(qualifier) for qualifier in config.qualifiers))
-                             )
-    else:
-        result.error(os.EX_DATAERR,
-                     _("Failed to increment the pre-release qualifier of version {version}.")
-                     .format(version=version),
-                     _("Pre-release increments cannot be performed on release versions."))
-
-    if not result.has_errors() and new_qualifier is not None:
-        result.value = semver.format_version(
-            version_info.major,
-            version_info.minor,
-            version_info.patch,
-            new_qualifier + ".1",
-            None)
-    return result
-
-
-def version_bump_prerelease(config: VersionConfig, version: str):
-    result = Result()
-    version_info = semver.parse_version_info(version)
-
-    if version_info.prerelease:
-        prerelease_version_elements = version_info.prerelease.split(".")
-        if len(prerelease_version_elements) > 0 and prerelease_version_elements[0].upper() == "SNAPSHOT":
-            if len(prerelease_version_elements) == 1:
-                result.error(os.EX_DATAERR,
-                             _("The pre-release increment has been skipped."),
-                             _("In order to retain Maven compatibility, "
-                               "the pre-release component of snapshot versions must not be versioned."))
-            else:
-                result.error(os.EX_DATAERR,
-                             _("Failed to increment the pre-release component of version {version}.")
-                             .format(version=repr(version)),
-                             _("Snapshot versions must not have a pre-release version."))
-            result.value = version
-        elif len(prerelease_version_elements) == 1:
-            result.error(os.EX_DATAERR,
-                         _("Failed to increment the pre-release component of version {version}.")
-                         .format(version=repr(version)),
-                         _("The qualifier {qualifier} must already be versioned.")
-                         .format(qualifier=repr(prerelease_version_elements[0]))
-                         )
-        else:
-            result.value = semver.bump_prerelease(version)
-    else:
-        result.error(os.EX_DATAERR,
-                     _("Failed to increment the pre-release component of version {version}.")
-                     .format(version=repr(version)),
-                     _("Pre-release increments cannot be performed on release versions.")
-                     )
-
-    if result.has_errors():
-        result.value = None
-    elif result.value is not None and not semver.compare(result.value, version) > 0:
-        result.value = None
-
-    if not result.value:
-        result.error(os.EX_SOFTWARE,
-                     _("Failed to increment the pre-release of version {version} for unknown reasons.")
-                     .format(version=repr(version)),
-                     None)
-    return result
-
-
-def version_bump_to_release(config: VersionConfig, version: str):
-    result = Result()
-    version_info = semver.parse_version_info(version)
-
-    if not version_info.prerelease:
-        result.error(os.EX_DATAERR,
-                     _("Failed to increment version to release: {version}.")
-                     .format(version=repr(version)),
-                     _("Only pre-release versions can be incremented to a release version."))
-
-    if not result.has_errors():
-        result.value = semver.format_version(
-            version_info.major,
-            version_info.minor,
-            version_info.patch,
-            None,
-            None)
-    return result
 
 
 def format_version_info(version_info: semver.VersionInfo):

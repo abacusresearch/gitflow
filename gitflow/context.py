@@ -339,19 +339,27 @@ class Context(AbstractContext):
         context.config.versioning_scheme = const.VERSIONING_SCHEMES[
             config.get(const.CONFIG_VERSIONING_SCHEME) or const.DEFAULT_VERSIONING_SCHEME]
 
-        qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
-        if qualifiers is None:
-            qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
-        if isinstance(qualifiers, str):
-            qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
-        if qualifiers != sorted(qualifiers):
-            result_out.fail(
-                os.EX_DATAERR,
-                _("Configuration failed."),
-                _("Pre-release qualifiers are not specified in ascending order.")
-            )
         context.config.version_config = VersionConfig()
-        context.config.version_config.qualifiers = qualifiers
+
+        if context.config.versioning_scheme == VersioningScheme.SEMVER:
+            qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
+            if qualifiers is None:
+                qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
+            if isinstance(qualifiers, str):
+                qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
+            if qualifiers != sorted(qualifiers):
+                result_out.fail(
+                    os.EX_DATAERR,
+                    _("Configuration failed."),
+                    _("Pre-release qualifiers are not specified in ascending order.")
+                )
+            context.config.version_config.qualifiers = qualifiers
+            context.config.version_config.initial_version = const.DEFAULT_INITIAL_VERSION
+        elif context.config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
+            context.config.version_config.qualifiers = None
+            context.config.version_config.initial_version = const.DEFAULT_INITIAL_SEQ_VERSION
+        else:
+            context.fail(os.EX_CONFIG, "configuration error", "invalid versioning scheme")
 
         # branch config
 
@@ -394,8 +402,11 @@ class Context(AbstractContext):
                 const.CONFIG_VERSION_TAG_PATTERN,
                 const.DEFAULT_SEMVER_VERSION_TAG_PATTERN
                 if context.config.versioning_scheme == VersioningScheme.SEMVER
-                else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN),
+                else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN)
         )
+        context.version_tag_matcher.group_unique_code = None \
+            if context.config.versioning_scheme == VersioningScheme.SEMVER \
+            else 'prerelease_type'
 
         context.discontinuation_tag_matcher = VersionMatcher(
             [const.LOCAL_TAG_PREFIX],
@@ -405,7 +416,7 @@ class Context(AbstractContext):
             config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
-            '{unique_code}'
+            None
         )
 
         return context
