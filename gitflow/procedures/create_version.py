@@ -1,7 +1,7 @@
 import json
-from typing import Callable, Union
-
 import os
+from typing import Callable, Union, Optional
+
 import semver
 
 from gitflow import utils, _, version, repotools, cli, const
@@ -16,9 +16,11 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number
 from gitflow.procedures.scheme import scheme_procedures
 from gitflow.repotools import BranchSelection
+from gitflow.version import VersionConfig
 
 
-def create_version_tag(command_context: CommandContext, operation: Callable[[CommandContext, str], str]) -> Result:
+def create_version_tag(command_context: CommandContext,
+                       operation: Callable[[VersionConfig, Optional[str], Optional[int]], str]) -> Result:
     result = Result()
     context: Context = command_context.context
 
@@ -148,7 +150,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Com
         latest_branch_version = None
 
     if latest_branch_version is not None:
-        version_result = operation(command_context, latest_branch_version)
+        version_result = operation(context.config.version_config, latest_branch_version,
+                                   get_global_sequence_number(context))
         result.add_subresult(version_result)
 
         new_version = version_result.value
@@ -166,7 +169,7 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Com
         )
 
     new_version_info = semver.parse_version_info(new_version)
-    new_sequential_version = scheme_procedures.get_sequence_number(command_context, new_version_info)
+    new_sequential_version = scheme_procedures.get_sequence_number(context.config.version_config, new_version_info)
 
     if new_version_info.major != branch_base_version_info.major or new_version_info.minor != branch_base_version_info.minor:
         result.fail(os.EX_USAGE,
@@ -430,7 +433,8 @@ def create_version_tag(command_context: CommandContext, operation: Callable[[Com
     return result
 
 
-def create_version_branch(command_context: CommandContext, operation: Callable[[CommandContext, str], str]) -> Result:
+def create_version_branch(command_context: CommandContext,
+                          operation: Callable[[VersionConfig, Optional[str], Optional[int]], str]) -> Result:
     result = Result()
     context: Context = command_context.context
 
@@ -536,7 +540,8 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         latest_branch_version_info = None
 
     if latest_branch_version is not None:
-        version_result = operation(command_context, latest_branch_version)
+        version_result = operation(context.config.version_config, latest_branch_version,
+                                   get_global_sequence_number(context))
         result.add_subresult(version_result)
 
         new_version = version_result.value
@@ -545,7 +550,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
         new_version_info = semver.parse_version_info(context.config.version_config.initial_version)
         new_version = version.format_version_info(new_version_info)
 
-    scheme_procedures.get_sequence_number(command_context, new_version_info)
+    scheme_procedures.get_sequence_number(context.config.version_config, new_version_info)
 
     if context.config.sequential_versioning:
         new_sequential_version = create_sequence_number_for_version(context, new_version)
@@ -713,7 +718,7 @@ def create_version_branch(command_context: CommandContext, operation: Callable[[
     return result
 
 
-def call(context: Context, operation: Callable[[CommandContext, str], Union[str, None]]) -> Result:
+def call(context: Context, operation: Callable[[VersionConfig, str], Union[str, None]]) -> Result:
     command_context = get_command_context(
         context=context,
         object_arg=context.args['<object>']
@@ -764,7 +769,7 @@ def call(context: Context, operation: Callable[[CommandContext, str], Union[str,
                            fail_message=_("Version creation failed.")
                            )
 
-        version_result = operation(command_context, None)
+        version_result = operation(context.config.version_config, None, get_global_sequence_number(context))
         command_context.add_subresult(version_result)
         new_version = version_result.value
         if new_version is None:

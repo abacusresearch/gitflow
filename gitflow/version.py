@@ -8,9 +8,11 @@ import semver
 
 from gitflow import const, utils, _
 from gitflow.common import Result
+from gitflow.const import VersioningScheme
 
 
 class VersionConfig(object):
+    versioning_scheme: VersioningScheme = None
     qualifiers: list = None
     initial_version: str = None
 

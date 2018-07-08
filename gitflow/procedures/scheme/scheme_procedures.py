@@ -1,68 +1,65 @@
 import os
+from typing import Optional
 
 import semver
 
 from gitflow import _, version
 from gitflow.common import Result
 from gitflow.const import VersioningScheme
-from gitflow.procedures.common import CommandContext, get_global_sequence_number
+from gitflow.version import VersionConfig
 
 
-def version_bump_major(command_context: CommandContext, version: str):
+def version_bump_major(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
     version_info = semver.parse_version_info(semver.bump_major(version))
     pre_release = True
-    version_config = command_context.context.config.version_config
 
     result.value = semver.format_version(
         version_info.major,
         version_info.minor,
         version_info.patch,
         (version_config.qualifiers[0] + ".1" if pre_release else None)
-        if command_context.context.config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
-        else get_global_sequence_number(command_context.context) + 1,
+        if version_config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
+        else (global_seq or 0) + 1,
         None)
     return result
 
 
-def version_bump_minor(command_context: CommandContext, version: str):
+def version_bump_minor(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
     version_info = semver.parse_version_info(semver.bump_minor(version))
     pre_release = True
-    version_config = command_context.context.config.version_config
 
     result.value = semver.format_version(
         version_info.major,
         version_info.minor,
         version_info.patch,
         (version_config.qualifiers[0] + ".1" if pre_release else None)
-        if command_context.context.config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
-        else get_global_sequence_number(command_context.context) + 1,
+        if version_config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
+        else (global_seq or 0) + 1,
         None)
     return result
 
 
-def version_bump_patch(command_context: CommandContext, version: str):
+def version_bump_patch(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
     version_info = semver.parse_version_info(semver.bump_patch(version))
     pre_release = True
-    version_config = command_context.context.config.version_config
 
     result.value = semver.format_version(
         version_info.major,
         version_info.minor,
         version_info.patch,
         (version_config.qualifiers[0] + ".1" if pre_release else None)
-        if command_context.context.config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
-        else get_global_sequence_number(command_context.context) + 1,
+        if version_config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
+        else (global_seq or 0) + 1,
         None)
     return result
 
 
-def version_bump_qualifier(command_context: CommandContext, version: str):
+def version_bump_qualifier(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
     version_info = semver.parse_version_info(version)
-    version_config = command_context.context.config.version_config
 
     new_qualifier = None
 
@@ -114,7 +111,7 @@ def version_bump_qualifier(command_context: CommandContext, version: str):
     return result
 
 
-def version_bump_prerelease(command_context: CommandContext, version: str):
+def version_bump_prerelease(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
     version_info = semver.parse_version_info(version)
 
@@ -133,7 +130,7 @@ def version_bump_prerelease(command_context: CommandContext, version: str):
                              _("Snapshot versions must not have a pre-release version."))
             result.value = version
         elif len(prerelease_version_elements) == 1:
-            if command_context.context.config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ:
+            if version_config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ:
                 result.error(os.EX_DATAERR,
                              _("Failed to increment the pre-release component of version {version}.")
                              .format(version=repr(version)),
@@ -161,11 +158,11 @@ def version_bump_prerelease(command_context: CommandContext, version: str):
     return result
 
 
-def version_bump_to_release(command_context: CommandContext, version: str):
+def version_bump_to_release(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
     version_info = semver.parse_version_info(version)
 
-    if command_context.context.config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
+    if version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
         result.error(os.EX_USAGE,
                      _("Failed to increment version to release: {version}.")
                      .format(version=repr(version)),
@@ -194,12 +191,12 @@ class version_set(object):
     def __init__(self, new_version):
         self.__new_version = new_version
 
-    def __call__(self, command_context: CommandContext, old_version: str):
-        return version.validate_version(command_context.context.config.version_config, old_version)
+    def __call__(self, version_config: VersionConfig, old_version: Optional[str], global_seq: Optional[int]):
+        return version.validate_version(version_config, old_version)
 
 
-def get_sequence_number(command_context: CommandContext, new_version_info: semver.VersionInfo):
-    if command_context.context.config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
+def get_sequence_number(version_config: VersionConfig, new_version_info: semver.VersionInfo):
+    if version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
         return int(new_version_info.prerelease)
     else:
-        return get_global_sequence_number(command_context.context)
+        return None

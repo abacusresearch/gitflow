@@ -46,9 +46,6 @@ class BuildStage(object):
 
 
 class Config(object):
-    # versioning scheme
-    versioning_scheme: VersioningScheme = None
-
     # project properties
     property_file: str = None
     version_property_name: str = None
@@ -89,11 +86,11 @@ class Config(object):
     # properties
     @property
     def sequential_versioning(self) -> bool:
-        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
+        return self.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
 
     @property
     def tie_sequential_version_to_semantic_version(self) -> bool:
-        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
+        return self.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
 
     @property
     def commit_version_property(self) -> bool:
@@ -336,12 +333,11 @@ class Context(AbstractContext):
 
         # version config
 
-        context.config.versioning_scheme = const.VERSIONING_SCHEMES[
+        context.config.version_config = VersionConfig()
+        context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[
             config.get(const.CONFIG_VERSIONING_SCHEME) or const.DEFAULT_VERSIONING_SCHEME]
 
-        context.config.version_config = VersionConfig()
-
-        if context.config.versioning_scheme == VersioningScheme.SEMVER:
+        if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
             qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
             if qualifiers is None:
                 qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
@@ -355,7 +351,7 @@ class Context(AbstractContext):
                 )
             context.config.version_config.qualifiers = qualifiers
             context.config.version_config.initial_version = const.DEFAULT_INITIAL_VERSION
-        elif context.config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
+        elif context.config.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
             context.config.version_config.qualifiers = None
             context.config.version_config.initial_version = const.DEFAULT_INITIAL_SEQ_VERSION
         else:
@@ -401,11 +397,11 @@ class Context(AbstractContext):
             config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
                 const.DEFAULT_SEMVER_VERSION_TAG_PATTERN
-                if context.config.versioning_scheme == VersioningScheme.SEMVER
+                if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER
                 else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN)
         )
         context.version_tag_matcher.group_unique_code = None \
-            if context.config.versioning_scheme == VersioningScheme.SEMVER \
+            if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER \
             else 'prerelease_type'
 
         context.discontinuation_tag_matcher = VersionMatcher(
