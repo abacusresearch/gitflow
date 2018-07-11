@@ -206,10 +206,10 @@ class Context(AbstractContext):
             # context.repo.use_root_dir_arg = semver.compare(context.git_version, "2.9.0") >= 0
             context.repo.use_root_dir_arg = False
 
-            root = repotools.git_rev_parse(context.repo, '--show-toplevel')
+            repo_root = repotools.git_rev_parse(context.repo, '--show-toplevel')
             # None when invalid or bare
-            if root is not None:
-                context.repo.dir = root
+            if repo_root is not None:
+                context.repo.dir = repo_root
 
                 if context.verbose >= const.TRACE_VERBOSITY:
                     cli.print("--------------------------------------------------------------------------------")
