@@ -370,27 +370,31 @@ def get_discontinuation_tag_name_for_version(context, version: Union[semver.Vers
 
 
 def get_global_sequence_number(context: Context) -> Union[int, None]:
-    sequential_tags = repotools.git_list_refs(context.repo,
-                                              repotools.create_ref_name(
-                                                  const.LOCAL_TAG_PREFIX,
-                                                  context.version_tag_matcher.ref_name_infixes[0])
-                                              )
     if context.version_tag_matcher.group_unique_code:
-        counter = 0
+        sequential_tags = repotools.git_list_refs(context.repo,
+                                                  repotools.create_ref_name(
+                                                      const.LOCAL_TAG_PREFIX,
+                                                      context.version_tag_matcher.ref_name_infixes[0])
+                                                  )
+        seq = None
+
         for tag in sequential_tags:
             match = context.version_tag_matcher.fullmatch(tag.name)
             if match is not None:
                 version_code = int(match.group(context.version_tag_matcher.group_unique_code))
-                counter = max(counter, version_code)
-            else:
-                raise Exception("invalid tag: " + tag.name)
-        return counter
+                if seq is None:
+                    seq = version_code
+                else:
+                    seq = max(seq, version_code)
+
+        return seq
     else:
         return None
 
 
 def create_sequence_number_for_version(context, new_version: Union[semver.VersionInfo, version.Version]):
-    return get_global_sequence_number(context) + 1
+    sequence_number = get_global_sequence_number(context)
+    return (sequence_number if sequence_number is not None else 0) + 1
 
 
 def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str]):
@@ -613,7 +617,7 @@ def get_command_context(context, object_arg: str) -> CommandContext:
                                                                      context.config.remote_name,
                                                                      'release'),
                                            'refs/heads/release',
-                                           'refs/heads/master',
+                                           'refs/heads/' + context.config.release_branch_base,
                                            # const.REMOTES_PREFIX + context.config.remote_name + '/' + context.config.release_branch_base,
                                            # const.LOCAL_BRANCH_PREFIX + context.config.release_branch_base,
                                            )))

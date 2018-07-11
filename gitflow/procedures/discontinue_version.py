@@ -129,7 +129,7 @@ def call(context: Context) -> Result:
             push_command.append('--dry-run')
         if context.verbose:
             push_command.append('--verbose')
-        push_command.append('origin')
+        push_command.append(context.config.remote_name)
 
         push_command.append(base_branch_ref.name + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                                    base_branch_ref.short_name))

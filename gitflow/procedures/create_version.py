@@ -129,7 +129,7 @@ def create_version_tag(command_context: CommandContext,
         if abort_version_scan and abort_sequential_version_scan:
             break
 
-    if context.config.sequential_versioning:
+    if context.config.sequential_versioning and preceding_version_tag is not None:
         match = context.version_tag_matcher.fullmatch(preceding_version_tag.name)
         preceding_sequential_version = match.group(context.version_tag_matcher.group_unique_code)
     else:
@@ -397,7 +397,7 @@ def create_version_tag(command_context: CommandContext,
             push_command.append('--dry-run')
         if context.verbose:
             push_command.append('--verbose')
-        push_command.append('origin')
+        push_command.append(context.config.remote_name)
 
         # push the release branch commit or its version increment commit
         if new_branch_ref_object is not None:
@@ -698,7 +698,7 @@ def create_version_branch(command_context: CommandContext,
             push_command.append('--dry-run')
         if context.verbose:
             push_command.append('--verbose')
-        push_command.append('origin')
+        push_command.append(context.config.remote_name)
 
         # push the base branch commit
         # push_command.append(commit + ':' + const.LOCAL_BRANCH_PREFIX + selected_ref.local_branch_name)
