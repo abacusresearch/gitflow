@@ -486,14 +486,17 @@ def create_shared_clone_repository(context: Context) -> Result:
                     )
 
     if not result.has_errors():
-        result.value = tempdir_path
+        repo = RepoContext()
+        repo.dir = tempdir_path
+        repo.verbose = context.verbose
+        result.value = repo
 
     context.add_subresult(result)
 
     return result
 
 
-def create_context(context, result, directory):
+def create_context(context, result, directory: str):
     clone_context = Context.create({
         '--root': directory,
 

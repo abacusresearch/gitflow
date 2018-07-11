@@ -88,7 +88,7 @@ def call(context: Context) -> Result:
         # run merge on local clone
 
         clone_result = create_shared_clone_repository(context)
-        clone_context = create_context(context, result, clone_result.value)
+        clone_context = create_context(context, result, clone_result.value.dir)
 
         changes = list()
 

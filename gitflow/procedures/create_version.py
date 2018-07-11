@@ -312,7 +312,7 @@ def create_version_tag(command_context: CommandContext,
         tag_name = get_tag_name_for_version(context, new_version_info)
 
         clone_result = create_shared_clone_repository(context)
-        clone_context = create_context(context, result, clone_result.value)
+        clone_context = create_context(context, result, clone_result.value.dir)
 
         # run version change hooks on release branch
         if (context.config.commit_version_property and new_version is not None) \
@@ -621,7 +621,7 @@ def create_version_branch(command_context: CommandContext,
         tag_name = get_tag_name_for_version(context, new_version_info)
 
         clone_result = create_shared_clone_repository(context)
-        clone_context = create_context(context, result, clone_result.value)
+        clone_context = create_context(context, result, clone_result.value.dir)
 
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
