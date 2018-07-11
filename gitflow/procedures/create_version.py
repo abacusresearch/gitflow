@@ -13,7 +13,7 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     CommandContext, create_sequence_number_for_version, \
     git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number
+    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number, create_context
 from gitflow.procedures.scheme import scheme_procedures
 from gitflow.repotools import BranchSelection
 from gitflow.version import VersionConfig
@@ -312,11 +312,7 @@ def create_version_tag(command_context: CommandContext,
         tag_name = get_tag_name_for_version(context, new_version_info)
 
         clone_result = create_shared_clone_repository(context)
-        result.add_subresult(clone_result)
-        if result.has_errors():
-            return result
-
-        clone_context = clone_result.value
+        clone_context = create_context(context, result, clone_result.value)
 
         # run version change hooks on release branch
         if (context.config.commit_version_property and new_version is not None) \
@@ -625,11 +621,7 @@ def create_version_branch(command_context: CommandContext,
         tag_name = get_tag_name_for_version(context, new_version_info)
 
         clone_result = create_shared_clone_repository(context)
-        result.add_subresult(clone_result)
-        if result.has_errors():
-            return result
-
-        clone_context = clone_result.value
+        clone_context = create_context(context, result, clone_result.value)
 
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):

@@ -1,16 +1,17 @@
 import os
 
-from gitflow import cli, utils, repotools, _, const
+from gitflow import cli, repotools, _, const
 from gitflow.common import Result
 from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
     get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
-    check_in_repo, prompt
+    check_in_repo, prompt, create_context
 from gitflow.repotools import BranchSelection
 
 
 def call(context: Context) -> Result:
+    result: Result = context.result
     object_arg = context.args['<object>']
 
     reintegrate = cli.get_boolean_opt(context.args, '--reintegrate')
@@ -87,11 +88,7 @@ def call(context: Context) -> Result:
         # run merge on local clone
 
         clone_result = create_shared_clone_repository(context)
-        command_context.add_subresult(clone_result)
-        if command_context.has_errors():
-            return context.result
-
-        clone_context: Context = clone_result.value
+        clone_context = create_context(context, result, clone_result.value)
 
         changes = list()
 

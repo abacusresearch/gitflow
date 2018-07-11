@@ -442,7 +442,7 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
     return branch_ref
 
 
-def create_shared_clone_repository(context):
+def create_shared_clone_repository(context: Context) -> Result:
     """
     :rtype: Result
     """
@@ -485,12 +485,11 @@ def create_shared_clone_repository(context):
                     _("An unexpected error occurred.")
                     )
 
-    clone_context = create_context(context, result, tempdir_path)
-
     if not result.has_errors():
-        result.value = clone_context
-    else:
-        context.cleanup()
+        result.value = tempdir_path
+
+    context.add_subresult(result)
+
     return result
 
 
