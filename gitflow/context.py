@@ -334,8 +334,15 @@ class Context(AbstractContext):
         # version config
 
         context.config.version_config = VersionConfig()
-        context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[
-            config.get(const.CONFIG_VERSIONING_SCHEME) or const.DEFAULT_VERSIONING_SCHEME]
+
+        versioning_scheme = config.get(const.CONFIG_VERSIONING_SCHEME, const.DEFAULT_VERSIONING_SCHEME)
+
+        if versioning_scheme not in const.VERSIONING_SCHEMES:
+            result_out.fail(os.EX_DATAERR, _("Configuration failed."),
+                            _("The versioning scheme {versioning_scheme} is invalid.").format(
+                                versioning_scheme=utils.quote(versioning_scheme, '\'')))
+
+        context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
 
         if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
             qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)

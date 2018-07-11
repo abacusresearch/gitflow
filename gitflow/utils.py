@@ -67,7 +67,7 @@ def split_join(delimiter: str, delimit_start=True, delimit_end=True, *tokens):
 
 
 def quote(string, quote_char) -> str:
-    return string.replace(quote_char, '\\' + quote_char)
+    return quote_char + string.replace(quote_char, '\\' + quote_char) + quote_char
 
 
 def command_to_str(command):
