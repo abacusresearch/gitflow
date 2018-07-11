@@ -471,22 +471,32 @@ def create_shared_clone_repository(context):
 
     if context.config.push_to_local:
         returncode, out, err = repotools.git(context.repo, 'clone', '--shared',
-                             '--branch', context.config.release_branch_base,
-                             '.',
-                             tempdir_path)
+                                             '--branch', context.config.release_branch_base,
+                                             '.',
+                                             tempdir_path)
     else:
         returncode, out, err = repotools.git(context.repo, 'clone', '--reference', '.',
-                             '--branch', context.config.release_branch_base,
-                             remote.url,
-                             tempdir_path)
+                                             '--branch', context.config.release_branch_base,
+                                             remote.url,
+                                             tempdir_path)
     if returncode != os.EX_OK:
         result.fail(os.EX_DATAERR,
                     _("Failed to clone repo."),
                     _("An unexpected error occurred.")
                     )
 
+    clone_context = create_context(context, result, tempdir_path)
+
+    if not result.has_errors():
+        result.value = clone_context
+    else:
+        context.cleanup()
+    return result
+
+
+def create_context(context, result, directory):
     clone_context = Context.create({
-        '--root': tempdir_path,
+        '--root': directory,
 
         '--config': context.args['--config'],  # no override here
 
@@ -496,20 +506,13 @@ def create_shared_clone_repository(context):
         '--verbose': context.verbose,
         '--pretty': context.pretty,
     }, result)
-
     if clone_context.temp_dirs is None:
         clone_context.temp_dirs = list()
-    clone_context.temp_dirs.append(tempdir_path)
-
+    clone_context.temp_dirs.append(directory)
     if context.clones is None:
         context.clones = list()
     context.clones.append(clone_context)
-
-    if not result.has_errors():
-        result.value = clone_context
-    else:
-        context.cleanup()
-    return result
+    return clone_context
 
 
 def prompt_for_confirmation(context: Context, fail_title: str, message: str, prompt: str):
