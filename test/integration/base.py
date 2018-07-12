@@ -173,7 +173,7 @@ class TestFlowBase(TestInTempDir):
         prev_stdout = sys.stdout
         sys.stdout = stdout_buf = StringIO()
 
-        exit_code = __main__.main([__name__, '-B'] + [*args])
+        exit_code = self.git_flow(*args)
 
         sys.stdout.flush()
         out_lines = stdout_buf.getvalue().splitlines()
