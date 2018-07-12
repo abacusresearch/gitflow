@@ -235,10 +235,20 @@ class TestFlowBase(TestInTempDir):
         current_head = out.decode('utf-8').splitlines()[0]
         return current_head
 
-    def assert_refs(self, expected: set, actual: set = None):
-        if actual is None:
-            actual = self.list_refs()
-        self.assert_same_elements(expected, actual)
+    def assert_refs(self, refs: set, added: set = None, removed: set = None):
+        if added is not None and removed is not None:
+            if added.intersection(removed):
+                raise ValueError('added and removed elements intersect')
+
+        if added is not None:
+            if added.intersection(refs):
+                raise ValueError('added and refs intersect')
+            refs.update(added)
+        if removed is not None:
+            if refs.issuperset(removed):
+                raise ValueError('refs is not a superset of removed')
+            refs.difference_update(removed)
+        self.assert_same_elements(refs, self.list_refs())
 
     def assert_head(self, expected: str):
         current_head = self.current_head()
