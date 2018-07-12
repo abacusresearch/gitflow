@@ -93,13 +93,13 @@ def call(context: Context) -> Result:
         changes = list()
 
         if reintegrate:
-            git_or_fail(clone_context, command_context.result,
+            git_or_fail(clone_context.repo, command_context.result,
                         ['checkout', base_branch_ref.short_name],
                         _("Failed to checkout branch {branch_name}.")
                         .format(branch_name=repr(base_branch_ref.short_name))
                         )
 
-            git_or_fail(clone_context, command_context.result,
+            git_or_fail(clone_context.repo, command_context.result,
                         ['merge', '--no-ff', release_branch_info.upstream.name],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
@@ -136,8 +136,8 @@ def call(context: Context) -> Result:
             repotools.ref_target(release_branch) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
                                                                                    discontinuation_tag_name))
 
-        git_or_fail(clone_context, command_context.result, push_command)
+        git_or_fail(clone_context.repo, command_context.result, push_command)
 
-        fetch_all_and_ff(context, command_context.result, context.config.remote_name)
+        fetch_all_and_ff(context.repo, command_context.result, context.config.remote_name)
 
     return context.result

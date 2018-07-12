@@ -15,7 +15,7 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
     check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number, create_context
 from gitflow.procedures.scheme import scheme_procedures
-from gitflow.repotools import BranchSelection
+from gitflow.repotools import BranchSelection, RepoContext
 from gitflow.version import VersionConfig
 
 
@@ -303,7 +303,7 @@ def create_version_tag(command_context: CommandContext,
                     _('Checking out {base_branch} in order to avoid failing the push to a checked-out release branch')
                         .format(base_branch=repr(context.config.release_branch_base)))
 
-            git_or_fail(context, result, ['checkout', context.config.release_branch_base])
+            git_or_fail(context.repo, result, ['checkout', context.config.release_branch_base])
             original_current_branch = command_context.current_branch
         else:
             original_current_branch = None
@@ -312,7 +312,7 @@ def create_version_tag(command_context: CommandContext,
         tag_name = get_tag_name_for_version(context, new_version_info)
 
         clone_result = create_shared_clone_repository(context)
-        clone_context = create_context(context, result, clone_result.value.dir)
+        cloned_repo = clone_result.value
 
         # run version change hooks on release branch
         if (context.config.commit_version_property and new_version is not None) \
@@ -322,12 +322,14 @@ def create_version_tag(command_context: CommandContext,
                                                           context.config.remote_name,
                                                           branch_name)]
 
-            returncode, out, err = repotools.git(clone_context.repo, *checkout_command)
+            returncode, out, err = repotools.git(cloned_repo, *checkout_command)
             if returncode != os.EX_OK:
                 result.fail(os.EX_DATAERR,
                             _("Failed to check out release branch."),
                             _("An unexpected error occurred.")
                             )
+
+            clone_context: Context = create_context(context, result, cloned_repo.dir)
 
             commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
@@ -346,6 +348,7 @@ def create_version_tag(command_context: CommandContext,
                 commit_info = None
         else:
             commit_info = None
+            clone_context: Context = create_context(context, result, cloned_repo.dir)
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
@@ -424,7 +427,7 @@ def create_version_tag(command_context: CommandContext,
                     _('Switching back to {original_branch} ')
                         .format(original_branch=repr(original_current_branch.name)))
 
-            git_or_fail(context, result, ['checkout', original_current_branch.short_name])
+            git_or_fail(context.repo, result, ['checkout', original_current_branch.short_name])
 
     return result
 
@@ -621,16 +624,18 @@ def create_version_branch(command_context: CommandContext,
         tag_name = get_tag_name_for_version(context, new_version_info)
 
         clone_result = create_shared_clone_repository(context)
-        clone_context = create_context(context, result, clone_result.value.dir)
+        cloned_repo: RepoContext = clone_result.value
+
+        # run version change hooks on new release branch
+        git_or_fail(cloned_repo, result, ['checkout', '--force',
+                                          '-b', branch_name,
+                                          command_context.selected_commit],
+                    _("Failed to check out release branch."))
+
+        clone_context: Context = create_context(context, result, cloned_repo.dir)
 
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
-
-            # run version change hooks on new release branch
-            git_or_fail(clone_context, result, ['checkout', '--force',
-                                                '-b', branch_name,
-                                                command_context.selected_commit],
-                        _("Failed to check out release branch."))
 
             commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
@@ -705,7 +710,7 @@ def create_version_branch(command_context: CommandContext,
                              repotools.ref_target(object_to_tag) + ':' + repotools.create_ref_name(
                                  const.LOCAL_TAG_PREFIX, tag_name)])
 
-        git_or_fail(clone_context, result, push_command, _("Failed to push."))
+        git_or_fail(cloned_repo, result, push_command, _("Failed to push."))
 
     return result
 
@@ -785,6 +790,6 @@ def call(context: Context, operation: Callable[[VersionConfig, str], Union[str, 
     if not command_context.has_errors() \
             and context.config.pull_after_bump \
             and not context.config.push_to_local:
-        fetch_all_and_ff(context, command_context.result, context.config.remote_name)
+        fetch_all_and_ff(context.repo, command_context.result, context.config.remote_name)
 
     return context.result

@@ -134,12 +134,12 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
     return candidate, candidate_class
 
 
-def git(context: Context, command: list) -> int:
-    returncode, out, err = repotools.git(context.repo, *command)
+def git(context: RepoContext, command: list) -> int:
+    returncode, out, err = repotools.git(context, *command)
     return returncode
 
 
-def git_or_fail(context: Context, result: Result, command: list,
+def git_or_fail(context: RepoContext, result: Result, command: list,
                 error_message: str = None, error_reason: str = None):
     returncode = git(context, command)
     if returncode != os.EX_OK:
@@ -153,9 +153,9 @@ def git_or_fail(context: Context, result: Result, command: list,
                         )
 
 
-def git_for_line_or_fail(context: Context, result: Result, command: list,
+def git_for_line_or_fail(context: RepoContext, result: Result, command: list,
                          error_message: str = None, error_reason: str = None):
-    line = repotools.git_for_line(context.repo, *command)
+    line = repotools.git_for_line(context, *command)
     if line is None:
         if error_message is not None:
             result.fail(os.EX_DATAERR, error_message, error_reason)
@@ -167,17 +167,17 @@ def git_for_line_or_fail(context: Context, result: Result, command: list,
     return line
 
 
-def fetch_all_and_ff(context: Context, result_out: Result, remote: [repotools.Remote, str]):
+def fetch_all_and_ff(context: RepoContext, result_out: Result, remote: [repotools.Remote, str]):
     # attempt a complete fetch and a fast forward on the current branch
     remote_name = remote.name if isinstance(remote, repotools.Remote) else remote
-    returncode, out, err = repotools.git(context.repo, 'fetch', '--tags', remote_name)
+    returncode, out, err = repotools.git(context, 'fetch', '--tags', remote_name)
     if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fetch from {remote}")
                 .format(repr(remote_name)),
             None)
 
-    returncode, out, err = repotools.git(context.repo, 'merge', '--ff-only')
+    returncode, out, err = repotools.git(context, 'merge', '--ff-only')
     if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fast forward"),
@@ -496,7 +496,7 @@ def create_shared_clone_repository(context: Context) -> Result:
     return result
 
 
-def create_context(context, result, directory: str):
+def create_context(context, result, directory: str) -> Context:
     clone_context = Context.create({
         '--root': directory,
 
@@ -669,13 +669,13 @@ def get_command_context(context, object_arg: str) -> CommandContext:
     return command_context
 
 
-def create_commit(clone_context, result, commit_info: CommitInfo):
+def create_commit(context: Context, result, commit_info: CommitInfo):
     add_command = ['update-index', '--add', '--']
     add_command.extend(commit_info.files)
-    git_or_fail(clone_context, result, add_command)
+    git_or_fail(context.repo, result, add_command)
 
     write_tree_command = ['write-tree']
-    new_tree = git_for_line_or_fail(clone_context, result, write_tree_command)
+    new_tree = git_for_line_or_fail(context.repo, result, write_tree_command)
 
     commit_command = ['commit-tree']
     for parent in commit_info.parents:
@@ -683,7 +683,7 @@ def create_commit(clone_context, result, commit_info: CommitInfo):
         commit_command.append(parent)
 
     commit_command.extend(['-m', commit_info.message, new_tree])
-    new_commit = git_for_line_or_fail(clone_context, result, commit_command)
+    new_commit = git_for_line_or_fail(context.repo, result, commit_command)
 
     # reset_command = ['reset', 'HEAD', new_commit]
     # git_or_fail(clone_context, result, reset_command)
@@ -770,7 +770,8 @@ def check_requirements(command_context: CommandContext,
     if not allow_unversioned_changes:
         current_branch = git_get_current_branch(command_context.context.repo)
         if ref == current_branch:
-            returncode = git(command_context.context, ['diff-index', '--name-status', '--exit-code', current_branch])
+            returncode = git(command_context.context.repo,
+                             ['diff-index', '--name-status', '--exit-code', current_branch])
 
             if returncode != os.EX_OK:
                 command_context.error(os.EX_USAGE,

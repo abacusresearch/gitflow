@@ -95,7 +95,7 @@ def call(context: Context) -> Result:
         cli.print("base_branch_name: " + base_branch.name)
 
     if not context.dry_run and not command_context.has_errors():
-        index_status = git(context, ['diff-index', 'HEAD', '--'])
+        index_status = git(context.repo, ['diff-index', 'HEAD', '--'])
         if index_status == 1:
             context.fail(os.EX_USAGE,
                                  _("Branch creation aborted."),
@@ -106,12 +106,12 @@ def call(context: Context) -> Result:
                                  _("Failed to determine index status."),
                                  None)
 
-        git_or_fail(context, command_context.result,
+        git_or_fail(context.repo, command_context.result,
                     ['update-ref', work_branch_ref_name, command_context.selected_commit, ''],
                     _("Failed to create branch {branch_name}.")
                     .format(branch_name=work_branch_name)
                     )
-        git_or_fail(context, command_context.result,
+        git_or_fail(context.repo, command_context.result,
                     ['checkout', work_branch_name],
                     _("Failed to checkout branch {branch_name}.")
                     .format(branch_name=work_branch_name)
