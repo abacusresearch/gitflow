@@ -99,6 +99,14 @@ class Ref(Object):
     def short_name(self):
         return self.local_branch_name or self.local_tag_name or self.remote_branch_name
 
+    @property
+    def remote(self):
+        if self.name.startswith(const.REMOTES_PREFIX):
+            remote = self.name[len(const.REMOTES_PREFIX):]
+            remote = remote[:remote.find('/')]
+            return remote
+        return None
+
     def __eq__(self, other):
         return isinstance(other, Ref) and self.name == other.name
 
@@ -310,13 +318,19 @@ class BranchSelection(Enum):
     BRANCH_REMOTE_ONLY = 3,
 
 
-def get_branch_by_name(context: RepoContext, branch_name: str, search_mode: BranchSelection) -> Ref:
+def get_branch_by_name(context: RepoContext, remotes: typing.Set[str], branch_name: str,
+                       search_mode: BranchSelection) -> Ref:
     candidate = None
     for branch in git_list_refs(context, *const.LOCAL_AND_REMOTE_BRANCH_PREFIXES):
         match = re.fullmatch(const.BRANCH_PATTERN, branch.name)
 
         name = match.group('name')
-        local = match.group('remote') is None
+        remote = match.group('remote')
+
+        if remote is not None and remotes is not None and remote not in remotes:
+            continue
+
+        local = remote is None
 
         if match and name == branch_name:
             if search_mode == BranchSelection.BRANCH_PREFER_LOCAL:

@@ -413,13 +413,14 @@ def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str])
 
 
 def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search_mode: BranchSelection):
-    branch_ref = repotools.get_branch_by_name(context.repo, name, search_mode)
+    branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, name, search_mode)
 
     if branch_ref is None:
         tag_version = version.parse_version(name)
         if tag_version is not None:
             version_branch_name = get_branch_name_for_version(context, tag_version)
-            branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
+            branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, version_branch_name,
+                                                      search_mode)
 
     if branch_ref is None:
         # TODO common definition
@@ -429,11 +430,12 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
             branch_version.major = int(match.group(1))
             branch_version.minor = int(match.group(2))
             version_branch_name = get_branch_name_for_version(context, branch_version)
-            branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
+            branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, version_branch_name,
+                                                      search_mode)
 
     if branch_ref is None:
         if not name.startswith(context.release_branch_matcher.ref_name_infix):
-            branch_ref = repotools.get_branch_by_name(context.repo,
+            branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name},
                                                       context.release_branch_matcher.ref_name_infix + name,
                                                       search_mode)
 

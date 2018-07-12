@@ -781,7 +781,8 @@ def call(context: Context, operation: Callable[[VersionConfig, str], Union[str, 
 
         branch_name = get_branch_name_for_version(context, new_version_info)
 
-        release_branch = repotools.get_branch_by_name(context.repo, branch_name, BranchSelection.BRANCH_PREFER_LOCAL)
+        release_branch = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, branch_name,
+                                                      BranchSelection.BRANCH_PREFER_LOCAL)
         if release_branch is None:
             tag_result = create_version_branch(command_context, operation)
             command_context.add_subresult(tag_result)

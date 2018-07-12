@@ -23,7 +23,8 @@ def call(context: Context) -> Result:
 
     check_in_repo(command_context)
 
-    base_branch_ref = repotools.get_branch_by_name(context.repo, context.config.release_branch_base,
+    base_branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name},
+                                                   context.config.release_branch_base,
                                                    BranchSelection.BRANCH_PREFER_LOCAL)
 
     release_branch = command_context.selected_ref
