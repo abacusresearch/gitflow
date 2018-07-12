@@ -367,7 +367,6 @@ class Context(AbstractContext):
         # branch config
 
         context.config.remote_name = "origin"
-        # context.config.remote_name = "backup"
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)
 

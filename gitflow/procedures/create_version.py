@@ -319,7 +319,7 @@ def create_version_tag(command_context: CommandContext,
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
                                 repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                          context.config.remote_name,
+                                                          'origin',
                                                           branch_name)]
 
             returncode, out, err = repotools.git(cloned_repo, *checkout_command)
@@ -330,6 +330,7 @@ def create_version_tag(command_context: CommandContext,
                             )
 
             clone_context: Context = create_context(context, result, cloned_repo.dir)
+            clone_context.config.remote_name = 'origin'
 
             commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
@@ -349,6 +350,7 @@ def create_version_tag(command_context: CommandContext,
         else:
             commit_info = None
             clone_context: Context = create_context(context, result, cloned_repo.dir)
+            clone_context.config.remote_name = 'origin'
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
@@ -633,6 +635,7 @@ def create_version_branch(command_context: CommandContext,
                     _("Failed to check out release branch."))
 
         clone_context: Context = create_context(context, result, cloned_repo.dir)
+        clone_context.config.remote_name = 'origin'
 
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
