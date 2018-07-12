@@ -4,6 +4,7 @@
 
   "propertyFile": "rootmodule/config.ini",
   "versionPropertyName": "version",
+  "versionTagPrefix": "version/",
 
   "build": {
     "stages": {
