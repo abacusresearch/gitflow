@@ -2,7 +2,7 @@ import itertools
 import os
 import re
 import string
-from typing import Union
+from typing import Union, List
 
 import semver
 
@@ -85,13 +85,15 @@ class VersionMatcher(object):
     group_prefix = None
     group_unique_code = None
 
-    ref_name_infixes: list = None
+    ref_name_infixes: List[str] = None
+    ref_name_infix: str = None
     __format = None
 
     comparator = None
     key_func = None
 
-    def __init__(self, ref_roots: list, ref_name_infixes: Union[list, str, None], pattern: str, format: str = None):
+    def __init__(self, ref_roots: list, ref_name_infixes: Union[List[str], str, None], pattern: str,
+                 format: str = None):
         """
         :param pattern:
         :param ref_name_infixes: the name prefixes of branches and tags following the conventional parents
@@ -104,7 +106,9 @@ class VersionMatcher(object):
                 ref_name_infixes = [ref_name_infixes]
             for index, ref_name_infix in enumerate(ref_name_infixes):
                 ref_name_infixes[index] = utils.split_join('/', False, True, ref_name_infix)
+            ref_name_infixes = [infix for infix in ref_name_infixes if infix is not None and infix != '/']
         self.ref_name_infixes = ref_name_infixes
+        self.ref_name_infix = self.ref_name_infixes[0] if self.ref_name_infixes and len(self.ref_name_infixes) else None
 
         full_pattern = ''
         full_pattern += '(?:'

@@ -354,31 +354,30 @@ def get_branch_version_component_for_version(context: Context,
 
 
 def get_branch_name_for_version(context: Context, version_on_branch: Union[semver.VersionInfo, version.Version]):
-    return context.release_branch_matcher.ref_name_infixes[0] \
+    return (context.release_branch_matcher.ref_name_infix or '') \
            + get_branch_version_component_for_version(context, version_on_branch)
 
 
 def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo):
-    return context.version_tag_matcher.ref_name_infixes[0] \
+    return (context.version_tag_matcher.ref_name_infix or '') \
            + version.format_version_info(version_info)
 
 
 def get_discontinuation_tag_name_for_version(context, version: Union[semver.VersionInfo, version.Version]):
-    return context.discontinuation_tag_matcher.ref_name_infixes[
-               0] + get_branch_version_component_for_version(
+    return (context.discontinuation_tag_matcher.ref_name_infix or '') + get_branch_version_component_for_version(
         context, version)
 
 
 def get_global_sequence_number(context: Context) -> Union[int, None]:
     if context.version_tag_matcher.group_unique_code:
-        sequential_tags = repotools.git_list_refs(context.repo,
-                                                  repotools.create_ref_name(
-                                                      const.LOCAL_TAG_PREFIX,
-                                                      context.version_tag_matcher.ref_name_infixes[0])
-                                                  )
+        tags = repotools.git_list_refs(context.repo,
+                                       repotools.create_ref_name(
+                                           const.LOCAL_TAG_PREFIX,
+                                           context.version_tag_matcher.ref_name_infix or '')
+                                       )
         seq = None
 
-        for tag in sequential_tags:
+        for tag in tags:
             match = context.version_tag_matcher.fullmatch(tag.name)
             if match is not None:
                 version_code = int(match.group(context.version_tag_matcher.group_unique_code))
@@ -433,10 +432,9 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
             branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
 
     if branch_ref is None:
-        if not name.startswith(context.release_branch_matcher.ref_name_infixes[0]):
+        if not name.startswith(context.release_branch_matcher.ref_name_infix):
             branch_ref = repotools.get_branch_by_name(context.repo,
-                                                      context.release_branch_matcher.ref_name_infixes[
-                                                          0] + name,
+                                                      context.release_branch_matcher.ref_name_infix + name,
                                                       search_mode)
 
     return branch_ref
