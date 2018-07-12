@@ -496,7 +496,7 @@ def create_shared_clone_repository(context: Context) -> Result:
     return result
 
 
-def create_context(context, result, directory: str) -> Context:
+def create_context(context: Context, result: Result, directory: str) -> Context:
     clone_context = Context.create({
         '--root': directory,
 
