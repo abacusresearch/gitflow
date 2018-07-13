@@ -22,8 +22,8 @@ class TestFlow(TestFlowBase):
             config = {
                 const.CONFIG_VERSIONING_SCHEME: 'semver',
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
-                const.CONFIG_VERSION_PROPERTY_NAME: 'version',
-                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq',
+                const.CONFIG_VERSION_PROPERTY: 'version',
+                const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
                 const.CONFIG_VERSION_TAG_PREFIX: ''
             }
             json.dump(obj=config, fp=property_file)

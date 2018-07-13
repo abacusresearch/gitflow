@@ -19,8 +19,8 @@ class TestBuild(TestFlowBase):
             config = {
                 const.CONFIG_VERSIONING_SCHEME: 'semverWithSeq',
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
-                const.CONFIG_VERSION_PROPERTY_NAME: 'version',
-                const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME: 'seq',
+                const.CONFIG_VERSION_PROPERTY: 'version',
+                const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
                 const.CONFIG_BUILD: {
                     'stages': {
                         'assemble': [['echo', 'assemble#1']],

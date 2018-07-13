@@ -227,7 +227,7 @@ def validate_version(config: VersionConfig, version_string):
                              "Invalid version.",
                              "The pre-release type \"" + prerelease_type + "\" is invalid, must be one of: "
                              + ','.join(config.qualifiers) + ".\n"
-                             + "Configuration property: " + const.CONFIG_PRE_RELEASE_QUALIFIERS)
+                             + "Configuration property: " + const.CONFIG_VERSION_TYPES)
         result.value = version_string
     except ValueError:
         result.error(os.EX_DATAERR,

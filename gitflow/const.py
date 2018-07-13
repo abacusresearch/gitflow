@@ -25,11 +25,13 @@ VERSIONING_SCHEMES = {
 
 # config keys
 
-CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
 CONFIG_VERSIONING_SCHEME = 'versioningScheme'
-CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
-CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
-CONFIG_OPAQUE_VERSION_PROPERTY_NAME = 'opaqueVersionPropertyName'
+CONFIG_VERSION_TYPES = 'releaseTypes'
+
+CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
+CONFIG_VERSION_PROPERTY = 'versionProperty'
+CONFIG_SEQUENCE_NUMBER_PROPERTY = 'sequenceNumberProperty'
+
 CONFIG_BUILD = 'build'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
@@ -45,7 +47,6 @@ CONFIG_VERSION_TAG_PATTERN = 'versionTagPattern'
 CONFIG_DISCONTINUATION_TAG_PREFIX = 'discontinuationTagPrefix'
 CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 
-CONFIG_PRE_RELEASE_QUALIFIERS = 'versionTypes'
 CONFIG_INITIAL_VERSION = 'initialVersion'
 
 # config defaults

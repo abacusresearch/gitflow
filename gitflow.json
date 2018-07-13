@@ -3,7 +3,7 @@
   "versionTypes": ["alpha", "beta"],
 
   "propertyFile": "gitflow/config.ini",
-  "versionPropertyName": "version",
+  "versionProperty": "version",
 
   "build": {
     "stages": {

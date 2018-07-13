@@ -325,11 +325,11 @@ class Context(AbstractContext):
         if context.config.property_file is not None:
             context.config.property_file = os.path.join(context.root, context.config.property_file)
 
-        context.config.version_property_name = config.get(const.CONFIG_VERSION_PROPERTY_NAME)
+        context.config.version_property_name = config.get(const.CONFIG_VERSION_PROPERTY)
         context.config.sequential_version_property_name = config.get(
-            const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
+            const.CONFIG_SEQUENCE_NUMBER_PROPERTY)
         context.config.opaque_version_property_name = config.get(
-            const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
+            const.CONFIG_VERSION_PROPERTY)
 
         # version config
 
@@ -345,7 +345,7 @@ class Context(AbstractContext):
         context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
 
         if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
-            qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
+            qualifiers = config.get(const.CONFIG_VERSION_TYPES)
             if qualifiers is None:
                 qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
             if isinstance(qualifiers, str):

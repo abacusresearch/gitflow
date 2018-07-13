@@ -207,7 +207,7 @@ def create_version_tag(command_context: CommandContext,
                         _("The selected commit does not contain a configuration file.")
                         )
 
-        opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
+        opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_VERSION_PROPERTY)
         if opaque_version_property_name is not None \
                 and properties_in_selected_commit.get(opaque_version_property_name) is None:
             result.warn(_("Missing version info."),

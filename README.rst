@@ -159,24 +159,10 @@ Maven Project
     {
 
       "versioningScheme": "semver",
-      "versionTypes": ["alpha", "beta", "rc"],
+      "releaseTypes": ["alpha", "beta", "rc"],
 
       "propertyFile": "project.properties",
-      "versionPropertyName": "mavenVersion",
-
-      "build": {
-        "stages": {
-          "assemble": [
-            ["mvn", "-DskipTests=true", "package"]
-          ],
-          "test": [
-            ["mvn", "test"]
-          ],
-          "integration-test": [
-            ["mvn", "verify"]
-          ]
-        }
-      }
+      "versionProperty": "mavenVersion"
 
     }
 
@@ -190,22 +176,8 @@ Android App Project
       "versioningScheme": "semverWithSeq",
 
       "propertyFile": "project.properties",
-      "versionPropertyName": "version",
-      "sequentialVersionPropertyName": "androidVersionCode",
-
-      "build": {
-        "stages": {
-          "assemble": [
-            ["./gradlew", "assembleDebug"]
-          ],
-          "test": [
-            ["./gradlew", "test"]
-          ],
-          "integration-test": [
-            ["./gradlew", "connectedDebugAndroidTest"]
-          ]
-        }
-      }
+      "versionProperty": "version",
+      "sequenceNumberProperty": "androidVersionCode"
 
     }
 
@@ -217,24 +189,10 @@ Android Library Project
     {
 
       "versioningScheme": "semver",
-      "versionTypes": ["alpha", "beta", "rc"],
+      "releaseTypes": ["alpha", "beta", "rc"],
 
       "propertyFile": "project.properties",
-      "versionPropertyName": "mavenVersion",
-
-      "build": {
-        "stages": {
-          "assemble": [
-            ["./gradlew", "assembleDebug"]
-          ],
-          "test": [
-            ["./gradlew", "test"]
-          ],
-          "integration-test": [
-            ["./gradlew", "connectedDebugAndroidTest"]
-          ]
-        }
-      }
+      "versionProperty": "mavenVersion"
 
     }
 
@@ -246,22 +204,10 @@ Python Project
     {
 
       "versioningScheme": "semver",
-      "versionTypes": ["alpha", "beta", "rc"],
+      "releaseTypes": ["alpha", "beta", "rc"],
 
       "propertyFile": "rootmodule/config.ini",
-      "versionPropertyName": "version",
-
-      "build": {
-        "stages": {
-          "assemble": [
-            ["python3", "setup.py", "sdist", "--formats=gztar"],
-            ["python3", "setup.py", "bdist"]
-          ],
-          "test": [
-            ["py.test", "--verbose", "test"]
-          ]
-        }
-      }
+      "versionProperty": "version"
 
     }
 
