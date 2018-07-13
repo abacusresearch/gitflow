@@ -34,7 +34,7 @@ For bash, extend ~/.bash_profile with::
 
 Configuration
 =============
-The configuration file is located at the workspace (branch) root and is named `gitflow.json` unless overridden
+The configuration file is located at the workspace (branch) root and is named `.gitflow.json` unless overridden
 with `--config=<relative-path>`.
 
 

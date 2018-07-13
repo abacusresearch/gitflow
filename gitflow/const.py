@@ -51,7 +51,7 @@ CONFIG_INITIAL_VERSION = 'initialVersion'
 
 # config defaults
 
-DEFAULT_CONFIG_FILE = 'gitflow.json'
+DEFAULT_CONFIG_FILE = '.gitflow.json'
 
 DEFAULT_RELEASE_BRANCH_BASE = "master"
 

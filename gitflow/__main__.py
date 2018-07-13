@@ -37,7 +37,7 @@ Workspace Options:
  --root=DIR             The working copy root.
  [default: .]
  --config=FILE          The configuration file relative to the working copy root.
- [default: gitflow.json]
+ [default: .gitflow.json]
 
 Execution Mode Options:
  -B --batch             Disables interaction and output coloring.
