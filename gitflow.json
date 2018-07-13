@@ -1,10 +1,9 @@
 {
   "versioningScheme": "semver",
-  "versionTypes": ["alpha", "beta", "rc"],
+  "versionTypes": ["alpha", "beta"],
 
-  "propertyFile": "rootmodule/config.ini",
+  "propertyFile": "gitflow/config.ini",
   "versionPropertyName": "version",
-  "versionTagPrefix": "version/",
 
   "build": {
     "stages": {
