@@ -1,7 +1,7 @@
+import os
 import sys
 
 import colors
-import os
 import semver
 
 from gitflow import repotools, const, cli, _, utils, version

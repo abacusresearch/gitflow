@@ -92,7 +92,6 @@ def create_version_tag(command_context: CommandContext,
                                     .format(version=repr(version.format_version_info(version_info)))
                                     )
                     else:
-                        print(" xx " + repr(tag_ref))
                         # when no merge base is used, abort at the first mismatching tag
                         abort_version_scan = True
                         abort_sequential_version_scan = True

@@ -23,10 +23,10 @@ def call(context: Context) -> Result:
                                                                    BranchSelection.BRANCH_PREFER_LOCAL)
         if selected_branch is None:
             command_context.fail(os.EX_USAGE,
-                        _("Log failed."),
-                        _("Failed to resolve an object for token {object}.")
-                        .format(object=repr(object_arg))
-                        )
+                                 _("Log failed."),
+                                 _("Failed to resolve an object for token {object}.")
+                                 .format(object=repr(object_arg))
+                                 )
     else:
         selected_branch = None
 

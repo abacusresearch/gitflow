@@ -67,10 +67,8 @@ import gitflow.procedures.log
 import gitflow.procedures.status
 from gitflow import cli, repotools, _, hooks, filesystem
 from gitflow import const
-from gitflow import version
 from gitflow.common import GitFlowException, Result
 from gitflow.context import Context
-
 # project_env = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 # print('project_env: ' + project_env)
 # sys.path.insert(0, project_env)
