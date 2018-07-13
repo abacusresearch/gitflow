@@ -591,8 +591,8 @@ def create_version_branch(command_context: CommandContext,
             context=context,
             fail_title=_("Failed to create release branch based on {branch}.")
                 .format(branch=repr(command_context.selected_ref.name)),
-            message=_("This operation disables version increments except for pre-release increments "
-                      "on all existing branches.\n"
+            message=_("This operation disables version increments "
+                      "on all existing release branches.\n"
                       "Affected branches are:\n"
                       "{listing}")
                 .format(listing=os.linesep.join(repr(branch.name) for branch in existing_release_branches))
