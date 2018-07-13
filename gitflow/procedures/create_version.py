@@ -207,12 +207,12 @@ def create_version_tag(command_context: CommandContext,
                         _("The selected commit does not contain a configuration file.")
                         )
 
-        opaque_version_property_name = config_in_selected_commit.get(const.CONFIG_VERSION_PROPERTY)
-        if opaque_version_property_name is not None \
-                and properties_in_selected_commit.get(opaque_version_property_name) is None:
+        version_property_name = config_in_selected_commit.get(const.CONFIG_VERSION_PROPERTY)
+        if version_property_name is not None \
+                and properties_in_selected_commit.get(version_property_name) is None:
             result.warn(_("Missing version info."),
-                        _("The selected commit does not contain an opaque version in property '{property_name}'.")
-                        .format(property_name=opaque_version_property_name)
+                        _("The selected commit does not contain a version in property '{property_name}'.")
+                        .format(property_name=version_property_name)
                         )
 
     if len(version_tags_on_same_commit):

@@ -1,4 +1,5 @@
 import atexit
+import collections
 import json
 import os
 import re
@@ -48,9 +49,8 @@ class BuildStage(object):
 class Config(object):
     # project properties
     property_file: str = None
-    version_property_name: str = None
-    sequential_version_property_name: str = None
-    opaque_version_property_name: str = None
+    sequence_number_property: str = None
+    version_property: str = None
 
     # validation mode
     strict_mode = True
@@ -94,23 +94,17 @@ class Config(object):
 
     @property
     def commit_version_property(self) -> bool:
-        return self.version_property_name is not None
+        return self.version_property is not None
 
     @property
     def commit_sequential_version_property(self) -> bool:
-        return self.sequential_version_property_name is not None \
-               and self.sequential_versioning
-
-    @property
-    def commit_opaque_version_property(self) -> bool:
-        return self.opaque_version_property_name is not None \
+        return self.sequence_number_property is not None \
                and self.sequential_versioning
 
     @property
     def requires_property_commits(self) -> bool:
         return self.commit_version_property \
-               or self.commit_sequential_version_property \
-               or self.commit_opaque_version_property
+               or self.commit_sequential_version_property
 
 
 class AbstractContext(object):
@@ -325,11 +319,20 @@ class Context(AbstractContext):
         if context.config.property_file is not None:
             context.config.property_file = os.path.join(context.root, context.config.property_file)
 
-        context.config.version_property_name = config.get(const.CONFIG_VERSION_PROPERTY)
-        context.config.sequential_version_property_name = config.get(
+        context.config.version_property = config.get(const.CONFIG_VERSION_PROPERTY)
+        context.config.sequence_number_property = config.get(
             const.CONFIG_SEQUENCE_NUMBER_PROPERTY)
-        context.config.opaque_version_property_name = config.get(
+        context.config.version_property = config.get(
             const.CONFIG_VERSION_PROPERTY)
+
+        property_names = [context.config.sequence_number_property, context.config.version_property]
+        duplicate_property_names = [item for item, count in collections.Counter(property_names).items() if count > 1]
+
+        if len(duplicate_property_names):
+            result_out.fail(os.EX_DATAERR, _("Configuration failed."),
+                            _("Duplicate property names: {duplicate_property_names}").format(
+                                duplicate_property_names=', '.join(duplicate_property_names))
+                            )
 
         # version config
 
@@ -345,9 +348,7 @@ class Context(AbstractContext):
         context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
 
         if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
-            qualifiers = config.get(const.CONFIG_VERSION_TYPES)
-            if qualifiers is None:
-                qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
+            qualifiers = config.get(const.CONFIG_VERSION_TYPES, const.DEFAULT_PRE_RELEASE_QUALIFIERS)
             if isinstance(qualifiers, str):
                 qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
             if qualifiers != sorted(qualifiers):

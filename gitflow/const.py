@@ -86,12 +86,10 @@ TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
                              "[-<prerelease_type:(a-zA-Z)(a-zA-Z0-9)*>.<prerelease_version:uint>]" \
                              "[+<build_info:(a-zA-Z0-9)+>]"
 
-DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
+DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
 DEFAULT_INITIAL_SEQ_VERSION = '1.0.0-1'
-
-DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}-{version_code}"
 
 DEFAULT_CONFIG = {
     CONFIG_PROJECT_PROPERTY_FILE: 'project.properties',

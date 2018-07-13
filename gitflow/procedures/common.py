@@ -277,22 +277,12 @@ def update_project_properties(context: Context,
     if new_version_info.build is not None:
         raise ValueError("build info must not be set in version tag")
 
-    new_opaque_version = const.DEFAULT_OPAQUE_VERSION_FORMAT.format(
-        major=new_version_info.major,
-        minor=new_version_info.minor,
-        patch=new_version_info.patch,
-        prerelease=new_version_info.prerelease,
-        version_code=str(new_sequential_version)
-    )
-
     properties = prev_properties.copy()
 
     if context.config.commit_version_property:
-        properties[context.config.version_property_name] = new_version
+        properties[context.config.version_property] = new_version
     if context.config.commit_sequential_version_property:
-        properties[context.config.sequential_version_property_name] = str(new_sequential_version)
-    if context.config.commit_opaque_version_property:
-        properties[context.config.opaque_version_property_name] = new_opaque_version
+        properties[context.config.sequence_number_property] = str(new_sequential_version)
 
     return properties
 
@@ -335,9 +325,8 @@ def update_project_property_file(context: Context,
                 commit_out.add_message('#properties[' + utils.quote(key, '"') + ']'
                                        + var_separator + cli.if_none(properties.get(key), "null"))
 
-        for property_key in [context.config.version_property_name,
-                             context.config.sequential_version_property_name,
-                             context.config.opaque_version_property_name]:
+        for property_key in [context.config.version_property,
+                             context.config.sequence_number_property]:
             log_property(properties, property_key)
 
     if context.verbose and result.value != 0:
