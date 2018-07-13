@@ -3,7 +3,7 @@ import subprocess
 import sys
 from io import StringIO
 from tempfile import TemporaryDirectory
-from typing import Tuple
+from typing import Tuple, Optional, Union, List
 
 import pytest
 
@@ -187,25 +187,44 @@ class TestFlowBase(TestInTempDir):
         proc.wait()
         return proc.returncode
 
+    def git_for_lines(self, *args) -> List[str]:
+        proc = subprocess.Popen(args=args,
+                                stdout=subprocess.PIPE)
+        out, err = proc.communicate()
+        assert proc.returncode == os.EX_OK
+        return out.decode('utf-8').splitlines()
+
+    def git_for_line(self, *args) -> str:
+        lines = self.git_for_lines(*args)
+        assert len(lines) == 1
+        return lines[0]
+
     def git_get_commit_count(self) -> int:
-        proc = subprocess.Popen(args=['git', 'rev-list', '--all', '--count'],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        return int(out.decode('utf-8').splitlines()[0])
+        return int(self.git_for_line('git', 'rev-list', '--all', '--count'))
 
-    def list_refs(self, *args) -> set:
-        proc = subprocess.Popen(args=['git', 'for-each-ref', '--format', '%(refname)'] + [*args],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        return set(out.decode('utf-8').splitlines())
+    def git_get_hash(self, object: str) -> str:
+        return self.git_for_line('git', 'rev-parse', object)
 
-    def commit(self, message: str = None):
+    def get_ref_map(self, *args) -> dict:
+        lines = self.git_for_lines('git', 'for-each-ref', '--format', '%(refname);%(objectname)', *args)
+
+        result = dict()
+        for line in lines:
+            entry = line.split(';')
+            result[entry[0]] = entry[1]
+        return result
+
+    def get_ref_set(self, *args) -> set:
+        lines = self.git_for_lines('git', 'for-each-ref', '--format', '%(refname)', *args)
+        return set(lines)
+
+    def commit(self, message: str = None) -> str:
+        # TODO atomic operation
         if message is None:
             message = "Test Commit #" + str(self.git_get_commit_count())
         exit_code = self.git('commit', '--allow-empty', '-m', message)
         assert exit_code == os.EX_OK
+        return self.git_get_hash('HEAD')
 
     def add(self, *files: str):
         exit_code = self.git('add', *files)
@@ -220,35 +239,75 @@ class TestFlowBase(TestInTempDir):
         assert exit_code == os.EX_OK
 
     def current_head(self):
-        proc = subprocess.Popen(args=['git', 'rev-parse', '--revs-only', '--symbolic-full-name', 'HEAD'],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        current_head = out.decode('utf-8').splitlines()[0]
-        return current_head
+        lines = self.git_for_lines('git', 'rev-parse', '--revs-only', '--symbolic-full-name', 'HEAD')
+        return lines[0]
 
     def current_head_commit(self):
-        proc = subprocess.Popen(args=['git', 'rev-parse', '--revs-only', 'HEAD'],
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        current_head = out.decode('utf-8').splitlines()[0]
-        return current_head
+        lines = self.git_for_lines('git', 'rev-parse', '--revs-only', 'HEAD')
+        return lines[0]
 
-    def assert_refs(self, refs: set, added: set = None, removed: set = None):
-        if added is not None and removed is not None:
-            if added.intersection(removed):
-                raise ValueError('added and removed elements intersect')
+    def assert_refs(self,
+                    refs: Optional[Union[set, dict]],
+                    added: Optional[Union[set, dict]] = None,
+                    removed: Optional[Union[set, dict]] = None):
 
-        if added is not None:
-            if added.intersection(refs):
-                raise ValueError('added and refs intersect')
-            refs.update(added)
-        if removed is not None:
-            if refs.issuperset(removed):
-                raise ValueError('refs is not a superset of removed')
-            refs.difference_update(removed)
-        self.assert_same_elements(refs, self.list_refs())
+        if isinstance(refs, dict):
+            if isinstance(added, set):
+                added = dict.fromkeys(added, None)
+            if isinstance(removed, set):
+                removed = dict.fromkeys(removed, None)
+
+            actual_refs = self.get_ref_map()
+
+            if added is not None and removed is not None:
+                if not added.keys().isdisjoint(removed.keys()):
+                    raise ValueError('added and removed elements are not disjoint')
+
+            if added is not None:
+                if not added.keys().isdisjoint(refs.keys()):
+                    raise ValueError('added and refs are not disjoint')
+                for refname, objectname in added.items():
+                    if objectname is None:
+                        objectname = actual_refs.get(refname)
+                    else:
+                        objectname = actual_refs.get(objectname) or objectname
+                    refs[refname] = objectname
+            if removed is not None:
+                if not removed.keys() <= refs.keys():
+                    raise ValueError('refs is not a superset of removed')
+                for refname, objectname in removed.items():
+                    if objectname is None:
+                        objectname = actual_refs.get(refname)
+                    else:
+                        objectname = actual_refs.get(refname) or objectname
+                    old_objectname = refs.pop(refname)
+
+            self.assert_same_pairs(refs, actual_refs)
+        else:
+            if isinstance(added, dict) or isinstance(removed, dict):
+                raise ValueError('cannot operate on a set using dict operands')
+
+            if added is not None and removed is not None:
+                if added.intersection(removed):
+                    raise ValueError('added and removed elements intersect')
+
+            if added is not None:
+                if added.intersection(refs):
+                    raise ValueError('added and refs intersect')
+                refs.update(added)
+            if removed is not None:
+                if refs.issuperset(removed):
+                    raise ValueError('refs is not a superset of removed')
+                refs.difference_update(removed)
+            self.assert_same_elements(refs, self.get_ref_set())
+
+    def assert_first_parent(self, object: str, expected_parent: str):
+        rev_entry = self.git_for_line('git', 'rev-list', '--parents', '--first-parent', '--max-count=1', object).split(
+            ' ')
+
+        expected_parent = self.git_for_line('git', 'rev-parse', expected_parent)
+        actual_parent = rev_entry[1] if len(rev_entry) == 2 else None
+        assert actual_parent == expected_parent
 
     def assert_head(self, expected: str):
         current_head = self.current_head()
