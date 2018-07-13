@@ -1,3 +1,5 @@
+import os
+
 from setuptools import setup
 
 from gitflow import const
@@ -10,6 +12,11 @@ def load_requirements(file):
                            ))
 
 
+def determine_module_names(base_dir):
+    return [dirpath.replace(os.sep, '.') for dirpath, dirnames, filenames in os.walk(base_dir)
+            if '__init__.py' in filenames]
+
+
 setup(name='gitflow',
       version=const.VERSION,
       description='Git Flow',
@@ -18,7 +25,7 @@ setup(name='gitflow',
       author_email='samuel.oggier@gmail.com',
       license='MIT',
       python_requires=">=3.0",
-      packages=['gitflow', 'gitflow.procedures'],
+      packages=determine_module_names('gitflow'),
       package_data={'gitflow': ['config.ini']},
       install_requires=load_requirements('requirements.txt'),
       tests_require=load_requirements('test_requirements.txt'),

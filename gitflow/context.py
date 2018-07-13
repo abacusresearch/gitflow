@@ -1,4 +1,5 @@
 import atexit
+import collections
 import json
 import os
 import re
@@ -7,17 +8,9 @@ from enum import Enum
 
 from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
+from gitflow.const import VersioningScheme
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
-
-
-class VersioningScheme(Enum):
-    # SemVer tags
-    SEMVER = 1,
-    # SemVer tags, sequence number tags
-    SEMVER_WITH_SEQ = 2,
-    # SemVer tags tied to sequence number tags in strictly ascending order
-    SEMVER_WITH_TIED_SEQ = 3,
 
 
 class BuildStepType(Enum):
@@ -54,14 +47,10 @@ class BuildStage(object):
 
 
 class Config(object):
-    # versioning scheme
-    versioning_scheme: VersioningScheme = None
-
     # project properties
     property_file: str = None
-    version_property_name: str = None
-    sequential_version_property_name: str = None
-    opaque_version_property_name: str = None
+    sequence_number_property: str = None
+    version_property: str = None
 
     # validation mode
     strict_mode = True
@@ -70,9 +59,10 @@ class Config(object):
     version_config: VersionConfig = None
 
     # repo
-    remote_name = "origin"
+    remote_name = None
 
     release_branch_base = None
+
     dev_branch_types = ['feature', 'integration',
                         'fix', 'chore', 'doc', 'issue']
 
@@ -96,32 +86,25 @@ class Config(object):
     # properties
     @property
     def sequential_versioning(self) -> bool:
-        return self.versioning_scheme in (VersioningScheme.SEMVER_WITH_SEQ,
-                                          VersioningScheme.SEMVER_WITH_TIED_SEQ)
+        return self.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
 
     @property
     def tie_sequential_version_to_semantic_version(self) -> bool:
-        return self.versioning_scheme == VersioningScheme.SEMVER_WITH_TIED_SEQ
+        return self.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
 
     @property
     def commit_version_property(self) -> bool:
-        return self.version_property_name is not None
+        return self.version_property is not None
 
     @property
     def commit_sequential_version_property(self) -> bool:
-        return self.sequential_version_property_name is not None \
-               and self.sequential_versioning
-
-    @property
-    def commit_opaque_version_property(self) -> bool:
-        return self.opaque_version_property_name is not None \
+        return self.sequence_number_property is not None \
                and self.sequential_versioning
 
     @property
     def requires_property_commits(self) -> bool:
         return self.commit_version_property \
-               or self.commit_sequential_version_property \
-               or self.commit_opaque_version_property
+               or self.commit_sequential_version_property
 
 
 class AbstractContext(object):
@@ -173,7 +156,6 @@ class Context(AbstractContext):
 
     version_tag_matcher: VersionMatcher = None
     discontinuation_tag_matcher: VersionMatcher = None
-    sequential_version_tag_matcher: VersionMatcher = None
 
     # resources
     temp_dirs: list = None
@@ -197,7 +179,8 @@ class Context(AbstractContext):
             context.batch = context.args['--batch']
             context.assume_yes = context.args.get('--assume-yes')
             context.dry_run = context.args.get('--dry-run')
-            context.verbose = context.args['--verbose']
+            # TODO remove this workaround
+            context.verbose = (context.args['--verbose'] + 1) // 2
             context.pretty = context.args['--pretty']
         else:
             context.args = dict()
@@ -217,10 +200,10 @@ class Context(AbstractContext):
             # context.repo.use_root_dir_arg = semver.compare(context.git_version, "2.9.0") >= 0
             context.repo.use_root_dir_arg = False
 
-            root = repotools.git_rev_parse(context.repo, '--show-toplevel')
+            repo_root = repotools.git_rev_parse(context.repo, '--show-toplevel')
             # None when invalid or bare
-            if root is not None:
-                context.repo.dir = root
+            if repo_root is not None:
+                context.repo.dir = repo_root
 
                 if context.verbose >= const.TRACE_VERBOSITY:
                     cli.print("--------------------------------------------------------------------------------")
@@ -336,39 +319,55 @@ class Context(AbstractContext):
         if context.config.property_file is not None:
             context.config.property_file = os.path.join(context.root, context.config.property_file)
 
-        context.config.version_property_name = config.get(const.CONFIG_VERSION_PROPERTY_NAME)
-        context.config.sequential_version_property_name = config.get(
-            const.CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME)
-        context.config.opaque_version_property_name = config.get(
-            const.CONFIG_OPAQUE_VERSION_PROPERTY_NAME)
+        context.config.version_property = config.get(const.CONFIG_VERSION_PROPERTY)
+        context.config.sequence_number_property = config.get(
+            const.CONFIG_SEQUENCE_NUMBER_PROPERTY)
+        context.config.version_property = config.get(
+            const.CONFIG_VERSION_PROPERTY)
+
+        property_names = [context.config.sequence_number_property, context.config.version_property]
+        duplicate_property_names = [item for item, count in collections.Counter(property_names).items() if count > 1]
+
+        if len(duplicate_property_names):
+            result_out.fail(os.EX_DATAERR, _("Configuration failed."),
+                            _("Duplicate property names: {duplicate_property_names}").format(
+                                duplicate_property_names=', '.join(duplicate_property_names))
+                            )
 
         # version config
 
-        versioning_schemes = {
-            'semver': VersioningScheme.SEMVER,
-            'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
-            'semverWithTiedSeq': VersioningScheme.SEMVER_WITH_TIED_SEQ
-        }
-
-        context.config.versioning_scheme = versioning_schemes[
-            config.get(const.CONFIG_VERSIONING_SCHEME) or 'semverWithTiedSeq']
-
-        qualifiers = config.get(const.CONFIG_PRE_RELEASE_QUALIFIERS)
-        if qualifiers is None:
-            qualifiers = const.DEFAULT_PRE_RELEASE_QUALIFIERS
-        if isinstance(qualifiers, str):
-            qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
-        if qualifiers != sorted(qualifiers):
-            result_out.fail(
-                os.EX_DATAERR,
-                _("Configuration failed."),
-                _("Pre-release qualifiers are not specified in ascending order.")
-            )
         context.config.version_config = VersionConfig()
-        context.config.version_config.qualifiers = qualifiers
+
+        versioning_scheme = config.get(const.CONFIG_VERSIONING_SCHEME, const.DEFAULT_VERSIONING_SCHEME)
+
+        if versioning_scheme not in const.VERSIONING_SCHEMES:
+            result_out.fail(os.EX_DATAERR, _("Configuration failed."),
+                            _("The versioning scheme {versioning_scheme} is invalid.").format(
+                                versioning_scheme=utils.quote(versioning_scheme, '\'')))
+
+        context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
+
+        if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
+            qualifiers = config.get(const.CONFIG_VERSION_TYPES, const.DEFAULT_PRE_RELEASE_QUALIFIERS)
+            if isinstance(qualifiers, str):
+                qualifiers = [qualifier.strip() for qualifier in qualifiers.split(",")]
+            if qualifiers != sorted(qualifiers):
+                result_out.fail(
+                    os.EX_DATAERR,
+                    _("Configuration failed."),
+                    _("Pre-release qualifiers are not specified in ascending order.")
+                )
+            context.config.version_config.qualifiers = qualifiers
+            context.config.version_config.initial_version = const.DEFAULT_INITIAL_VERSION
+        elif context.config.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
+            context.config.version_config.qualifiers = None
+            context.config.version_config.initial_version = const.DEFAULT_INITIAL_SEQ_VERSION
+        else:
+            context.fail(os.EX_CONFIG, "configuration error", "invalid versioning scheme")
 
         # branch config
 
+        context.config.remote_name = "origin"
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)
 
@@ -405,8 +404,13 @@ class Context(AbstractContext):
                 const.DEFAULT_VERSION_TAG_PREFIX),
             config.get(
                 const.CONFIG_VERSION_TAG_PATTERN,
-                const.DEFAULT_VERSION_TAG_PATTERN),
+                const.DEFAULT_SEMVER_VERSION_TAG_PATTERN
+                if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER
+                else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN)
         )
+        context.version_tag_matcher.group_unique_code = None \
+            if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER \
+            else 'prerelease_type'
 
         context.discontinuation_tag_matcher = VersionMatcher(
             [const.LOCAL_TAG_PREFIX],
@@ -416,17 +420,8 @@ class Context(AbstractContext):
             config.get(
                 const.CONFIG_DISCONTINUATION_TAG_PATTERN,
                 const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
+            None
         )
-
-        context.sequential_version_tag_matcher = VersionMatcher(
-            [const.LOCAL_TAG_PREFIX],
-            config.get(
-                const.CONFIG_SEQUENTIAL_VERSION_TAG_PREFIX,
-                const.DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX),
-            config.get(
-                const.CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN,
-                const.DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN),
-            '{unique_code}')
 
         return context
 
@@ -454,6 +449,8 @@ class Context(AbstractContext):
         atexit.unregister(self.cleanup)
         if self.temp_dirs is not None:
             for temp_dir in self.temp_dirs:
+                if self.verbose >= const.DEBUG_VERBOSITY:
+                    cli.print("deleting temp dir: " + temp_dir)
                 shutil.rmtree(temp_dir)
             self.temp_dirs = None
         if self.clones is not None:

@@ -1,7 +1,7 @@
+import os
 import sys
 
 import colors
-import os
 import semver
 
 from gitflow import repotools, const, cli, _, utils, version
@@ -88,7 +88,7 @@ def call(context) -> Result:
             cli.fcwriteln(sys.stdout, status_color)
 
             commit_tags = repotools.git_get_branch_tags(context=context.repo,
-                                                        base_branch='master',
+                                                        base_branch=context.config.release_branch_base,
                                                         branch=branch_ref.name,
                                                         tag_filter=None,
                                                         commit_tag_comparator=None
@@ -96,28 +96,27 @@ def call(context) -> Result:
 
             for commit, tags in commit_tags:
                 for tag in tags:
-                    # print the sequential version tag
-                    tag_match = context.sequential_version_tag_matcher.fullmatch(tag.name)
-                    if tag_match:
-                        unique_code = tag_match.group(
-                            context.sequential_version_tag_matcher.group_unique_code)
-                        version_string = unique_code
+                    if context.version_tag_matcher.group_unique_code is not None:
+                        tag_match = context.version_tag_matcher.fullmatch(tag.name)
+                        if tag_match is not None:
+                            unique_code = tag_match.group(
+                                context.version_tag_matcher.group_unique_code)
+                            version_string = unique_code
 
-                        unique_version_codes.append(int(unique_code))
+                            unique_version_codes.append(int(unique_code))
 
-                        if unique_code in unique_codes:
-                            command_context.error(os.EX_DATAERR,
-                                                  _("Invalid sequential version tag {tag}.")
-                                                  .format(tag=tag.name),
-                                                  _("The code element of version {version_string} is not unique.")
-                                                  .format(version_string=version_string)
-                                                  )
-                        else:
-                            unique_codes.add(unique_code)
+                            if unique_code in unique_codes:
+                                command_context.error(os.EX_DATAERR,
+                                                      _("Invalid sequential version tag {tag}.")
+                                                      .format(tag=tag.name),
+                                                      _("The code element of version {version_string} is not unique.")
+                                                      .format(version_string=version_string)
+                                                      )
+                            else:
+                                unique_codes.add(unique_code)
 
-                        cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
+                            cli.fcwriteln(sys.stdout, status_color, "  code: " + version_string)
 
-                for tag in tags:
                     # print the version tag
                     version_string = context.version_tag_matcher.format(tag.name)
                     if version_string:

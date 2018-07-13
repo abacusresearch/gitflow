@@ -1,0 +1,19 @@
+{
+  "versioningScheme": "semver",
+  "versionTypes": ["alpha", "beta"],
+
+  "propertyFile": "gitflow/config.ini",
+  "versionProperty": "version",
+
+  "build": {
+    "stages": {
+      "assemble": [
+        ["python3", "setup.py", "sdist", "--formats=gztar"],
+        ["python3", "setup.py", "bdist"]
+      ],
+      "test": [
+        ["py.test", "--verbose", "test"]
+      ]
+    }
+  }
+}

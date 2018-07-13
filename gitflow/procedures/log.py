@@ -1,6 +1,6 @@
 import os
 
-from gitflow import _, repotools, utils
+from gitflow import _, repotools
 from gitflow.common import Result
 from gitflow.context import Context
 from gitflow.procedures.common import get_branch_by_branch_name_or_version_tag, get_command_context, check_in_repo
@@ -23,10 +23,10 @@ def call(context: Context) -> Result:
                                                                    BranchSelection.BRANCH_PREFER_LOCAL)
         if selected_branch is None:
             command_context.fail(os.EX_USAGE,
-                        _("Log failed."),
-                        _("Failed to resolve an object for token {object}.")
-                        .format(object=repr(object_arg))
-                        )
+                                 _("Log failed."),
+                                 _("Failed to resolve an object for token {object}.")
+                                 .format(object=repr(object_arg))
+                                 )
     else:
         selected_branch = None
 

@@ -3,25 +3,25 @@ Git Flow CLI
 
 Usage:
  flow status [(-a|--all) | <object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow log [<object>] [-- <git-arg>...]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (assemble|test|integration-test) [-d|--dry-run] [--inplace| [<object>]]
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow drop-cache [-d|--dry-run]
-        [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [-B|--batch] [-v|--verbose]... [-p|--pretty]
  flow (-h|--help)
  flow --version
  flow --hook=<hook-name> [<hook-args>...]
@@ -37,7 +37,7 @@ Workspace Options:
  --root=DIR             The working copy root.
  [default: .]
  --config=FILE          The configuration file relative to the working copy root.
- [default: gitflow.json]
+ [default: .gitflow.json]
 
 Execution Mode Options:
  -B --batch             Disables interaction and output coloring.
@@ -67,13 +67,12 @@ import gitflow.procedures.log
 import gitflow.procedures.status
 from gitflow import cli, repotools, _, hooks, filesystem
 from gitflow import const
-from gitflow import version
 from gitflow.common import GitFlowException, Result
 from gitflow.context import Context
-
 # project_env = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 # print('project_env: ' + project_env)
 # sys.path.insert(0, project_env)
+from gitflow.procedures.scheme import scheme_procedures
 
 ENABLE_PROFILER = False
 
@@ -82,33 +81,31 @@ ENABLE_PROFILER = False
 # mapped by cmd_<name>
 
 def cmd_bump_major(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_major)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_major)
 
 
 def cmd_bump_minor(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_minor)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_minor)
 
 
 def cmd_bump_patch(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_patch)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_patch)
 
 
 def cmd_bump_prerelease_type(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_qualifier)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_qualifier)
 
 
 def cmd_bump_prerelease(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_prerelease)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_prerelease)
 
 
 def cmd_bump_to_release(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_to_release)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_to_release)
 
 
 def cmd_bump_to(context):
-    return gitflow.procedures.create_version.call(context,
-                                                  version.version_set(context.config.version,
-                                                                      context.args['<version>']))
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_set(context.args['<version>']))
 
 
 def cmd_discontinue(context):
@@ -175,11 +172,10 @@ def main(argv: list = sys.argv) -> int:
         pass  # errors are in result
     if context is not None:
         try:
-            if context.verbose >= const.TRACE_VERBOSITY:
+            if context.verbose >= const.DEBUG_VERBOSITY:
+                cli.print("GitFlow version: " + const.VERSION)
+                cli.print("Python version:" + sys.version.replace('\n', ' '))
                 cli.print("cwd: " + os.getcwd())
-
-            if context.verbose >= const.TRACE_VERBOSITY:
-                cli.print("Python version:\n" + sys.version + "\n")
 
             if args['--hook'] is not None:
                 if context.verbose >= const.TRACE_VERBOSITY:

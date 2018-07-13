@@ -10,11 +10,28 @@ with open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'config.ini'))
     __config.read_file(f=__config_file)
     VERSION = __config.get(section=__config.default_section, option='version', fallback='0.0.0-dev')
 
-CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
+
+class VersioningScheme(Enum):
+    # SemVer tags
+    SEMVER = 1,
+    # SemVer tags, sequence number tags
+    SEMVER_WITH_SEQ = 2,
+
+
+VERSIONING_SCHEMES = {
+    'semver': VersioningScheme.SEMVER,
+    'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
+}
+
+# config keys
+
 CONFIG_VERSIONING_SCHEME = 'versioningScheme'
-CONFIG_VERSION_PROPERTY_NAME = 'versionPropertyName'
-CONFIG_SEQUENTIAL_VERSION_PROPERTY_NAME = 'sequentialVersionPropertyName'
-CONFIG_OPAQUE_VERSION_PROPERTY_NAME = 'opaqueVersionPropertyName'
+CONFIG_VERSION_TYPES = 'releaseTypes'
+
+CONFIG_PROJECT_PROPERTY_FILE = 'propertyFile'
+CONFIG_VERSION_PROPERTY = 'versionProperty'
+CONFIG_SEQUENCE_NUMBER_PROPERTY = 'sequenceNumberProperty'
+
 CONFIG_BUILD = 'build'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
@@ -27,36 +44,38 @@ CONFIG_WORK_BRANCH_PATTERN = 'workBranchPattern'
 CONFIG_VERSION_TAG_PREFIX = 'versionTagPrefix'
 CONFIG_VERSION_TAG_PATTERN = 'versionTagPattern'
 
-CONFIG_SEQUENTIAL_VERSION_TAG_PREFIX = 'sequentialVersionTagPrefix'
-CONFIG_SEQUENTIAL_VERSION_TAG_PATTERN = 'sequentialVersionTagPattern'
-
 CONFIG_DISCONTINUATION_TAG_PREFIX = 'discontinuationTagPrefix'
 CONFIG_DISCONTINUATION_TAG_PATTERN = 'discontinuationTagPattern'
 
-CONFIG_PRE_RELEASE_QUALIFIERS = 'versionTypes'
 CONFIG_INITIAL_VERSION = 'initialVersion'
 
-DEFAULT_CONFIG_FILE = 'gitflow.json'
-DEFAULT_PROJECT_PROPERTY_FILE = 'project.properties'
+# config defaults
+
+DEFAULT_CONFIG_FILE = '.gitflow.json'
 
 DEFAULT_RELEASE_BRANCH_BASE = "master"
 
+DEFAULT_VERSIONING_SCHEME = 'semver'
+
 DEFAULT_RELEASE_BRANCH_PREFIX = 'release/'
+
 DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
 DEFAULT_VERSION_VAR_NAME = 'version'
-DEFAULT_VERSION_TAG_PREFIX = 'version/'
-DEFAULT_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
-                              r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
-                              r'(\.(?P<prerelease_version>\d+))?)?'
+DEFAULT_VERSION_TAG_PREFIX = None
 
-DEFAULT_SEQUENTIAL_VERSION_VAR_NAME = 'version_code'
-DEFAULT_SEQUENTIAL_VERSION_TAG_PREFIX = 'version_code/'
-DEFAULT_SEQUENTIAL_VERSION_TAG_PATTERN = r'(?P<unique_code>\d+)'
+DEFAULT_SEMVER_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
+                                     r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
+                                     r'(\.(?P<prerelease_version>\d+))?)?'
+
+DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
+                                              r'-((?P<prerelease_type>(0|[1-9][0-9]*))?' \
+                                              r'([.-](?P<prerelease_version>\d+))?)?'
 
 DEFAULT_DISCONTINUATION_TAG_PREFIX = 'discontinued/'
+
 DEFAULT_DISCONTINUATION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)(?:\.(?P<patch>\d+)' \
                                       r'(-(?P<prerelease_type>[a-zA-Z][a-zA-Z0-9]*)' \
                                       r'(\.(?P<prerelease_version>\d+))?)?)?'
@@ -67,11 +86,15 @@ TEXT_VERSION_STRING_FORMAT = "<major:uint>.<minor:uint>.<patch:uint>" \
                              "[-<prerelease_type:(a-zA-Z)(a-zA-Z0-9)*>.<prerelease_version:uint>]" \
                              "[+<build_info:(a-zA-Z0-9)+>]"
 
-DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta,rc"
+DEFAULT_PRE_RELEASE_QUALIFIERS = "alpha,beta"
 
 DEFAULT_INITIAL_VERSION = '1.0.0-alpha.1'
+DEFAULT_INITIAL_SEQ_VERSION = '1.0.0-1'
 
-DEFAULT_OPAQUE_VERSION_FORMAT = "{major}.{minor}.{patch}-{version_code}"
+DEFAULT_CONFIG = {
+    CONFIG_PROJECT_PROPERTY_FILE: 'project.properties',
+    CONFIG_RELEASE_BRANCH_BASE: 'master'
+}
 
 # prefixes with a trailing slash for proper prefix matching
 LOCAL_BRANCH_PREFIX = 'refs/heads/'
@@ -121,9 +144,9 @@ BRANCHING = {
 }
 
 # TODO Accounts for two actual arguments. Adjust when docopt option counting is fixed.
-NO_VERBOSITY = 0
-ERROR_VERBOSITY = 1
-INFO_VERBOSITY = 2
+ERROR_VERBOSITY = 0
+INFO_VERBOSITY = 1
+DEBUG_VERBOSITY = 2
 TRACE_VERBOSITY = 3
 
 OS_IS_POSIX = os.name == 'posix'

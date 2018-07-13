@@ -23,7 +23,7 @@ from gitflow import const
 from gitflow import repotools
 from gitflow import version
 from gitflow.common import Result
-from gitflow.context import Context, AbstractContext
+from gitflow.context import Context
 from gitflow.properties import PropertyIO
 from gitflow.repotools import BranchSelection, git_get_current_branch, RepoContext
 
@@ -81,6 +81,7 @@ class CommandContext(object):
 
     def __init__(self):
         self.branch_info_dict = dict()
+        self.result = Result()
 
     def warn(self, message, reason):
         self.context.warn(message, reason)
@@ -133,13 +134,12 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
     return candidate, candidate_class
 
 
-def git(context: Context, command: list) -> int:
-    proc = repotools.git(context.repo, *command)
-    proc.wait()
-    return proc.returncode
+def git(context: RepoContext, command: list) -> int:
+    returncode, out, err = repotools.git(context, *command)
+    return returncode
 
 
-def git_or_fail(context: Context, result: Result, command: list,
+def git_or_fail(context: RepoContext, result: Result, command: list,
                 error_message: str = None, error_reason: str = None):
     returncode = git(context, command)
     if returncode != os.EX_OK:
@@ -153,34 +153,32 @@ def git_or_fail(context: Context, result: Result, command: list,
                         )
 
 
-def git_for_line_or_fail(context: Context, result: Result, command: list,
+def git_for_line_or_fail(context: RepoContext, result: Result, command: list,
                          error_message: str = None, error_reason: str = None):
-    line = repotools.git_for_line(context.repo, *command)
+    line = repotools.git_for_line(context, *command)
     if line is None:
         if error_message is not None:
             result.fail(os.EX_DATAERR, error_message, error_reason)
         else:
-            first_command_token = next(filter(lambda token: not token.startswith('-'), command))
             result.fail(os.EX_DATAERR, _("git {sub_command} failed.")
-                        .format(sub_command=repr(first_command_token)),
+                        .format(sub_command=repr(utils.command_to_str(command))),
                         error_reason
                         )
     return line
 
 
-def fetch_all_and_ff(context: Context, result_out: Result, remote: [repotools.Remote, str]):
+def fetch_all_and_ff(context: RepoContext, result_out: Result, remote: [repotools.Remote, str]):
     # attempt a complete fetch and a fast forward on the current branch
     remote_name = remote.name if isinstance(remote, repotools.Remote) else remote
-    proc = repotools.git(context.repo, 'fetch', '--tags', remote_name)
-    proc.wait()
-    if proc.returncode != os.EX_OK:
+    returncode, out, err = repotools.git(context, 'fetch', '--tags', remote_name)
+    if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fetch from {remote}")
                 .format(repr(remote_name)),
             None)
-    proc = repotools.git(context.repo, 'merge', '--ff-only')
-    proc.wait()
-    if proc.returncode != os.EX_OK:
+
+    returncode, out, err = repotools.git(context, 'merge', '--ff-only')
+    if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fast forward"),
             None)
@@ -279,22 +277,12 @@ def update_project_properties(context: Context,
     if new_version_info.build is not None:
         raise ValueError("build info must not be set in version tag")
 
-    new_opaque_version = const.DEFAULT_OPAQUE_VERSION_FORMAT.format(
-        major=new_version_info.major,
-        minor=new_version_info.minor,
-        patch=new_version_info.patch,
-        prerelease=new_version_info.prerelease,
-        version_code=str(new_sequential_version)
-    )
-
     properties = prev_properties.copy()
 
     if context.config.commit_version_property:
-        properties[context.config.version_property_name] = new_version
+        properties[context.config.version_property] = new_version
     if context.config.commit_sequential_version_property:
-        properties[context.config.sequential_version_property_name] = str(new_sequential_version)
-    if context.config.commit_opaque_version_property:
-        properties[context.config.opaque_version_property_name] = new_opaque_version
+        properties[context.config.sequence_number_property] = str(new_sequential_version)
 
     return properties
 
@@ -330,8 +318,6 @@ def update_project_property_file(context: Context,
     var_separator = ' : '
     commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
                            + cli.if_none(new_version))
-    commit_out.add_message("#" + const.DEFAULT_SEQUENTIAL_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_sequential_version))
 
     if properties is not None:
         def log_property(properties: dict, key: str):
@@ -339,9 +325,8 @@ def update_project_property_file(context: Context,
                 commit_out.add_message('#properties[' + utils.quote(key, '"') + ']'
                                        + var_separator + cli.if_none(properties.get(key), "null"))
 
-        for property_key in [context.config.version_property_name,
-                             context.config.sequential_version_property_name,
-                             context.config.opaque_version_property_name]:
+        for property_key in [context.config.version_property,
+                             context.config.sequence_number_property]:
             log_property(properties, property_key)
 
     if context.verbose and result.value != 0:
@@ -358,44 +343,46 @@ def get_branch_version_component_for_version(context: Context,
 
 
 def get_branch_name_for_version(context: Context, version_on_branch: Union[semver.VersionInfo, version.Version]):
-    return context.release_branch_matcher.ref_name_infixes[0] \
+    return (context.release_branch_matcher.ref_name_infix or '') \
            + get_branch_version_component_for_version(context, version_on_branch)
 
 
 def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo):
-    return context.version_tag_matcher.ref_name_infixes[0] \
+    return (context.version_tag_matcher.ref_name_infix or '') \
            + version.format_version_info(version_info)
 
 
 def get_discontinuation_tag_name_for_version(context, version: Union[semver.VersionInfo, version.Version]):
-    return context.discontinuation_tag_matcher.ref_name_infixes[
-               0] + get_branch_version_component_for_version(
+    return (context.discontinuation_tag_matcher.ref_name_infix or '') + get_branch_version_component_for_version(
         context, version)
 
 
-def get_global_sequence_number(context) -> int:
-    sequential_tags = repotools.git_list_refs(context.repo,
-                                              repotools.create_ref_name(
-                                                  const.LOCAL_TAG_PREFIX,
-                                                  context.sequential_version_tag_matcher.ref_name_infixes[0])
-                                              )
-    counter = 0
-    for tag in sequential_tags:
-        match = context.sequential_version_tag_matcher.fullmatch(tag.name)
-        if match is not None:
-            version_code = int(match.group(context.sequential_version_tag_matcher.group_unique_code))
-            counter = max(counter, version_code)
-        else:
-            raise Exception("invalid tag: " + tag.name)
-    return counter
+def get_global_sequence_number(context: Context) -> Union[int, None]:
+    if context.version_tag_matcher.group_unique_code:
+        tags = repotools.git_list_refs(context.repo,
+                                       repotools.create_ref_name(
+                                           const.LOCAL_TAG_PREFIX,
+                                           context.version_tag_matcher.ref_name_infix or '')
+                                       )
+        seq = None
+
+        for tag in tags:
+            match = context.version_tag_matcher.fullmatch(tag.name)
+            if match is not None:
+                version_code = int(match.group(context.version_tag_matcher.group_unique_code))
+                if seq is None:
+                    seq = version_code
+                else:
+                    seq = max(seq, version_code)
+
+        return seq
+    else:
+        return None
 
 
 def create_sequence_number_for_version(context, new_version: Union[semver.VersionInfo, version.Version]):
-    return get_global_sequence_number(context) + 1
-
-
-def create_sequential_version_tag_name(context, counter: int):
-    return context.sequential_version_tag_matcher.ref_name_infixes[0] + str(counter)
+    sequence_number = get_global_sequence_number(context)
+    return (sequence_number if sequence_number is not None else 0) + 1
 
 
 def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str]):
@@ -408,20 +395,21 @@ def get_discontinuation_tags(context, version_branch: Union[repotools.Ref, str])
     discontinuation_tag = repotools.create_ref_name(const.LOCAL_TAG_PREFIX, discontinuation_tag_name)
 
     discontinuation_tags = [discontinuation_tag] \
-        if repotools.git_rev_parse(context.repo, discontinuation_tag) is not None \
+        if repotools.git_rev_parse(context.repo, '--verify', discontinuation_tag) is not None \
         else []
 
     return discontinuation_tags, discontinuation_tag_name
 
 
 def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search_mode: BranchSelection):
-    branch_ref = repotools.get_branch_by_name(context.repo, name, search_mode)
+    branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, name, search_mode)
 
     if branch_ref is None:
         tag_version = version.parse_version(name)
         if tag_version is not None:
             version_branch_name = get_branch_name_for_version(context, tag_version)
-            branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
+            branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, version_branch_name,
+                                                      search_mode)
 
     if branch_ref is None:
         # TODO common definition
@@ -431,19 +419,19 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
             branch_version.major = int(match.group(1))
             branch_version.minor = int(match.group(2))
             version_branch_name = get_branch_name_for_version(context, branch_version)
-            branch_ref = repotools.get_branch_by_name(context.repo, version_branch_name, search_mode)
+            branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name}, version_branch_name,
+                                                      search_mode)
 
     if branch_ref is None:
-        if not name.startswith(context.release_branch_matcher.ref_name_infixes[0]):
-            branch_ref = repotools.get_branch_by_name(context.repo,
-                                                      context.release_branch_matcher.ref_name_infixes[
-                                                          0] + name,
+        if not name.startswith(context.release_branch_matcher.ref_name_infix):
+            branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name},
+                                                      context.release_branch_matcher.ref_name_infix + name,
                                                       search_mode)
 
     return branch_ref
 
 
-def create_shared_clone_repository(context):
+def create_shared_clone_repository(context: Context) -> Result:
     """
     :rtype: Result
     """
@@ -471,24 +459,35 @@ def create_shared_clone_repository(context):
     os.mkdir(path=tempdir_path, mode=clone_dir_mode)
 
     if context.config.push_to_local:
-        proc = repotools.git(context.repo, 'clone', '--shared',
-                             '--branch', context.config.release_branch_base,
-                             '.',
-                             tempdir_path)
+        returncode, out, err = repotools.git(context.repo, 'clone', '--shared',
+                                             '--branch', context.config.release_branch_base,
+                                             '.',
+                                             tempdir_path)
     else:
-        proc = repotools.git(context.repo, 'clone', '--reference', '.',
-                             '--branch', context.config.release_branch_base,
-                             remote.url,
-                             tempdir_path)
-    proc.wait()
-    if proc.returncode != os.EX_OK:
+        returncode, out, err = repotools.git(context.repo, 'clone', '--reference', '.',
+                                             '--branch', context.config.release_branch_base,
+                                             remote.url,
+                                             tempdir_path)
+    if returncode != os.EX_OK:
         result.fail(os.EX_DATAERR,
                     _("Failed to clone repo."),
                     _("An unexpected error occurred.")
                     )
 
+    if not result.has_errors():
+        repo = RepoContext()
+        repo.dir = tempdir_path
+        repo.verbose = context.verbose
+        result.value = repo
+
+    context.add_subresult(result)
+
+    return result
+
+
+def create_context(context: Context, result: Result, directory: str) -> Context:
     clone_context = Context.create({
-        '--root': tempdir_path,
+        '--root': directory,
 
         '--config': context.args['--config'],  # no override here
 
@@ -498,20 +497,13 @@ def create_shared_clone_repository(context):
         '--verbose': context.verbose,
         '--pretty': context.pretty,
     }, result)
-
     if clone_context.temp_dirs is None:
         clone_context.temp_dirs = list()
-    clone_context.temp_dirs.append(tempdir_path)
-
+    clone_context.temp_dirs.append(directory)
     if context.clones is None:
         context.clones = list()
     context.clones.append(clone_context)
-
-    if not result.has_errors():
-        result.value = clone_context
-    else:
-        context.cleanup()
-    return result
+    return clone_context
 
 
 def prompt_for_confirmation(context: Context, fail_title: str, message: str, prompt: str):
@@ -619,7 +611,7 @@ def get_command_context(context, object_arg: str) -> CommandContext:
                                                                      context.config.remote_name,
                                                                      'release'),
                                            'refs/heads/release',
-                                           'refs/heads/master',
+                                           'refs/heads/' + context.config.release_branch_base,
                                            # const.REMOTES_PREFIX + context.config.remote_name + '/' + context.config.release_branch_base,
                                            # const.LOCAL_BRANCH_PREFIX + context.config.release_branch_base,
                                            )))
@@ -666,13 +658,13 @@ def get_command_context(context, object_arg: str) -> CommandContext:
     return command_context
 
 
-def create_commit(clone_context, result, commit_info: CommitInfo):
+def create_commit(context: Context, result, commit_info: CommitInfo):
     add_command = ['update-index', '--add', '--']
     add_command.extend(commit_info.files)
-    git_or_fail(clone_context, result, add_command)
+    git_or_fail(context.repo, result, add_command)
 
     write_tree_command = ['write-tree']
-    new_tree = git_for_line_or_fail(clone_context, result, write_tree_command)
+    new_tree = git_for_line_or_fail(context.repo, result, write_tree_command)
 
     commit_command = ['commit-tree']
     for parent in commit_info.parents:
@@ -680,7 +672,7 @@ def create_commit(clone_context, result, commit_info: CommitInfo):
         commit_command.append(parent)
 
     commit_command.extend(['-m', commit_info.message, new_tree])
-    new_commit = git_for_line_or_fail(clone_context, result, commit_command)
+    new_commit = git_for_line_or_fail(context.repo, result, commit_command)
 
     # reset_command = ['reset', 'HEAD', new_commit]
     # git_or_fail(clone_context, result, reset_command)
@@ -767,7 +759,8 @@ def check_requirements(command_context: CommandContext,
     if not allow_unversioned_changes:
         current_branch = git_get_current_branch(command_context.context.repo)
         if ref == current_branch:
-            returncode = git(command_context.context, ['diff-index', '--name-status', '--exit-code', current_branch])
+            returncode = git(command_context.context.repo,
+                             ['diff-index', '--name-status', '--exit-code', current_branch])
 
             if returncode != os.EX_OK:
                 command_context.error(os.EX_USAGE,
@@ -791,7 +784,7 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
     return config
 
 
-def read_properties_in_commit(context: AbstractContext, repo: RepoContext, config: dict, commit: str):
+def read_properties_in_commit(context: Context, repo: RepoContext, config: dict, commit: str):
     if config is not None:
         # print(json.dumps(obj=config_in_history, indent=2))
         property_file = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
