@@ -22,6 +22,7 @@ class TestFlow(TestFlowBase):
             config = {
                 const.CONFIG_VERSIONING_SCHEME: 'semverWithSeq',
                 const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
+                const.CONFIG_VERSION_PROPERTY: 'version',
                 const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
                 const.CONFIG_VERSION_TAG_PREFIX: ''
             }
@@ -60,6 +61,7 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/release/1.0': None,
             'refs/tags/' + self.version_tag_prefix + '1.0.0-1': 'refs/remotes/origin/release/1.0'
         })
+
         self.assert_first_parent('refs/remotes/origin/release/1.0', 'refs/heads/master')
         self.assert_project_properties_contain({
         })
@@ -75,6 +77,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1',
         })
 
     def test_bump_minor(self):
@@ -98,6 +101,7 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         self.checkout("master")
@@ -119,6 +123,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '2',
+            'version': '1.1.0-2'
         })
 
     def test_bump_patch(self):
@@ -159,6 +164,7 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
             'seq': '2',
+            'version': '1.0.1-2'
         })
 
         self.assert_refs(refs)
@@ -193,6 +199,7 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         self.assert_refs(refs)
@@ -226,6 +233,7 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         self.assert_refs(refs)
@@ -248,6 +256,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         self.commit()
@@ -266,6 +275,7 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
             'seq': '2',
+            'version': '1.0.0-2'
         })
 
         self.assert_refs(refs)
@@ -289,6 +299,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         tagged_commit = self.current_head_commit()
@@ -307,6 +318,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         self.assert_refs(refs)
@@ -330,6 +342,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         tagged_commit = self.current_head_commit()
@@ -353,7 +366,8 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
 
         self.assert_project_properties_contain({
-            'seq': '2'
+            'seq': '2',
+            'version': '1.0.1-2'
         })
 
         self.assert_refs(refs)
@@ -389,6 +403,7 @@ class TestFlow(TestFlowBase):
         self.checkout("release/1.0")
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         self.assert_refs(refs)
@@ -422,6 +437,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
     def test_begin_end_dev_feature(self):
@@ -586,6 +602,7 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '1',
+            'version': '1.0.0-1'
         })
 
         # hotfix
@@ -647,6 +664,7 @@ class TestFlow(TestFlowBase):
         self.checkout('release/1.0')
         self.assert_project_properties_contain({
             'seq': '2',
+            'version': '1.0.1-2'
         })
 
         # new feature
@@ -688,4 +706,5 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'seq': '3',
+            'version': '2.0.0-3'
         })

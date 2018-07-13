@@ -34,7 +34,7 @@ class DictDiffer(object):
 
     def added(self) -> dict:
         return dict(
-            (key, self.a[key]) for key in (self.b.keys() - self.intersect)
+            (key, self.b[key]) for key in (self.b.keys() - self.intersect)
         )
 
     def removed(self) -> dict:
