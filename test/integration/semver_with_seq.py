@@ -48,17 +48,19 @@ class TestFlow(TestFlowBase):
         assert exit_code == os.EX_OK
 
     def test_bump_major(self):
-        refs = {
+        refs = dict()
+        self.assert_refs(refs, added={
             'refs/heads/master',
-            'refs/remotes/origin/master',
-        }
+            'refs/remotes/origin/master'
+        })
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
-            'refs/tags/' + self.version_tag_prefix + '1.0.0-1'
+            'refs/remotes/origin/release/1.0': None,
+            'refs/tags/' + self.version_tag_prefix + '1.0.0-1': 'refs/remotes/origin/release/1.0'
         })
+        self.assert_first_parent('refs/remotes/origin/release/1.0', 'refs/heads/master')
         self.assert_project_properties_contain({
         })
 
@@ -69,7 +71,7 @@ class TestFlow(TestFlowBase):
 
         self.checkout("release/1.0")
         self.assert_refs(refs, added={
-            'refs/heads/release/1.0'  # local branch
+            'refs/heads/release/1.0': 'refs/remotes/origin/release/1.0'
         })
         self.assert_project_properties_contain({
             'seq': '1',
