@@ -67,13 +67,12 @@ import gitflow.procedures.log
 import gitflow.procedures.status
 from gitflow import cli, repotools, _, hooks, filesystem
 from gitflow import const
-from gitflow import version
 from gitflow.common import GitFlowException, Result
 from gitflow.context import Context
-
 # project_env = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 # print('project_env: ' + project_env)
 # sys.path.insert(0, project_env)
+from gitflow.procedures.scheme import scheme_procedures
 
 ENABLE_PROFILER = False
 
@@ -82,33 +81,31 @@ ENABLE_PROFILER = False
 # mapped by cmd_<name>
 
 def cmd_bump_major(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_major)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_major)
 
 
 def cmd_bump_minor(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_minor)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_minor)
 
 
 def cmd_bump_patch(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_patch)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_patch)
 
 
 def cmd_bump_prerelease_type(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_qualifier)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_qualifier)
 
 
 def cmd_bump_prerelease(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_prerelease)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_prerelease)
 
 
 def cmd_bump_to_release(context):
-    return gitflow.procedures.create_version.call(context, version.version_bump_to_release)
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_to_release)
 
 
 def cmd_bump_to(context):
-    return gitflow.procedures.create_version.call(context,
-                                                  version.version_set(context.config.version,
-                                                                      context.args['<version>']))
+    return gitflow.procedures.create_version.call(context, scheme_procedures.version_set(context.args['<version>']))
 
 
 def cmd_discontinue(context):

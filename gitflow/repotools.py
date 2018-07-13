@@ -7,7 +7,7 @@ import typing
 from enum import Enum
 from typing import Optional, Union, Callable, List
 
-from gitflow import const, utils, cli
+from gitflow import utils, cli, const
 
 
 class RepoContext(object):
@@ -98,6 +98,14 @@ class Ref(Object):
     @property
     def short_name(self):
         return self.local_branch_name or self.local_tag_name or self.remote_branch_name
+
+    @property
+    def remote(self):
+        if self.name.startswith(const.REMOTES_PREFIX):
+            remote = self.name[len(const.REMOTES_PREFIX):]
+            remote = remote[:remote.find('/')]
+            return remote
+        return None
 
     def __eq__(self, other):
         return isinstance(other, Ref) and self.name == other.name
@@ -310,13 +318,19 @@ class BranchSelection(Enum):
     BRANCH_REMOTE_ONLY = 3,
 
 
-def get_branch_by_name(context: RepoContext, branch_name: str, search_mode: BranchSelection) -> Ref:
+def get_branch_by_name(context: RepoContext, remotes: typing.Set[str], branch_name: str,
+                       search_mode: BranchSelection) -> Ref:
     candidate = None
     for branch in git_list_refs(context, *const.LOCAL_AND_REMOTE_BRANCH_PREFIXES):
         match = re.fullmatch(const.BRANCH_PATTERN, branch.name)
 
         name = match.group('name')
-        local = match.group('remote') is None
+        remote = match.group('remote')
+
+        if remote is not None and remotes is not None and remote not in remotes:
+            continue
+
+        local = remote is None
 
         if match and name == branch_name:
             if search_mode == BranchSelection.BRANCH_PREFER_LOCAL:
@@ -353,8 +367,8 @@ def git_list_refs(context: RepoContext, *args):
     """
 
     returncode, out, err = git(context, 'for-each-ref', '--format',
-               '%(refname);%(objecttype);%(objectname);%(*objecttype);%(*objectname);%(upstream)',
-               *args)
+                               '%(refname);%(objecttype);%(objectname);%(*objecttype);%(*objectname);%(upstream)',
+                               *args)
 
     if returncode == os.EX_OK:
         for ref_element in out.decode("utf-8").splitlines():
@@ -385,8 +399,8 @@ def get_ref_by_name(context: RepoContext, ref_name):
 
 def git_get_upstreams(context: RepoContext, *args) -> dict:
     returncode, out, err = git(context, 'for-each-ref', '--format',
-               '%(refname);%(upstream)',
-               *args)
+                               '%(refname);%(upstream)',
+                               *args)
 
     if returncode == os.EX_OK:
         upstreams = dict()

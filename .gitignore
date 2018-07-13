@@ -4,6 +4,9 @@
 # build dir
 /build
 
+# default python virtual env created by PyCharm
+venv/*
+
 # Compiled python modules.
 *.pyc
 

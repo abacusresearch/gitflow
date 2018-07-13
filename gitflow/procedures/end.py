@@ -130,7 +130,7 @@ def call(context: Context) -> Result:
         return context.result
 
     # check for staged changes
-    index_status = git(context, ['diff-index', 'HEAD', '--'])
+    index_status = git(context.repo, ['diff-index', 'HEAD', '--'])
     if index_status == 1:
         context.fail(os.EX_USAGE,
                      _("Branch creation aborted."),
@@ -146,19 +146,19 @@ def call(context: Context) -> Result:
         local_branch_ref_name = repotools.create_local_branch_ref_name(base_branch_ref.name)
         local_branch_name = repotools.create_local_branch_name(base_branch_ref.name)
         if local_branch_ref_name == base_branch_ref.name:
-            git_or_fail(context, command_context.result,
+            git_or_fail(context.repo, command_context.result,
                         ['checkout', local_branch_name],
                         _("Failed to checkout branch {branch_name}.")
                         .format(branch_name=repr(base_branch_ref.short_name))
                         )
         else:
-            git_or_fail(context, command_context.result,
+            git_or_fail(context.repo, command_context.result,
                         ['checkout', '-b', local_branch_name, base_branch_ref.name],
                         _("Failed to checkout branch {branch_name}.")
                         .format(branch_name=repr(base_branch_ref.short_name))
                         )
 
-        git_or_fail(context, command_context.result,
+        git_or_fail(context.repo, command_context.result,
                     ['merge', '--no-ff', work_branch_ref],
                     _("Failed to merge work branch.\n"
                       "Rebase {work_branch} on {base_branch} and try again")
@@ -166,7 +166,7 @@ def call(context: Context) -> Result:
                             base_branch=repr(base_branch_ref.short_name))
                     )
 
-        git_or_fail(context, command_context.result,
+        git_or_fail(context.repo, command_context.result,
                     ['push', context.config.remote_name, local_branch_name],
                     _("Failed to push branch {branch_name}.")
                     .format(branch_name=repr(base_branch_ref.short_name))

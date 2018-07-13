@@ -1,16 +1,17 @@
 import os
 
-from gitflow import cli, utils, repotools, _, const
+from gitflow import cli, repotools, _, const
 from gitflow.common import Result
 from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
     get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
-    check_in_repo, prompt
+    check_in_repo, prompt, create_context
 from gitflow.repotools import BranchSelection
 
 
 def call(context: Context) -> Result:
+    result: Result = context.result
     object_arg = context.args['<object>']
 
     reintegrate = cli.get_boolean_opt(context.args, '--reintegrate')
@@ -22,7 +23,8 @@ def call(context: Context) -> Result:
 
     check_in_repo(command_context)
 
-    base_branch_ref = repotools.get_branch_by_name(context.repo, context.config.release_branch_base,
+    base_branch_ref = repotools.get_branch_by_name(context.repo, {context.config.remote_name},
+                                                   context.config.release_branch_base,
                                                    BranchSelection.BRANCH_PREFER_LOCAL)
 
     release_branch = command_context.selected_ref
@@ -87,22 +89,19 @@ def call(context: Context) -> Result:
         # run merge on local clone
 
         clone_result = create_shared_clone_repository(context)
-        command_context.add_subresult(clone_result)
-        if command_context.has_errors():
-            return context.result
-
-        clone_context: Context = clone_result.value
+        clone_context: Context = create_context(context, result, clone_result.value.dir)
+        clone_context.config.remote_name = 'origin'
 
         changes = list()
 
         if reintegrate:
-            git_or_fail(clone_context, command_context.result,
+            git_or_fail(clone_context.repo, command_context.result,
                         ['checkout', base_branch_ref.short_name],
                         _("Failed to checkout branch {branch_name}.")
                         .format(branch_name=repr(base_branch_ref.short_name))
                         )
 
-            git_or_fail(clone_context, command_context.result,
+            git_or_fail(clone_context.repo, command_context.result,
                         ['merge', '--no-ff', release_branch_info.upstream.name],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
@@ -129,7 +128,7 @@ def call(context: Context) -> Result:
             push_command.append('--dry-run')
         if context.verbose:
             push_command.append('--verbose')
-        push_command.append('origin')
+        push_command.append(context.config.remote_name)
 
         push_command.append(base_branch_ref.name + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                                    base_branch_ref.short_name))
@@ -139,8 +138,8 @@ def call(context: Context) -> Result:
             repotools.ref_target(release_branch) + ':' + repotools.create_ref_name(const.LOCAL_TAG_PREFIX,
                                                                                    discontinuation_tag_name))
 
-        git_or_fail(clone_context, command_context.result, push_command)
+        git_or_fail(clone_context.repo, command_context.result, push_command)
 
-        fetch_all_and_ff(context, command_context.result, context.config.remote_name)
+        fetch_all_and_ff(context.repo, command_context.result, context.config.remote_name)
 
     return context.result

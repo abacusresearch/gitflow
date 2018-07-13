@@ -1,33 +1,19 @@
 {
   "versioningScheme": "semver",
-  "versionTypes": [
-    "alpha",
-    "beta",
-    "rc"
-  ],
-  "propertyFile": "gitflow/config.ini",
+  "versionTypes": ["alpha", "beta", "rc"],
+
+  "propertyFile": "rootmodule/config.ini",
   "versionPropertyName": "version",
+  "versionTagPrefix": "version/",
+
   "build": {
     "stages": {
       "assemble": [
-        [
-          "python3",
-          "setup.py",
-          "sdist",
-          "--formats=gztar"
-        ],
-        [
-          "python3",
-          "setup.py",
-          "bdist"
-        ]
+        ["python3", "setup.py", "sdist", "--formats=gztar"],
+        ["python3", "setup.py", "bdist"]
       ],
       "test": [
-        [
-          "py.test",
-          "--verbose",
-          "test"
-        ]
+        ["py.test", "--verbose", "test"]
       ]
     }
   }
