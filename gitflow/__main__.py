@@ -1,30 +1,30 @@
 """
-Git Flow CLI
+git-flow - Manage version branches and tags
 
 Usage:
- flow status [(-a|--all) | <object>]
+ git-flow status [(-a|--all) | <object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
+ git-flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
+ git-flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
+ git-flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
+ git-flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
+ git-flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
+ git-flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow log [<object>] [-- <git-arg>...]
+ git-flow log [<object>] [-- <git-arg>...]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow (assemble|test|integration-test) [-d|--dry-run] [--inplace| [<object>]]
+ git-flow (assemble|test|integration-test) [-d|--dry-run] [--inplace| [<object>]]
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow drop-cache [-d|--dry-run]
+ git-flow drop-cache [-d|--dry-run]
         [-B|--batch] [-v|--verbose]... [-p|--pretty]
- flow (-h|--help)
- flow --version
- flow --hook=<hook-name> [<hook-args>...]
+ git-flow (-h|--help)
+ git-flow --version
+ git-flow --hook=<hook-name> [<hook-args>...]
 
 Options:
  -h --help              Shows this screen.
