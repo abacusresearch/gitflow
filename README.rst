@@ -159,7 +159,7 @@ Maven Project
     {
 
       "versioningScheme": "semver",
-      "releaseTypes": ["alpha", "beta", "rc"],
+      "releaseTypes": ["alpha", "beta"],
 
       "propertyFile": "project.properties",
       "versionProperty": "mavenVersion"
@@ -189,7 +189,7 @@ Android Library Project
     {
 
       "versioningScheme": "semver",
-      "releaseTypes": ["alpha", "beta", "rc"],
+      "releaseTypes": ["alpha", "beta"],
 
       "propertyFile": "project.properties",
       "versionProperty": "mavenVersion"
@@ -204,7 +204,7 @@ Python Project
     {
 
       "versioningScheme": "semver",
-      "releaseTypes": ["alpha", "beta", "rc"],
+      "releaseTypes": ["alpha", "beta"],
 
       "propertyFile": "rootmodule/config.ini",
       "versionProperty": "version"
