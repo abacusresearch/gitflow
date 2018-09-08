@@ -1,9 +1,9 @@
-import json
 import os
 
 import pytest
 
 from gitflow import const
+from gitflow.properties import PropertyIO
 from test.integration.base import TestFlowBase
 
 
@@ -15,39 +15,38 @@ class TestBuild(TestFlowBase):
         # create the config file
         self.project_property_file = 'project.properties'
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
-        with open(config_file, 'w+') as property_file:
-            config = {
-                const.CONFIG_VERSIONING_SCHEME: 'semverWithSeq',
-                const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
-                const.CONFIG_VERSION_PROPERTY: 'version',
-                const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
-                const.CONFIG_BUILD: {
-                    'stages': {
-                        'assemble': [['echo', 'assemble#1']],
-                        'test': {
-                            'steps': {
-                                'app': [
-                                    ['echo', 'test#1'],
-                                    ['echo', '\\$HOME: $HOME'],
-                                    ['echo', '\\\\\\$HOME: \\$HOME'],
-                                    ['echo', '\\\\\\\\\\$HOME: \\\\$HOME'],
-                                    ['echo', '\\${HOME}: ${HOME}'],
-                                    ['echo', '\\\\\\${HOME}: \\${HOME}'],
-                                    ['echo', '\\\\\\\\\\${HOME}: \\\\${HOME}']
-                                ]
-                            }
-                        },
-                        'google_testing_lab': {
-                            'type': 'integration_test',
-                            'steps': {
-                                'monkey_test': [['echo', 'monkey_test']],
-                                'instrumentation_test': [['echo', 'instrumentation_test']]
-                            }
+        config = {
+            const.CONFIG_VERSIONING_SCHEME: 'semverWithSeq',
+            const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
+            const.CONFIG_VERSION_PROPERTY: 'version',
+            const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
+            const.CONFIG_BUILD: {
+                'stages': {
+                    'assemble': [['echo', 'assemble#1']],
+                    'test': {
+                        'steps': {
+                            'app': [
+                                ['echo', 'test#1'],
+                                ['echo', '\\$HOME: $HOME'],
+                                ['echo', '\\\\\\$HOME: \\$HOME'],
+                                ['echo', '\\\\\\\\\\$HOME: \\\\$HOME'],
+                                ['echo', '\\${HOME}: ${HOME}'],
+                                ['echo', '\\\\\\${HOME}: \\${HOME}'],
+                                ['echo', '\\\\\\\\\\${HOME}: \\\\${HOME}']
+                            ]
+                        }
+                    },
+                    'google_testing_lab': {
+                        'type': 'integration_test',
+                        'steps': {
+                            'monkey_test': [['echo', 'monkey_test']],
+                            'instrumentation_test': [['echo', 'instrumentation_test']]
                         }
                     }
                 }
             }
-            json.dump(obj=config, fp=property_file)
+        }
+        PropertyIO.write_file(config_file, config)
 
         # create & push the initial commit
         self.add(config_file)
@@ -85,6 +84,9 @@ class TestBuild(TestFlowBase):
 
     def test_integration_test(self):
         exit_code, out_lines = self.git_flow_for_lines('integration-test')
+
+        print(">>>>>")
+        print(out_lines)
 
         assert exit_code == os.EX_OK
         assert out_lines == [

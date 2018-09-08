@@ -58,7 +58,7 @@ class TestLoadStore(object):
         properties = dict()
 
         properties['bla'] = 'blub'
-        property_file.write_file(file_name, properties)
+        property_file.to_file(file_name, properties)
 
         print('===================================')
         print(file_name)
@@ -67,7 +67,7 @@ class TestLoadStore(object):
             print(file.read())
         print('-----------------------------------')
 
-        stored_properties = property_file.read_file(file_name)
+        stored_properties = property_file.from_file(file_name)
 
         assert properties == stored_properties
 

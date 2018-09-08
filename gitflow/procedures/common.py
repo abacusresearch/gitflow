@@ -794,11 +794,22 @@ def check_requirements(command_context: CommandContext,
 
 
 def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str = const.DEFAULT_CONFIG_FILE) -> dict:
-    config_str = repotools.get_file_contents(
-        repo,
-        commit,
-        config_file_path
-    )
+    if config_file_path is None:
+        config_str = None
+        for config_filename in const.DEFAULT_CONFIGURATION_FILE_NAMES:
+            config_str = repotools.get_file_contents(
+                repo,
+                commit,
+                config_filename
+            )
+            if config_filename is not None:
+                break
+    else:
+        config_str = repotools.get_file_contents(
+            repo,
+            commit,
+            config_file_path
+        )
 
     if config_str is not None:
         config = PropertyIO.get_instance_by_filename(config_file_path).from_bytes(config_str,

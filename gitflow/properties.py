@@ -20,12 +20,12 @@ class PropertyIO(ABC):
     def to_stream(self, stream: io.TextIOBase, properties: dict):
         pass
 
-    def read_file(self, property_file: str) -> dict:
-        with open(property_file, "r") as input_stream:
+    def from_file(self, property_file: str) -> dict:
+        with open(property_file, mode='r', encoding='utf-8') as input_stream:
             return self.from_stream(input_stream)
 
-    def write_file(self, property_file: str, properties: dict):
-        with open(property_file, "w") as output_stream:
+    def to_file(self, property_file: str, properties: dict):
+        with open(property_file, mode='w', encoding='utf-8') as output_stream:
             return self.to_stream(output_stream, properties)
 
     def from_str(self, string: str) -> dict:
@@ -42,6 +42,10 @@ class PropertyIO(ABC):
 
     def to_bytes(self, properties: dict, encoding: str) -> bytes:
         return self.to_str(properties).encode(encoding)
+
+    @classmethod
+    def write_file(cls, file_path: str, properties: dict):
+        PropertyIO.get_instance_by_filename(file_path).to_file(file_path, properties)
 
     @classmethod
     def get_instance_by_filename(cls, file_name: str):

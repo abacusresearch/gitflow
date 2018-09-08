@@ -1,0 +1,14 @@
+build:
+  stages:
+    assemble:
+    - [python3, setup.py, sdist, --formats=gztar]
+    - [python3, setup.py, bdist]
+    test:
+    - [py.test, --verbose, test]
+
+propertyFile: gitflow/config.ini
+versionProperty: version
+versionTypes:
+- alpha
+- beta
+versioningScheme: semver

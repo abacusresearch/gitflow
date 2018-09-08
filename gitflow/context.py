@@ -1,12 +1,11 @@
 import atexit
-from typing import List
-
-import collections
-import json
 import os
 import re
 import shutil
 from enum import Enum
+from typing import List
+
+import collections
 
 from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
@@ -206,6 +205,7 @@ class Context(AbstractContext):
             context.repo.use_root_dir_arg = False
 
             repo_root = repotools.git_rev_parse(context.repo, '--show-toplevel')
+
             # None when invalid or bare
             if repo_root is not None:
                 context.repo.dir = repo_root
@@ -217,20 +217,36 @@ class Context(AbstractContext):
                     for ref in repotools.git_list_refs(context.repo):
                         cli.print(repr(ref))
                     cli.print("--------------------------------------------------------------------------------")
-                gitflow_config_file = os.path.join(context.repo.dir, context.args['--config'])
+                config_dir = context.repo.dir
             else:
                 context.repo = None
-                gitflow_config_file = os.path.join(context.root, context.args['--config'])
+                config_dir = context.root
+
+            gitflow_config_file: str = None
+            if context.args['--config'] is not None:
+                gitflow_config_file = os.path.join(config_dir, context.args['--config'])
+                if gitflow_config_file is None:
+                    result_out.fail(os.EX_DATAERR,
+                                    _("the specified config file does not exist or is not a regular file: {path}.")
+                                    .format(path=repr(gitflow_config_file)),
+                                    None
+                                    )
+            else:
+                for config_filename in const.DEFAULT_CONFIGURATION_FILE_NAMES:
+                    path = os.path.join(config_dir, config_filename)
+                    if os.path.exists(path):
+                        gitflow_config_file = path
+                        break
+                if gitflow_config_file is None:
+                    result_out.fail(os.EX_DATAERR,
+                                    _("config file not found.")
+                                    .format(path=repr(gitflow_config_file)),
+                                    _("Default config files are\n:{list}")
+                                    .__format__(list=const.DEFAULT_CONFIGURATION_FILE_NAMES)
+                                    )
 
             if context.verbose >= const.TRACE_VERBOSITY:
                 cli.print("gitflow_config_file: " + gitflow_config_file)
-
-            if not os.path.isfile(gitflow_config_file):
-                result_out.fail(os.EX_DATAERR,
-                                _("gitflow_config_file does not exist or is not a regular file: {path}.")
-                                .format(path=repr(gitflow_config_file)),
-                                None
-                                )
 
             with open(gitflow_config_file) as json_file:
                 config = PropertyIO.get_instance_by_filename(gitflow_config_file).from_stream(json_file)
@@ -332,7 +348,9 @@ class Context(AbstractContext):
         context.config.version_property = config.get(
             const.CONFIG_VERSION_PROPERTY)
 
-        property_names = [property for property in [context.config.sequence_number_property, context.config.version_property] if property is not None]
+        property_names = [property for property in
+                          [context.config.sequence_number_property, context.config.version_property] if
+                          property is not None]
         duplicate_property_names = [item for item, count in collections.Counter(property_names).items() if count > 1]
 
         if len(duplicate_property_names):

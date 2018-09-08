@@ -316,7 +316,7 @@ class TestFlowBase(TestInTempDir):
     def assert_project_properties_contain(self, expected: dict):
         property_reader = PropertyIO.get_instance_by_filename(self.project_property_file)
         try:
-            actual = property_reader.read_file(self.project_property_file)
+            actual = property_reader.from_file(self.project_property_file)
         except FileNotFoundError:
             actual = dict()
 
