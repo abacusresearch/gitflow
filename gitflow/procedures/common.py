@@ -276,7 +276,7 @@ def update_project_properties(context: Context,
     if new_version_info.build is not None:
         raise ValueError("build info must not be set in version tag")
 
-    properties = prev_properties.copy()
+    properties = prev_properties.copy() if prev_properties is not None else dict()
 
     if context.config.commit_version_property:
         properties[context.config.version_property] = new_version
@@ -306,7 +306,7 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        properties = update_project_properties(context, prev_properties.copy(), new_version, new_sequential_version)
+        properties = update_project_properties(context, prev_properties, new_version, new_sequential_version)
 
         property_reader.write_file(context.config.property_file, properties)
         commit_out.add_file(context.config.property_file)
