@@ -44,6 +44,15 @@ class TestLoadStore(object):
     def test_yml_bytes(self):
         self.__test_load_store_bytes('test.yml')
 
+    def test_json(self):
+        self.__test_load_store('test.json')
+
+    def test_json_string(self):
+        self.__test_load_store_string('test.json')
+
+    def test_json_bytes(self):
+        self.__test_load_store_bytes('test.json')
+
     def __test_load_store(self, file_name: str):
         property_file: PropertyIO = PropertyIO.get_instance_by_filename(file_name)
         properties = dict()

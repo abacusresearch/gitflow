@@ -1,4 +1,5 @@
 import io
+import json
 import os
 from abc import abstractmethod, ABC
 from configparser import ConfigParser
@@ -54,6 +55,8 @@ class PropertyIO(ABC):
             reader = JavaPropertyIO()
         elif extension == '.yml':
             reader = YAMLPropertyIO()
+        elif extension == '.json':
+            reader = JSONPropertyIO()
         elif extension == '.ini':
             reader = PythonConfigPropertyIO()
         else:
@@ -82,6 +85,17 @@ class YAMLPropertyIO(PropertyIO):
 
     def to_stream(self, stream: io.TextIOBase, properties: dict):
         yaml.safe_dump(properties, stream, default_flow_style=False)
+
+
+class JSONPropertyIO(PropertyIO):
+    def from_stream(self, stream: io.TextIOBase) -> dict:
+        return json.load(stream)
+
+    def to_stream(self, stream: io.TextIOBase, properties: dict):
+        json.dump(properties, stream)
+
+    def from_str(self, string: str) -> dict:
+        return super().from_str(string) if len(string) else dict()
 
 
 class PythonConfigPropertyIO(PropertyIO):
