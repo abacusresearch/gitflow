@@ -26,10 +26,17 @@ Login as the respective user and run::
 
     ./install.sh --user
 
-Make sure, the installation location of executable python files is present in PATH.
+Make sure, that the installation location of executable python files is present in PATH.
 For bash, extend ~/.bash_profile with::
 
     export PATH="$PATH:$HOME/.local/bin"
+
+
+Uninstall
+=========
+Run as the install user::
+
+    ./uninstall.sh
 
 
 Configuration
@@ -48,7 +55,10 @@ Branching Model:
 * dev/(fix|issue|topic)/(name|issue-id)
 * prod/(fix|issue|topic)/(name|issue-id)
 
-Version tags shall never point to commits on master, thus, branches with tags should always be merged without fast forwarding: `git merge --no-ff`.
+Version tags shall never point to commits on master, thus, branches with tags should always be merged without fast forwarding:
+
+    `git merge/pull --no-ff ...`
+
 Branches are created on a per minor version basis.
 
 semver
@@ -119,34 +129,38 @@ semverWithSeq
 * Version specification: `SemVer 2.0 <https://semver.org/spec/v2.0.0.html>`_
 * Version format: {major}.{minor}.{patch}-{sequence-number}
 
-Since there are only abstract prerelease versions, there's no need for version increments after testing, or before delivery.
-The sequence number applies across all branches of a project. Concurrent versioning is not possible.
+The sequence number must be unique across the whole repository. Concurrent versioning on release branches is not (yet) supported.
+
+Since the version is always an abstract prerelease, it does not say anything specific about quality.
+Because of that, there's no need for version increments after testing or before delivery.
+Builds that pass testing or any other stage, can be forwarded to the next stage as is.
+This eliminates risks associated with untested "version increment only" builds or redundant testing of such builds.
+
+This scheme is especially suited for projects, where artifacts are rolled out through multiple, consecutive channels, such as alpha, beta, stable.
 
 Example Chronology:
 
-Testing and delivery is not semantically coupled to the version string.
-There are no 'version increment only builds', builds that pass testing can be forwarded to the next step as is.
-
-1. initial development and release
-    *  1.0.0-1
-    *  1.0.0-2
-    *  1.0.0-3
+1. initial development and stable release
+    *  1.0.0-1      release: roll out through channels alpha/beta, testing
+    *  1.0.0-2      "
+    *  1.0.0-3      "
+    *  1.0.0-4      release: roll out through channels alpha -> beta -> stable
 
 2. hotfix:
-    *  1.0.1-5
+    *  1.0.1-5      release: roll out to the stable channel
 
 3. bugfixing:
-    *  1.0.2-6
-    *  1.0.2-7
+    *  1.0.2-6      release: roll out through channels alpha/beta, testing
+    *  1.0.2-7      release: roll out through channels alpha and/or beta to stable
 
 4. development of a new feature:
-    *  1.1.0-8 (supersedes the 1.0 branch)
-    *  1.1.0-9
+    *  1.1.0-8      release: roll out through channels alpha/beta, testing, supersedes the 1.0 branch
+    *  1.1.0-9      release: roll out through channels alpha -> beta -> stable
 
 5. development of a new major version with breaking changes and new features:
-    *  2.0.0-10 (supersedes the 1.1 branch)
-    *  2.0.0-11
-    *  2.0.0-12
+    *  2.0.0-10     release: roll out through channels alpha/beta, testing, supersedes the 1.1 branch
+    *  2.0.0-11     "
+    *  2.0.0-12     release: roll out through channels alpha -> beta -> stable
 
 Examples
 --------
@@ -183,8 +197,8 @@ or
     }
 
 
-Android App Project
-~~~~~~~~~~~~~~~~~~~
+Android App (Gradle)
+~~~~~~~~~~~~~~~~~~~~
 ::
 
     {
@@ -198,8 +212,8 @@ Android App Project
     }
 
 
-Android Library Project
-~~~~~~~~~~~~~~~~~~~~~~~
+Gradle, Android Library Project
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ::
 
     {
@@ -233,13 +247,6 @@ Usage
 See CLI help::
 
     git flow -h
-
-
-Uninstall
-=========
-Run as the install user::
-
-    ./uninstall.sh
 
 Development
 ===========
