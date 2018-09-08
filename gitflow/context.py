@@ -11,6 +11,7 @@ from enum import Enum
 from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
 from gitflow.const import VersioningScheme
+from gitflow.properties import PropertyIO
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
 
@@ -232,7 +233,7 @@ class Context(AbstractContext):
                                 )
 
             with open(gitflow_config_file) as json_file:
-                config = json.load(fp=json_file)
+                config = PropertyIO.get_instance_by_filename(gitflow_config_file).from_stream(json_file)
         else:
             config = object()
 

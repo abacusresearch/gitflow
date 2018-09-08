@@ -7,7 +7,6 @@
 #   - version gaps
 #   - potentially undesired effects
 #   - operations involving a push
-import json
 import os
 import re
 import shlex
@@ -802,7 +801,8 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
     )
 
     if config_str is not None:
-        config = json.loads(s=config_str, encoding=const.DEFAULT_PROPERTY_ENCODING)
+        config = PropertyIO.get_instance_by_filename(config_file_path).from_bytes(config_str,
+                                                                                  const.DEFAULT_PROPERTY_ENCODING)
     else:
         config = None
     return config
@@ -810,7 +810,6 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
 
 def read_properties_in_commit(context: Context, repo: RepoContext, config: dict, commit: str):
     if config is not None:
-        # print(json.dumps(obj=config_in_history, indent=2))
         property_file = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
 
         if property_file is None:
