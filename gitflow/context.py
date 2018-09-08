@@ -1,4 +1,6 @@
 import atexit
+from typing import List
+
 import collections
 import json
 import os
@@ -69,6 +71,8 @@ class Config(object):
     prod_branch_types = ['fix', 'chore', 'doc', 'issue']
 
     # build config
+    version_change_actions: List[List[str]] = None
+
     build_stages: list = None
 
     # hard config
@@ -234,6 +238,8 @@ class Context(AbstractContext):
 
         build_config_json = config.get(const.CONFIG_BUILD)
 
+        context.config.version_change_actions = config.get(const.CONFIG_ON_VERSION_CHANGE, [])
+
         context.config.build_stages = list()
 
         if build_config_json is not None:
@@ -325,7 +331,7 @@ class Context(AbstractContext):
         context.config.version_property = config.get(
             const.CONFIG_VERSION_PROPERTY)
 
-        property_names = [context.config.sequence_number_property, context.config.version_property]
+        property_names = [property for property in [context.config.sequence_number_property, context.config.version_property] if property is not None]
         duplicate_property_names = [item for item, count in collections.Counter(property_names).items() if count > 1]
 
         if len(duplicate_property_names):

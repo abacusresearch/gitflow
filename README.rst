@@ -161,6 +161,22 @@ Maven Project
       "versioningScheme": "semver",
       "releaseTypes": ["alpha", "beta"],
 
+      "onVersionChange": [
+        ["mvn", "versions:set", "-DnewVersion=${NEW_VERSION}"]
+      ]
+
+    }
+
+
+or
+
+::
+
+    {
+
+      "versioningScheme": "semver",
+      "releaseTypes": ["alpha", "beta"],
+
       "propertyFile": "project.properties",
       "versionProperty": "mavenVersion"
 

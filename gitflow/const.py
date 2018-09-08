@@ -33,6 +33,7 @@ CONFIG_VERSION_PROPERTY = 'versionProperty'
 CONFIG_SEQUENCE_NUMBER_PROPERTY = 'sequenceNumberProperty'
 
 CONFIG_BUILD = 'build'
+CONFIG_ON_VERSION_CHANGE = 'onVersionChange'
 
 CONFIG_RELEASE_BRANCH_BASE = 'releaseBranchBase'
 

@@ -316,8 +316,6 @@ def update_project_property_file(context: Context,
         properties = None
 
     var_separator = ' : '
-    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_version))
 
     if properties is not None:
         def log_property(properties: dict, key: str):
@@ -335,6 +333,32 @@ def update_project_property_file(context: Context,
         print(commit_out.message)
 
     return result
+
+
+def execute_version_change_actions(context: Context, old_version: str, new_version: str):
+    variables = dict(os.environ)
+    variables['OLD_VERSION'] = old_version or ''
+    variables['NEW_VERSION'] = new_version
+
+    for command in context.config.version_change_actions:
+        command_string = ' '.join(shlex.quote(token) for token in command)
+        if context.verbose >= const.TRACE_VERBOSITY:
+            print(command_string)
+
+        command = [expand_vars(token, variables) for token in command]
+
+        proc = subprocess.Popen(args=command,
+                                # stdin=subprocess.PIPE,
+                                # stdout=subprocess.PIPE,
+                                cwd=context.repo.dir,
+                                env=None)
+        proc.wait()
+        if proc.returncode != os.EX_OK:
+            context.fail(os.EX_DATAERR,
+                         _("version change action failed."),
+                         _("{command}\n"
+                           "returned with an error.")
+                         .format(command=command_string))
 
 
 def get_branch_version_component_for_version(context: Context,

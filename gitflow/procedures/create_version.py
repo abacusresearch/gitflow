@@ -13,9 +13,10 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     CommandContext, create_sequence_number_for_version, \
     git_or_fail, get_tag_name_for_version, \
     create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number, create_context
+    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number, create_context, \
+    execute_version_change_actions
 from gitflow.procedures.scheme import scheme_procedures
-from gitflow.repotools import BranchSelection, RepoContext
+from gitflow.repotools import BranchSelection, RepoContext, git_for_lines
 from gitflow.version import VersionConfig
 
 
@@ -313,6 +314,9 @@ def create_version_tag(command_context: CommandContext,
         clone_result = create_shared_clone_repository(context)
         cloned_repo = clone_result.value
 
+        commit_info = CommitInfo()
+        commit_info.add_message("#version: " + cli.if_none(new_version))
+
         # run version change hooks on release branch
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
@@ -331,7 +335,6 @@ def create_version_tag(command_context: CommandContext,
             clone_context: Context = create_context(context, result, cloned_repo.dir)
             clone_context.config.remote_name = 'origin'
 
-            commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
                                                          properties_in_selected_commit,
                                                          new_version,
@@ -340,16 +343,15 @@ def create_version_tag(command_context: CommandContext,
             result.add_subresult(update_result)
             if result.has_errors():
                 result.fail(os.EX_DATAERR,
-                            _("Version change hook run failed."),
+                            _("Property update failed."),
                             _("An unexpected error occurred.")
                             )
-
-            if not update_result.value:
-                commit_info = None
         else:
-            commit_info = None
             clone_context: Context = create_context(context, result, cloned_repo.dir)
             clone_context.config.remote_name = 'origin'
+
+        if new_version is not None:
+            execute_version_change_actions(clone_context, latest_branch_version, new_version)
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
@@ -636,10 +638,12 @@ def create_version_branch(command_context: CommandContext,
         clone_context: Context = create_context(context, result, cloned_repo.dir)
         clone_context.config.remote_name = 'origin'
 
+        commit_info = CommitInfo()
+        commit_info.add_message("#version: " + cli.if_none(new_version))
+
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
 
-            commit_info = CommitInfo()
             update_result = update_project_property_file(clone_context,
                                                          properties_in_selected_commit,
                                                          new_version,
@@ -648,14 +652,12 @@ def create_version_branch(command_context: CommandContext,
             result.add_subresult(update_result)
             if result.has_errors():
                 result.fail(os.EX_DATAERR,
-                            _("Version change hook run failed."),
+                            _("Property update failed."),
                             _("An unexpected error occurred.")
                             )
 
-            if not update_result.value:
-                commit_info = None
-        else:
-            commit_info = None
+        if new_version is not None:
+            execute_version_change_actions(clone_context, latest_branch_version, new_version)
 
         if commit_info is not None:
             if command_context.selected_commit != command_context.selected_ref.target.obj_name:
