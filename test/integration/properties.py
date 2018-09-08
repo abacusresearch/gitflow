@@ -35,6 +35,15 @@ class TestLoadStore(object):
     def test_ini_bytes(self):
         self.__test_load_store_bytes('test.ini')
 
+    def test_yml(self):
+        self.__test_load_store('test.yml')
+
+    def test_yml_string(self):
+        self.__test_load_store_string('test.yml')
+
+    def test_yml_bytes(self):
+        self.__test_load_store_bytes('test.yml')
+
     def __test_load_store(self, file_name: str):
         property_file: PropertyIO = PropertyIO.get_instance_by_filename(file_name)
         properties = dict()
@@ -42,6 +51,8 @@ class TestLoadStore(object):
         properties['bla'] = 'blub'
         property_file.write_file(file_name, properties)
 
+        print('===================================')
+        print(file_name)
         print('---------- FILE CONTENTS ----------')
         with open(file_name, 'r') as file:
             print(file.read())
@@ -60,6 +71,8 @@ class TestLoadStore(object):
         properties['bla'] = 'blub'
         written_string = property_file.to_str(properties)
 
+        print('===================================')
+        print(file_name)
         print('---------- FILE CONTENTS ----------')
         print(written_string)
         print('-----------------------------------')
@@ -77,6 +90,8 @@ class TestLoadStore(object):
         properties['bla'] = 'blub'
         written_bytes = property_file.to_bytes(properties, 'UTF-8')
 
+        print('===================================')
+        print(file_name)
         print('---------- FILE CONTENTS ----------')
         print(str(written_bytes, 'UTF-8'))
         print('-----------------------------------')
