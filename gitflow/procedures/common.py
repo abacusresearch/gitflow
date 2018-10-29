@@ -459,15 +459,25 @@ def create_shared_clone_repository(context: Context) -> Result:
     os.mkdir(path=tempdir_path, mode=clone_dir_mode)
 
     if context.config.push_to_local:
-        returncode, out, err = repotools.git(context.repo, 'clone', '--shared',
-                                             '--branch', context.config.release_branch_base,
-                                             '.',
-                                             tempdir_path)
+        returncode, out, err = repotools.git_raw(
+            git=context.repo.git,
+            args=['clone',
+                  '--branch', context.config.release_branch_base,
+                  '--shared',
+                  context.repo.dir,
+                  tempdir_path
+                  ],
+            verbose=context.verbose)
     else:
-        returncode, out, err = repotools.git(context.repo, 'clone', '--reference', '.',
-                                             '--branch', context.config.release_branch_base,
-                                             remote.url,
-                                             tempdir_path)
+        returncode, out, err = repotools.git_raw(
+            git=context.repo.git,
+            args=['clone',
+                  '--branch', context.config.release_branch_base,
+                  '--reference', context.repo.dir,
+                  remote.url,
+                  tempdir_path],
+            verbose=context.verbose)
+
     if returncode != os.EX_OK:
         result.fail(os.EX_DATAERR,
                     _("Failed to clone repo."),
