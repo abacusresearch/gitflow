@@ -160,44 +160,49 @@ def create_ref_name(*strings: str):
     return utils.split_join('/', False, False, *strings)
 
 
-def git(context: RepoContext, *args) -> typing.Tuple[int, bytes, bytes]:
-    command = [context.git]
-    if context.use_root_dir_arg:
-        command.extend(['-C', context.dir])
+def git_raw(git: str, args: list, verbose: int, dir: str = None) -> typing.Tuple[int, bytes, bytes]:
+    command = [git]
+    if dir is not None:
+        command.extend(['-C', dir])
+
+    for index, arg in enumerate(args):
+        if isinstance(arg, Ref):
+            args[index] = arg.name
+
     command.extend(args)
 
-    for index, arg in enumerate(command):
-        if isinstance(arg, Ref):
-            command[index] = arg.name
-
-    if context.verbose >= const.TRACE_VERBOSITY:
+    if verbose >= const.TRACE_VERBOSITY:
         cli.print(utils.command_to_str(command))
 
     env = os.environ.copy()
     env["LANGUAGE"] = "C"
     env["LC_ALL"] = "C"
-    if context.verbose >= const.TRACE_VERBOSITY:
+    if verbose >= const.TRACE_VERBOSITY:
         proc = subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
-                                cwd=context.dir if not context.use_root_dir_arg else None,
+                                cwd=dir,
                                 env=env)
     else:
         proc = subprocess.Popen(args=command,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
-                                cwd=context.dir if not context.use_root_dir_arg else None,
+                                cwd=dir,
                                 env=env)
 
     out, err = proc.communicate()
     if proc.returncode != os.EX_OK:
-        if context.verbose >= const.TRACE_VERBOSITY:
+        if verbose >= const.TRACE_VERBOSITY:
             cli.eprint("command failed: " + utils.command_to_str(command))
             cli.eprint("child process returned " + str(proc.returncode))
             if err is not None:
                 cli.eprint(err.decode("utf-8"))
     return proc.returncode, out, err
+
+
+def git(context: RepoContext, *args) -> typing.Tuple[int, bytes, bytes]:
+    return git_raw(git=context.git, args=list(args), dir=context.dir, verbose=context.verbose)
 
 
 def git_interactive(context: RepoContext, *args) -> subprocess.Popen:

@@ -13,6 +13,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Union
 
 import semver
@@ -454,7 +455,7 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
     return branch_ref
 
 
-def create_shared_clone_repository(context: Context) -> Result:
+def clone_repository(context: Context) -> Result:
     """
     :rtype: Result
     """
@@ -468,47 +469,73 @@ def create_shared_clone_repository(context: Context) -> Result:
                     .format(remote=repr(context.config.remote_name))
                     )
 
-    tempdir_path = os.path.join(os.path.dirname(context.repo.dir),
-                                '.' + os.path.basename(context.repo.dir) + ".gitflow-clone")
-    clone_dir_mode = 0o700
-    if os.path.exists(tempdir_path):
-        if not os.path.isdir(tempdir_path):
+    tempdir_path = tempfile.mkdtemp(prefix=os.path.basename(context.repo.dir) + ".gitflow-clone.")
+    try:
+        if os.path.exists(tempdir_path):
+            os.chmod(path=tempdir_path, mode=0o700)
+            if os.path.isdir(tempdir_path):
+                if os.listdir(tempdir_path):
+                    result.fail(os.EX_DATAERR,
+                                _("Failed to clone repo."),
+                                _("Directory is not empty: {path}").format(path=tempdir_path)
+                                )
+            else:
+                result.fail(os.EX_DATAERR,
+                            _("Failed to clone repo."),
+                            _("File is not a directory: {path}").format(path=tempdir_path)
+                            )
+        else:
             result.fail(os.EX_DATAERR,
                         _("Failed to clone repo."),
-                        _("The temporary target directory exists, but is not a directory.")
+                        _("File does not exist: {path}").format(path=tempdir_path)
                         )
-        else:
-            shutil.rmtree(tempdir_path)
-    os.mkdir(path=tempdir_path, mode=clone_dir_mode)
 
-    if context.config.push_to_local:
-        returncode, out, err = repotools.git(context.repo, 'clone', '--shared',
-                                             '--branch', context.config.release_branch_base,
-                                             '.',
-                                             tempdir_path)
-    else:
-        returncode, out, err = repotools.git(context.repo, 'clone', '--reference', '.',
-                                             '--branch', context.config.release_branch_base,
-                                             remote.url,
-                                             tempdir_path)
-    if returncode != os.EX_OK:
-        result.fail(os.EX_DATAERR,
-                    _("Failed to clone repo."),
-                    _("An unexpected error occurred.")
-                    )
+        if context.config.push_to_local:
+            returncode, out, err = repotools.git_raw(
+                git=context.repo.git,
+                args=['clone',
+                      '--branch', context.config.release_branch_base,
+                      '--shared',
+                      context.repo.dir,
+                      tempdir_path
+                      ],
+                verbose=context.verbose)
+        else:
+            returncode, out, err = repotools.git_raw(
+                git=context.repo.git,
+                args=['clone',
+                      '--branch', context.config.release_branch_base,
+                      '--reference', context.repo.dir,
+                      remote.url,
+                      tempdir_path],
+                verbose=context.verbose)
+
+        if returncode != os.EX_OK:
+            result.error(os.EX_DATAERR,
+                         _("Failed to clone repo."),
+                         _("An unexpected error occurred.")
+                         )
+    except:
+        result.error(os.EX_DATAERR,
+                     _("Failed to clone repo."),
+                     _("An unexpected error occurred.")
+                     )
+    finally:
+        context.add_subresult(result)
 
     if not result.has_errors():
         repo = RepoContext()
+        repo.git = context.repo.git
         repo.dir = tempdir_path
-        repo.verbose = context.verbose
+        repo.verbose = context.repo.verbose
         result.value = repo
-
-    context.add_subresult(result)
+    else:
+        shutil.rmtree(path=tempdir_path)
 
     return result
 
 
-def create_context(context: Context, result: Result, directory: str) -> Context:
+def create_temp_context(context: Context, result: Result, directory: str) -> Context:
     clone_context = Context.create({
         '--root': directory,
 
