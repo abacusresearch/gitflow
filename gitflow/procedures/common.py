@@ -432,7 +432,7 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
     return branch_ref
 
 
-def create_shared_clone_repository(context: Context) -> Result:
+def clone_repository(context: Context) -> Result:
     """
     :rtype: Result
     """
@@ -512,7 +512,7 @@ def create_shared_clone_repository(context: Context) -> Result:
     return result
 
 
-def create_context(context: Context, result: Result, directory: str) -> Context:
+def create_temp_context(context: Context, result: Result, directory: str) -> Context:
     clone_context = Context.create({
         '--root': directory,
 

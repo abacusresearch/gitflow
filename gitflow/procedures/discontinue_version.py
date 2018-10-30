@@ -5,8 +5,8 @@ from gitflow.common import Result
 from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures.common import get_command_context, get_branch_info, check_requirements, \
-    get_discontinuation_tags, prompt_for_confirmation, create_shared_clone_repository, git_or_fail, fetch_all_and_ff, \
-    check_in_repo, prompt, create_context
+    get_discontinuation_tags, prompt_for_confirmation, clone_repository, git_or_fail, fetch_all_and_ff, \
+    check_in_repo, prompt, create_temp_context
 from gitflow.repotools import BranchSelection
 
 
@@ -88,8 +88,8 @@ def call(context: Context) -> Result:
     if not command_context.has_errors():
         # run merge on local clone
 
-        clone_result = create_shared_clone_repository(context)
-        clone_context: Context = create_context(context, result, clone_result.value.dir)
+        clone_result = clone_repository(context)
+        clone_context: Context = create_temp_context(context, result, clone_result.value.dir)
         clone_context.config.remote_name = 'origin'
 
         changes = list()

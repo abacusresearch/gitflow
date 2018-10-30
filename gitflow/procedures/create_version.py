@@ -12,8 +12,8 @@ from gitflow.procedures.common import get_command_context, check_requirements, g
     fetch_all_and_ff, \
     CommandContext, create_sequence_number_for_version, \
     git_or_fail, get_tag_name_for_version, \
-    create_shared_clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
-    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number, create_context
+    clone_repository, CommitInfo, update_project_property_file, create_commit, prompt_for_confirmation, \
+    check_in_repo, read_properties_in_commit, read_config_in_commit, get_global_sequence_number, create_temp_context
 from gitflow.procedures.scheme import scheme_procedures
 from gitflow.repotools import BranchSelection, RepoContext
 from gitflow.version import VersionConfig
@@ -310,7 +310,7 @@ def create_version_tag(command_context: CommandContext,
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
-        clone_result = create_shared_clone_repository(context)
+        clone_result = clone_repository(context)
         cloned_repo = clone_result.value
 
         # run version change hooks on release branch
@@ -328,7 +328,7 @@ def create_version_tag(command_context: CommandContext,
                             _("An unexpected error occurred.")
                             )
 
-            clone_context: Context = create_context(context, result, cloned_repo.dir)
+            clone_context: Context = create_temp_context(context, result, cloned_repo.dir)
             clone_context.config.remote_name = 'origin'
 
             commit_info = CommitInfo()
@@ -348,7 +348,7 @@ def create_version_tag(command_context: CommandContext,
                 commit_info = None
         else:
             commit_info = None
-            clone_context: Context = create_context(context, result, cloned_repo.dir)
+            clone_context: Context = create_temp_context(context, result, cloned_repo.dir)
             clone_context.config.remote_name = 'origin'
 
         if commit_info is not None:
@@ -624,7 +624,7 @@ def create_version_branch(command_context: CommandContext,
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
-        clone_result = create_shared_clone_repository(context)
+        clone_result = clone_repository(context)
         cloned_repo: RepoContext = clone_result.value
 
         # run version change hooks on new release branch
@@ -633,7 +633,7 @@ def create_version_branch(command_context: CommandContext,
                                           command_context.selected_commit],
                     _("Failed to check out release branch."))
 
-        clone_context: Context = create_context(context, result, cloned_repo.dir)
+        clone_context: Context = create_temp_context(context, result, cloned_repo.dir)
         clone_context.config.remote_name = 'origin'
 
         if (context.config.commit_version_property and new_version is not None) \
