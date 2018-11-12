@@ -88,7 +88,7 @@ def call(context: Context) -> Result:
     if not command_context.has_errors():
         # run merge on local clone
 
-        clone_result = clone_repository(context)
+        clone_result = clone_repository(context, context.config.release_branch_base)
         clone_context: Context = create_temp_context(context, result, clone_result.value.dir)
         clone_context.config.remote_name = 'origin'
 

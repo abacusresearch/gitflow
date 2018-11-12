@@ -7,7 +7,6 @@
 #   - version gaps
 #   - potentially undesired effects
 #   - operations involving a push
-import json
 import os
 import re
 import shlex
@@ -278,7 +277,7 @@ def update_project_properties(context: Context,
     if new_version_info.build is not None:
         raise ValueError("build info must not be set in version tag")
 
-    properties = prev_properties.copy()
+    properties = prev_properties.copy() if prev_properties is not None else dict()
 
     if context.config.commit_version_property:
         properties[context.config.version_property] = new_version
@@ -308,7 +307,7 @@ def update_project_property_file(context: Context,
                         None
                         )
 
-        properties = update_project_properties(context, prev_properties.copy(), new_version, new_sequential_version)
+        properties = update_project_properties(context, prev_properties, new_version, new_sequential_version)
 
         property_reader.write_file(context.config.property_file, properties)
         commit_out.add_file(context.config.property_file)
@@ -317,8 +316,6 @@ def update_project_property_file(context: Context,
         properties = None
 
     var_separator = ' : '
-    commit_out.add_message("#" + const.DEFAULT_VERSION_VAR_NAME + var_separator
-                           + cli.if_none(new_version))
 
     if properties is not None:
         def log_property(properties: dict, key: str):
@@ -336,6 +333,32 @@ def update_project_property_file(context: Context,
         print(commit_out.message)
 
     return result
+
+
+def execute_version_change_actions(context: Context, old_version: str, new_version: str):
+    variables = dict(os.environ)
+    variables['OLD_VERSION'] = old_version or ''
+    variables['NEW_VERSION'] = new_version
+
+    for command in context.config.version_change_actions:
+        command_string = ' '.join(shlex.quote(token) for token in command)
+        if context.verbose >= const.TRACE_VERBOSITY:
+            print(command_string)
+
+        command = [expand_vars(token, variables) for token in command]
+
+        proc = subprocess.Popen(args=command,
+                                # stdin=subprocess.PIPE,
+                                # stdout=subprocess.PIPE,
+                                cwd=context.repo.dir,
+                                env=None)
+        proc.wait()
+        if proc.returncode != os.EX_OK:
+            context.fail(os.EX_DATAERR,
+                         _("version change action failed."),
+                         _("{command}\n"
+                           "returned with an error.")
+                         .format(command=command_string))
 
 
 def get_branch_version_component_for_version(context: Context,
@@ -432,7 +455,7 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
     return branch_ref
 
 
-def clone_repository(context: Context) -> Result:
+def clone_repository(context: Context, branch: str) -> Result:
     """
     :rtype: Result
     """
@@ -471,7 +494,7 @@ def clone_repository(context: Context) -> Result:
             returncode, out, err = repotools.git_raw(
                 git=context.repo.git,
                 args=['clone',
-                      '--branch', context.config.release_branch_base,
+                      '--branch', branch,
                       '--shared',
                       context.repo.dir,
                       tempdir_path
@@ -481,7 +504,7 @@ def clone_repository(context: Context) -> Result:
             returncode, out, err = repotools.git_raw(
                 git=context.repo.git,
                 args=['clone',
-                      '--branch', context.config.release_branch_base,
+                      '--branch', branch,
                       '--reference', context.repo.dir,
                       remote.url,
                       tempdir_path],
@@ -489,12 +512,12 @@ def clone_repository(context: Context) -> Result:
 
         if returncode != os.EX_OK:
             result.error(os.EX_DATAERR,
-                         _("Failed to clone repo."),
+                         _("Failed to clone the repository."),
                          _("An unexpected error occurred.")
                          )
     except:
         result.error(os.EX_DATAERR,
-                     _("Failed to clone repo."),
+                     _("Failed to clone the repository."),
                      _("An unexpected error occurred.")
                      )
     finally:
@@ -798,14 +821,26 @@ def check_requirements(command_context: CommandContext,
 
 
 def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str = const.DEFAULT_CONFIG_FILE) -> dict:
-    config_str = repotools.get_file_contents(
-        repo,
-        commit,
-        config_file_path
-    )
+    if config_file_path is None:
+        config_str = None
+        for config_filename in const.DEFAULT_CONFIGURATION_FILE_NAMES:
+            config_str = repotools.get_file_contents(
+                repo,
+                commit,
+                config_filename
+            )
+            if config_filename is not None:
+                break
+    else:
+        config_str = repotools.get_file_contents(
+            repo,
+            commit,
+            config_file_path
+        )
 
     if config_str is not None:
-        config = json.loads(s=config_str, encoding=const.DEFAULT_PROPERTY_ENCODING)
+        config = PropertyIO.get_instance_by_filename(config_file_path).from_bytes(config_str,
+                                                                                  const.DEFAULT_PROPERTY_ENCODING)
     else:
         config = None
     return config
@@ -813,7 +848,6 @@ def read_config_in_commit(repo: RepoContext, commit: str, config_file_path: str 
 
 def read_properties_in_commit(context: Context, repo: RepoContext, config: dict, commit: str):
     if config is not None:
-        # print(json.dumps(obj=config_in_history, indent=2))
         property_file = config.get(const.CONFIG_PROJECT_PROPERTY_FILE)
 
         if property_file is None:

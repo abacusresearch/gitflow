@@ -1,10 +1,10 @@
 import itertools
-import json
 import os
 
 import pytest
 
 from gitflow import const
+from gitflow.properties import PropertyIO
 from test.integration.base import TestFlowBase
 
 
@@ -18,17 +18,19 @@ class TestFlow(TestFlowBase):
         # create the config file
         self.project_property_file = 'project.properties'
         config_file = os.path.join(self.git_working_copy, const.DEFAULT_CONFIG_FILE)
-        with open(config_file, 'w+') as property_file:
-            config = {
-                const.CONFIG_VERSIONING_SCHEME: 'semverWithSeq',
-                const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
-                const.CONFIG_VERSION_PROPERTY: 'version',
-                const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
-                const.CONFIG_VERSION_TAG_PREFIX: ''
-            }
-            json.dump(obj=config, fp=property_file)
-            self.version_tag_prefix = config.get(const.CONFIG_VERSION_TAG_PREFIX,
-                                                 const.DEFAULT_VERSION_TAG_PREFIX) or ''
+        config = {
+
+            const.CONFIG_VERSIONING_SCHEME: 'semverWithSeq',
+            const.CONFIG_PROJECT_PROPERTY_FILE: self.project_property_file,
+            const.CONFIG_VERSION_PROPERTY: 'version',
+            const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
+            const.CONFIG_VERSION_TAG_PREFIX: ''
+        }
+
+        PropertyIO.write_file(config_file, config)
+
+        self.version_tag_prefix = config.get(const.CONFIG_VERSION_TAG_PREFIX,
+                                             const.DEFAULT_VERSION_TAG_PREFIX) or ''
 
         # create & push the initial commit
         self.add(config_file)

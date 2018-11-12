@@ -22,6 +22,7 @@ Usage:
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
  git-flow drop-cache [-d|--dry-run]
         [-B|--batch] [-v|--verbose]... [-p|--pretty]
+ git-flow convert-config <input-file> <output-file>
  git-flow (-h|--help)
  git-flow --version
  git-flow --hook=<hook-name> [<hook-args>...]
@@ -37,7 +38,7 @@ Workspace Options:
  --root=DIR             The working copy root.
  [default: .]
  --config=FILE          The configuration file relative to the working copy root.
- [default: .gitflow.json]
+                        Defaults to default file name in the following order: .gitflow.yml, gitflow.json
 
 Execution Mode Options:
  -B --batch             Disables interaction and output coloring.
@@ -73,6 +74,7 @@ from gitflow.context import Context
 # print('project_env: ' + project_env)
 # sys.path.insert(0, project_env)
 from gitflow.procedures.scheme import scheme_procedures
+from gitflow.properties import PropertyIO
 
 ENABLE_PROFILER = False
 
@@ -138,6 +140,30 @@ def cmd_drop_cache(context):
     cli.print("dropping cache root: " + repr(cache_root))
     if not context.dry_run:
         filesystem.delete_all_cache_dirs()
+    return result
+
+
+def cmd_convert_config(context):
+    result = Result()
+
+    with open(context.args['<input-file>'], mode='r', encoding='utf-8') as in_file:
+        if in_file is None:
+            result.fail(os.EX_USAGE,
+                        _("Failed to open input file"),
+                        None)
+            return result
+        input = PropertyIO.get_instance_by_filename(in_file.name)
+
+        with open(context.args['<output-file>'], mode='w', encoding='utf-8') as out_file:
+            if out_file is None:
+                result.fail(os.EX_USAGE,
+                            _("Failed to open output file"),
+                            None)
+                return result
+
+            output = PropertyIO.get_instance_by_filename(out_file.name)
+            config = input.from_stream(in_file)
+            output.to_stream(out_file, config)
     return result
 
 
@@ -209,6 +235,7 @@ def main(argv: list = sys.argv) -> int:
                     'test': cmd_build,
                     'integration-test': cmd_build,
                     'drop-cache': cmd_drop_cache,
+                    'convert-config': cmd_convert_config,
                 }
 
                 command_funcs = list()
