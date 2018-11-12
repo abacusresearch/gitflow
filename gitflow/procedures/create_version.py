@@ -318,22 +318,22 @@ def create_version_tag(command_context: CommandContext,
         commit_info.add_message("#version: " + cli.if_none(new_version))
 
         # run version change hooks on release branch
+        checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
+                            repotools.create_ref_name(const.REMOTES_PREFIX,
+                                                      context.config.remote_name,
+                                                      branch_name)]
+        returncode, out, err = repotools.git(cloned_repo, *checkout_command)
+        if returncode != os.EX_OK:
+            result.fail(os.EX_DATAERR,
+                        _("Failed to check out release branch."),
+                        _("An unexpected error occurred.")
+                        )
+
+        clone_context: Context = create_temp_context(context, result, cloned_repo.dir)
+        clone_context.config.remote_name = 'origin'
+
         if (context.config.commit_version_property and new_version is not None) \
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
-            checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
-                                repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                          context.config.remote_name,
-                                                          branch_name)]
-
-            returncode, out, err = repotools.git(cloned_repo, *checkout_command)
-            if returncode != os.EX_OK:
-                result.fail(os.EX_DATAERR,
-                            _("Failed to check out release branch."),
-                            _("An unexpected error occurred.")
-                            )
-
-            clone_context: Context = create_temp_context(context, result, cloned_repo.dir)
-            clone_context.config.remote_name = 'origin'
 
             update_result = update_project_property_file(clone_context,
                                                          properties_in_selected_commit,
@@ -346,9 +346,6 @@ def create_version_tag(command_context: CommandContext,
                             _("Property update failed."),
                             _("An unexpected error occurred.")
                             )
-        else:
-            clone_context: Context = create_temp_context(context, result, cloned_repo.dir)
-            clone_context.config.remote_name = 'origin'
 
         if new_version is not None:
             execute_version_change_actions(clone_context, latest_branch_version, new_version)
