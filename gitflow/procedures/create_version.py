@@ -311,7 +311,7 @@ def create_version_tag(command_context: CommandContext,
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
-        clone_result = clone_repository(context)
+        clone_result = clone_repository(context, context.config.release_branch_base)
         cloned_repo = clone_result.value
 
         commit_info = CommitInfo()
@@ -322,7 +322,7 @@ def create_version_tag(command_context: CommandContext,
                 or (context.config.commit_sequential_version_property and new_sequential_version is not None):
             checkout_command = ['checkout', '--force', '--track', '-b', branch_name,
                                 repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                          'origin',
+                                                          context.config.remote_name,
                                                           branch_name)]
 
             returncode, out, err = repotools.git(cloned_repo, *checkout_command)
@@ -626,7 +626,7 @@ def create_version_branch(command_context: CommandContext,
         branch_name = get_branch_name_for_version(context, new_version_info)
         tag_name = get_tag_name_for_version(context, new_version_info)
 
-        clone_result = clone_repository(context)
+        clone_result = clone_repository(context, context.config.release_branch_base)
         cloned_repo: RepoContext = clone_result.value
 
         # run version change hooks on new release branch

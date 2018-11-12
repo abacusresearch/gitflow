@@ -455,7 +455,7 @@ def get_branch_by_branch_name_or_version_tag(context: Context, name: str, search
     return branch_ref
 
 
-def clone_repository(context: Context) -> Result:
+def clone_repository(context: Context, branch: str) -> Result:
     """
     :rtype: Result
     """
@@ -494,7 +494,7 @@ def clone_repository(context: Context) -> Result:
             returncode, out, err = repotools.git_raw(
                 git=context.repo.git,
                 args=['clone',
-                      '--branch', context.config.release_branch_base,
+                      '--branch', branch,
                       '--shared',
                       context.repo.dir,
                       tempdir_path
@@ -504,7 +504,7 @@ def clone_repository(context: Context) -> Result:
             returncode, out, err = repotools.git_raw(
                 git=context.repo.git,
                 args=['clone',
-                      '--branch', context.config.release_branch_base,
+                      '--branch', branch,
                       '--reference', context.repo.dir,
                       remote.url,
                       tempdir_path],
@@ -512,12 +512,12 @@ def clone_repository(context: Context) -> Result:
 
         if returncode != os.EX_OK:
             result.error(os.EX_DATAERR,
-                         _("Failed to clone repo."),
+                         _("Failed to clone the repository."),
                          _("An unexpected error occurred.")
                          )
     except:
         result.error(os.EX_DATAERR,
-                     _("Failed to clone repo."),
+                     _("Failed to clone the repository."),
                      _("An unexpected error occurred.")
                      )
     finally:
