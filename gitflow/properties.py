@@ -85,7 +85,7 @@ class JavaPropertyIO(PropertyIO):
 
 class YAMLPropertyIO(PropertyIO):
     def from_stream(self, stream: io.TextIOBase) -> dict:
-        return yaml.load(stream) or dict()
+        return yaml.safe_load(stream) or dict()
 
     def to_stream(self, stream: io.TextIOBase, properties: dict):
         yaml.safe_dump(properties, stream, default_flow_style=False)
