@@ -205,6 +205,11 @@ def git(context: RepoContext, *args) -> typing.Tuple[int, bytes, bytes]:
     return git_raw(git=context.git, args=list(args), dir=context.dir, verbose=context.verbose)
 
 
+def git_in_cwd(context: RepoContext, *args) -> typing.Tuple[int, bytes, bytes]:
+    """executes git without an explicit location"""
+    return git_raw(git=context.git, args=list(args), dir=None, verbose=context.verbose)
+
+
 def git_interactive(context: RepoContext, *args) -> subprocess.Popen:
     command = [context.git]
     if context.use_root_dir_arg:
@@ -307,7 +312,12 @@ def __extract_line(context, out):
 
 
 def git_version(context: RepoContext):
-    line = git_for_line(context, '--version')
+    returncode, out, err = git_in_cwd(context, '--version')
+
+    line = None
+    if returncode == os.EX_OK:
+        line = __extract_line(context, out)
+
     if line is None:
         return None
     version_match = re.fullmatch(r'(?:(?:git|version|\s+)+?\s+)?(\d+\.\d+\.\d+).*', line)
