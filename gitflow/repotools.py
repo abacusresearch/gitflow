@@ -279,12 +279,24 @@ def git_for_lines(context: RepoContext, *args) -> Union[List[str], None]:
     returncode, out, err = git(context, *args)
 
     if returncode == os.EX_OK:
-        return out.decode("utf-8").splitlines()
+        return __extract_lines(context, out)
     return None
 
 
 def git_for_line(context: RepoContext, *args):
-    lines = git_for_lines(context, *args)
+    returncode, out, err = git(context, *args)
+
+    if returncode == os.EX_OK:
+        return __extract_line(context, out)
+    return None
+
+
+def __extract_lines(context, out):
+    return out.decode("utf-8").splitlines()
+
+
+def __extract_line(context, out):
+    lines = __extract_lines(context, out)
     lines = [line for line in lines if line]
     if lines is not None and len(lines) == 1:
         return lines[0]
