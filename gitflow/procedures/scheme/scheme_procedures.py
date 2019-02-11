@@ -236,7 +236,10 @@ class version_set(object):
         self.__new_version = new_version
 
     def __call__(self, version_config: VersionConfig, old_version: Optional[str], global_seq: Optional[int]):
-        return version.validate_version(version_config, old_version)
+        result = Result()
+        result.add_subresult(version.validate_version(version_config, self.__new_version))
+        result.value = self.__new_version
+        return result
 
 
 def get_sequence_number(version_config: VersionConfig, new_version_info: semver.VersionInfo):
