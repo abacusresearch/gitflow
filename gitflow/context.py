@@ -242,7 +242,7 @@ class Context(AbstractContext):
                                     _("config file not found.")
                                     .format(path=repr(gitflow_config_file)),
                                     _("Default config files are\n:{list}")
-                                    .__format__(list=const.DEFAULT_CONFIGURATION_FILE_NAMES)
+                                    .format(list=const.DEFAULT_CONFIGURATION_FILE_NAMES)
                                     )
 
             if context.verbose >= const.TRACE_VERBOSITY:
