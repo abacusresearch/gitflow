@@ -456,7 +456,7 @@ class Context(AbstractContext):
         self.temp_dirs.append(dir)
         pass
 
-    def get_release_branches(self):
+    def get_release_branches(self, reverse: bool = True):
         release_branches = list(filter(
             lambda branch_ref: self.release_branch_matcher.format(
                 branch_ref.name) is not None,
@@ -465,7 +465,7 @@ class Context(AbstractContext):
                                     const.LOCAL_BRANCH_PREFIX)
         ))
         release_branches.sort(
-            reverse=True,
+            reverse=reverse,
             key=self.release_branch_matcher.key_func
         )
         return release_branches
