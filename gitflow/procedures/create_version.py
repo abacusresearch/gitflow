@@ -25,16 +25,19 @@ def create_version_tag(command_context: CommandContext,
     result = Result()
     context: Context = command_context.context
 
+    release_branches = command_context.context.get_release_branches(reverse=True)
+
     # TODO configuration
     allow_merge_base_tags = True  # context.config.allow_shared_release_branch_base
 
-    branch_base_version = context.release_branch_matcher.format(command_context.selected_ref.name)
-    if branch_base_version is not None:
-        branch_base_version_info = semver.parse_version_info(branch_base_version)
+    selected_branch = command_context.selected_ref
+    selected_branch_base_version = context.release_branch_matcher.format(command_context.selected_ref.name)
+    if selected_branch_base_version is not None:
+        selected_branch_base_version_info = semver.parse_version_info(selected_branch_base_version)
     else:
-        branch_base_version_info = None
+        selected_branch_base_version_info = None
 
-    if branch_base_version is None:
+    if selected_branch_base_version is None:
         result.fail(os.EX_USAGE,
                     _("Cannot bump version."),
                     _("{branch} is not a release branch.")
@@ -42,91 +45,110 @@ def create_version_tag(command_context: CommandContext,
 
     latest_version_tag = None
     preceding_version_tag = None
+    preceding_branch_version_tag = None
     version_tags_on_same_commit = list()
     subsequent_version_tags = list()
     enclosing_versions = set()
-
-    # fork_point = repotools.git_merge_base(context.repo, context.config.release_branch_base,
-    #                                       command_context.selected_commit)
-    # if fork_point is None:
-    #     result.fail(os.EX_USAGE,
-    #                 _("Cannot bump version."),
-    #                 _("{branch} has no fork point on {base_branch}.")
-    #                 .format(branch=repr(command_context.selected_ref.name),
-    #                         base_branch=repr(context.config.release_branch_base)))
-    fork_point = None
 
     # abort scan, when a preceding commit for each tag type has been processed.
     # enclosing_versions now holds enough information for operation validation,
     # assuming the branch has not gone haywire in earlier commits
     # TODO evaluate upper and lower bound version for efficiency
     abort_version_scan = False
-    abort_sequential_version_scan = False
+
+    on_selected_branch = False
 
     before_commit = False
-    for history_commit in repotools.git_list_commits(
-            context=context.repo,
-            start=fork_point,
-            end=command_context.selected_ref,
-            options=const.BRANCH_COMMIT_SCAN_OPTIONS):
-        at_commit = history_commit.obj_name == command_context.selected_commit
-        version_tag_refs = None
+    before_selected_branch = False
 
-        assert not at_commit if before_commit else not before_commit
+    for release_branch in release_branches:
+        # fork_point = repotools.git_merge_base(context.repo, context.config.release_branch_base,
+        #                                       command_context.selected_commit)
+        # if fork_point is None:
+        #     result.fail(os.EX_USAGE,
+        #                 _("Cannot bump version."),
+        #                 _("{branch} has no fork point on {base_branch}.")
+        #                 .format(branch=repr(command_context.selected_ref.name),
+        #                         base_branch=repr(context.config.release_branch_base)))
+        fork_point = None
 
-        for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit.obj_name):
-            version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
-            if version_info is not None:
-                tag_matches = version_info.major == branch_base_version_info.major \
-                              and version_info.minor == branch_base_version_info.minor
+        branch_base_version = context.release_branch_matcher.format(release_branch.name)
+        if branch_base_version is not None:
+            branch_base_version_info = semver.parse_version_info(branch_base_version)
+        else:
+            branch_base_version_info = None
 
-                if tag_matches:
-                    if version_tag_refs is None:
-                        version_tag_refs = list()
-                    version_tag_refs.append(tag_ref)
-                else:
-                    if fork_point is not None:
-                        # fail stray tags on exclusive branch commits
-                        result.fail(os.EX_DATAERR,
-                                    _("Cannot bump version."),
-                                    _("Found stray version tag: {version}.")
-                                    .format(version=repr(version.format_version_info(version_info)))
-                                    )
+        on_selected_branch = not before_selected_branch and release_branch.name == selected_branch.name
+
+        for history_commit in repotools.git_list_commits(
+                context=context.repo,
+                start=fork_point,
+                end=release_branch.obj_name,
+                options=const.BRANCH_COMMIT_SCAN_OPTIONS):
+            at_commit = not before_commit and on_selected_branch and history_commit.obj_name == command_context.selected_commit
+
+            version_tag_refs = None
+
+            assert not at_commit if before_commit else not before_commit
+
+            for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit.obj_name):
+                version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
+                if version_info is not None:
+                    tag_matches = version_info.major == branch_base_version_info.major \
+                                  and version_info.minor == branch_base_version_info.minor
+
+                    if tag_matches:
+                        if version_tag_refs is None:
+                            version_tag_refs = list()
+                        version_tag_refs.append(tag_ref)
                     else:
-                        # when no merge base is used, abort at the first mismatching tag
-                        abort_version_scan = True
-                        abort_sequential_version_scan = True
-                        break
+                        if fork_point is not None:
+                            # fail stray tags on exclusive branch commits
+                            result.fail(os.EX_DATAERR,
+                                        _("Cannot bump version."),
+                                        _("Found stray version tag: {version}.")
+                                        .format(version=repr(version.format_version_info(version_info)))
+                                        )
+                        else:
+                            # when no merge base is used, abort at the first mismatching tag
+                            break
 
-        if not abort_version_scan and version_tag_refs is not None and len(version_tag_refs):
-            version_tag_refs.sort(
-                reverse=True,
-                key=utils.cmp_to_key(
-                    lambda tag_ref_a, tag_ref_b: semver.compare(
-                        context.version_tag_matcher.format(tag_ref_a.name),
-                        context.version_tag_matcher.format(tag_ref_b.name)
+            if not abort_version_scan and version_tag_refs is not None and len(version_tag_refs):
+                version_tag_refs.sort(
+                    reverse=True,
+                    key=utils.cmp_to_key(
+                        lambda tag_ref_a, tag_ref_b: semver.compare(
+                            context.version_tag_matcher.format(tag_ref_a.name),
+                            context.version_tag_matcher.format(tag_ref_b.name)
+                        )
                     )
                 )
-            )
-            if latest_version_tag is None:
-                latest_version_tag = version_tag_refs[0]
+                if latest_version_tag is None:
+                    latest_version_tag = version_tag_refs[0]
+                if at_commit:
+                    version_tags_on_same_commit.extend(version_tag_refs)
+                if at_commit or before_commit:
+                    if preceding_version_tag is None:
+                        preceding_version_tag = version_tag_refs[0]
+                    if on_selected_branch and preceding_branch_version_tag is None:
+                        preceding_branch_version_tag = version_tag_refs[0]
+                else:
+                    subsequent_version_tags.extend(version_tag_refs)
+
+                for tag_ref in version_tag_refs:
+                    enclosing_versions.add(context.version_tag_matcher.format(tag_ref.name))
+
+                if before_commit:
+                    abort_version_scan = True
+
             if at_commit:
-                version_tags_on_same_commit.extend(version_tag_refs)
-            elif not before_commit:
-                subsequent_version_tags.extend(version_tag_refs)
-            if at_commit or before_commit and preceding_version_tag is None:
-                preceding_version_tag = version_tag_refs[0]
+                before_commit = True
 
-            for tag_ref in version_tag_refs:
-                enclosing_versions.add(context.version_tag_matcher.format(tag_ref.name))
-
-            if before_commit:
-                abort_version_scan = True
-
-        if at_commit:
+        if on_selected_branch:
             before_commit = True
+            before_selected_branch = True
 
-        if abort_version_scan and abort_sequential_version_scan:
+        if abort_version_scan:
             break
 
     if context.config.sequential_versioning and preceding_version_tag is not None:
@@ -144,14 +166,14 @@ def create_version_tag(command_context: CommandContext,
         cli.print("Tags in subsequent history:\n"
                   + '\n'.join(' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
 
-    if preceding_version_tag is not None:
-        latest_branch_version = context.version_tag_matcher.format(preceding_version_tag.name)
+    if preceding_branch_version_tag is not None:
+        latest_branch_version = context.version_tag_matcher.format(preceding_branch_version_tag.name)
     else:
         latest_branch_version = None
 
+    global_sequence_number = get_global_sequence_number(context)
     if latest_branch_version is not None:
-        version_result = operation(context.config.version_config, latest_branch_version,
-                                   get_global_sequence_number(context))
+        version_result = operation(context.config.version_config, latest_branch_version, global_sequence_number)
         result.add_subresult(version_result)
 
         new_version = version_result.value
@@ -160,25 +182,25 @@ def create_version_tag(command_context: CommandContext,
     else:
         template_version_info = semver.parse_version_info(context.config.version_config.initial_version)
         new_version = semver.format_version(
-            major=branch_base_version_info.major,
-            minor=branch_base_version_info.minor,
+            major=selected_branch_base_version_info.major,
+            minor=selected_branch_base_version_info.minor,
 
             patch=template_version_info.patch,
-            prerelease=template_version_info.prerelease,
+            prerelease=str(global_sequence_number + 1) if context.config.tie_sequential_version_to_semantic_version and global_sequence_number is not None else template_version_info.prerelease,
             build=template_version_info.build,
         )
 
     new_version_info = semver.parse_version_info(new_version)
     new_sequential_version = scheme_procedures.get_sequence_number(context.config.version_config, new_version_info)
 
-    if new_version_info.major != branch_base_version_info.major or new_version_info.minor != branch_base_version_info.minor:
+    if new_version_info.major != selected_branch_base_version_info.major or new_version_info.minor != selected_branch_base_version_info.minor:
         result.fail(os.EX_USAGE,
                     _("Tag creation failed."),
                     _("The major.minor part of the new version {new_version}"
                       " does not match the branch version {branch_version}.")
                     .format(new_version=repr(new_version),
                             branch_version=repr(
-                                "%d.%d" % (branch_base_version_info.major, branch_base_version_info.minor)))
+                                "%d.%d" % (selected_branch_base_version_info.major, selected_branch_base_version_info.minor)))
                     )
 
     try:
@@ -267,7 +289,7 @@ def create_version_tag(command_context: CommandContext,
                                     ' - ' + repr(tag_ref.name) for tag_ref in subsequent_version_tags))
                         )
 
-    global_seq_number = get_global_sequence_number(context)
+    global_seq_number = global_sequence_number
     if context.config.tie_sequential_version_to_semantic_version \
             and global_seq_number is not None \
             and new_sequential_version is not None \
