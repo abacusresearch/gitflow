@@ -440,7 +440,7 @@ def create_version_tag(command_context: CommandContext,
         if returncode != os.EX_OK:
             result.fail(os.EX_DATAERR,
                         _("Failed to push."),
-                        _("git push exited with " + returncode)
+                        _("git push exited with " + str(returncode))
                         )
 
         if original_current_branch is not None:
