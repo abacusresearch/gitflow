@@ -29,8 +29,8 @@ class JavaProperties(object):
         # dictionary to pristine dictionary
         self._keymap = {}
 
-        self.othercharre = re.compile(r'(?<!\\)(\s*\=)|(?<!\\)(\s*\:)')
-        self.othercharre2 = re.compile(r'(\s*\=)|(\s*\:)')
+        self.othercharre = re.compile(r'(?<!\\)(\s*=)|(?<!\\)(\s*:)')
+        self.othercharre2 = re.compile(r'(\s*=)|(\s*:)')
         self.bspacere = re.compile(r'\\(?!\s$)')
 
     def __str__(self):
@@ -101,7 +101,7 @@ class JavaProperties(object):
                 first, last = m.span()
                 start, end = 0, first
                 flag = 1
-                wspacere = re.compile(r'(?<![\\\=\:])(\s)')
+                wspacere = re.compile(r'(?<![\\=:])(\s)')
             else:
                 if self.othercharre2.search(line):
                     # Check if either '=' or ':' is present
@@ -174,11 +174,11 @@ class JavaProperties(object):
             key = key.strip()
             old_key = old_key.strip()
 
-        old_value = self.unescape(old_value)
-        value = self.unescape(value)
+        old_value = JavaProperties.unescape(old_value)
+        value = JavaProperties.unescape(value)
 
         # Patch from N B @ ActiveState
-        curlies = re.compile(r'\$?\{.+?\}')
+        curlies = re.compile(r'\$?{.+?}')
         found_variables = curlies.findall(value)
 
         for found_variable in found_variables:
@@ -204,21 +204,23 @@ class JavaProperties(object):
         if key not in self._keyorder:
             self._keyorder.append(key)
 
-    def escape(self, value):
+    @staticmethod
+    def escape(value):
 
         # Java escapes the '=' and ':' in the value
         # string with backslashes in the store method.
         # So let us do the same.
-        newvalue = value.replace(':', '\:')
-        newvalue = newvalue.replace('=', '\=')
+        newvalue = value.replace(':', '\\:')
+        newvalue = newvalue.replace('=', '\\=')
 
         return newvalue
 
-    def unescape(self, value):
+    @staticmethod
+    def unescape(value):
 
         # Reverse of escape
-        newvalue = value.replace('\:', ':')
-        newvalue = newvalue.replace('\=', '=')
+        newvalue = value.replace('\\:', ':')
+        newvalue = newvalue.replace('\\=', '=')
 
         return newvalue
 
@@ -271,7 +273,7 @@ class JavaProperties(object):
             for prop in self._keyorder:
                 if prop in self._origprops:
                     val = self._origprops[prop]
-                    out.write(''.join((prop, '=', self.escape(val), '\n')))
+                    out.write(''.join((prop, '=', JavaProperties.escape(val), '\n')))
         except IOError:
             raise
 

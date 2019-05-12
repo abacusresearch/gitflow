@@ -1,5 +1,5 @@
 import shlex
-from collections import Callable
+from typing import Callable
 
 
 def cmp_to_key(comparator: Callable):
@@ -40,6 +40,7 @@ def get_or_default(map: dict, key, default):
 def split_join(delimiter: str, delimit_start=True, delimit_end=True, *tokens):
     """
     Splits individual tokens by a delimiter and rejoins all of them separated by delimiter.
+    :param delimiter: delimiter to split at and join with
     :param delimit_start: add a separator to the beginning of the result
     :param delimit_end: add a separator to the end of the result
     :rtype: str

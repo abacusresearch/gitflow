@@ -2,7 +2,7 @@ import itertools
 import os
 import re
 import string
-from typing import Union, List
+from typing import Union, List, Optional, Dict
 
 import semver
 
@@ -145,7 +145,7 @@ class VersionMatcher(object):
     def fullmatch(self, string: str):
         return self.pattern.fullmatch(string)
 
-    def to_dict(self, string: str) -> dict:
+    def to_dict(self, string: str) -> Optional[Dict[str, str]]:
         """
         :param string: input string
         :return: dictionary containing version fields extracted from the input string
@@ -155,7 +155,7 @@ class VersionMatcher(object):
             return None
         return match.groupdict()
 
-    def format(self, string: str) -> str:
+    def format(self, string: str) -> Optional[str]:
         """
         :param string: input string
         :return string representation of version fields extracted from the input string
@@ -222,7 +222,7 @@ def validate_version(config: VersionConfig, version_string):
             prerelease_type = prerelease_version_elements[0]
             prerelease_version = prerelease_version_elements[1]
 
-            if config.qualifiers is not None and not prerelease_type in config.qualifiers:
+            if config.qualifiers is not None and prerelease_type not in config.qualifiers:
                 result.error(os.EX_DATAERR,
                              "Invalid version.",
                              "The pre-release type \"" + prerelease_type + "\" is invalid, must be one of: "
@@ -386,7 +386,7 @@ def cmp_alnum_token(a, b, keywords: list = None):
         return (a > b) - (a < b)
 
 
-def parse_version(version_str: str) -> Version:
+def parse_version(version_str: str) -> Optional[Version]:
     match = _SEMVER_REGEX.match(version_str)
     if match is None:
         return None

@@ -3,6 +3,7 @@ import json
 import os
 from abc import abstractmethod, ABC
 from configparser import ConfigParser
+from typing import IO
 
 import yaml
 
@@ -13,11 +14,11 @@ class PropertyIO(ABC):
     __reader_instances: dict = dict()
 
     @abstractmethod
-    def from_stream(self, stream: io.TextIOBase) -> dict:
+    def from_stream(self, stream: IO[str]) -> dict:
         pass
 
     @abstractmethod
-    def to_stream(self, stream: io.TextIOBase, properties: dict):
+    def to_stream(self, stream: IO[str], properties: dict):
         pass
 
     def from_file(self, property_file: str) -> dict:

@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import collections
 
@@ -40,7 +40,7 @@ class BuildStep(object):
 class BuildStage(object):
     type: str
     steps: list = None
-    labels: set = None
+    labels: list = None
     """contains labels for mapping to ci tasks"""
 
     def __init__(self):
@@ -222,7 +222,7 @@ class Context(AbstractContext):
                 context.repo = None
                 config_dir = context.root
 
-            gitflow_config_file: str = None
+            gitflow_config_file: Optional[str] = None
             if context.args['--config'] is not None:
                 gitflow_config_file = os.path.join(config_dir, context.args['--config'])
                 if gitflow_config_file is None:
@@ -477,11 +477,11 @@ class Context(AbstractContext):
                 if self.verbose >= const.DEBUG_VERBOSITY:
                     cli.print("deleting temp dir: " + temp_dir)
                 shutil.rmtree(temp_dir)
-            self.temp_dirs = None
+            self.temp_dirs.clear()
         if self.clones is not None:
             for clone in self.clones:
                 clone.cleanup()
-            self.clones = None
+            self.clones.clear()
 
     def __del__(self):
         self.cleanup()

@@ -424,7 +424,7 @@ def get_ref_by_name(context: RepoContext, ref_name):
         raise ValueError("multiple refs")
 
 
-def git_get_upstreams(context: RepoContext, *args) -> dict:
+def git_get_upstreams(context: RepoContext, *args) -> Optional[dict]:
     returncode, out, err = git(context, 'for-each-ref', '--format',
                                '%(refname);%(upstream)',
                                *args)
@@ -438,9 +438,7 @@ def git_get_upstreams(context: RepoContext, *args) -> dict:
 
             if ref_elements[0] in upstreams:
                 raise KeyError
-            if not len(ref_elements[1]):
-                ref_elements[1] = None
-            upstreams[ref_elements[0]] = ref_elements[1]
+            upstreams[ref_elements[0]] = ref_elements[1] if len(ref_elements[1]) else None
         return upstreams
     return None
 
@@ -499,7 +497,7 @@ def git_get_tags_by_referred_object(context: RepoContext, obj_name: str) -> list
 
 
 def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Optional[Union[Object, str]],
-                   determine_fork_point=False) -> str:
+                   determine_fork_point=False) -> Optional[str]:
     command = ['merge-base']
     if determine_fork_point:
         command.append('--fork-point')
@@ -518,7 +516,7 @@ def git_merge_base(context: RepoContext, base: Union[Object, str], ref: Optional
 
 
 def git_list_commits(context: RepoContext, start: Union[Object, str, None], end: Union[Object, str], reverse=False,
-                     options: list = None) -> itertools.chain:
+                     options: list = None) -> typing.Iterable:
     """"
     :returns branch commits in reverse chronological order
     :rtype: list of str
@@ -659,8 +657,6 @@ def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry
         entry.file_path = parts[1]
 
         return entry
-
-    return None
 
 
 def get_file_entry_contents(context: RepoContext, tree_entry: TreeEntry):

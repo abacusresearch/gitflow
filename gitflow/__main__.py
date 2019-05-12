@@ -107,7 +107,7 @@ def cmd_bump_to_release(context):
 
 
 def cmd_bump_to(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_set(context.args['<version>']))
+    return gitflow.procedures.create_version.call(context, scheme_procedures.VersionSet(context.args['<version>']))
 
 
 def cmd_discontinue(context):

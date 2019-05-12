@@ -661,9 +661,7 @@ def get_command_context(context, object_arg: str) -> CommandContext:
                                                                      context.config.remote_name,
                                                                      'release'),
                                            'refs/heads/release',
-                                           'refs/heads/' + context.config.release_branch_base,
-                                           # const.REMOTES_PREFIX + context.config.remote_name + '/' + context.config.release_branch_base,
-                                           # const.LOCAL_BRANCH_PREFIX + context.config.release_branch_base,
+                                           'refs/heads/' + context.config.release_branch_base
                                            )))
         if len(affected_main_branches) == 1:
             if selected_ref is None or selected_ref.name.startswith(const.LOCAL_TAG_PREFIX):
@@ -783,8 +781,7 @@ def check_requirements(command_context: CommandContext,
             if push_merge_base is None:
                 command_context.error(os.EX_USAGE,
                                       fail_message,
-                                      _(
-                                          "{branch} does not have a common base with its upstream branch: {remote_branch}")
+                                      _("{branch} does not have a common base with its upstream branch: {remote_branch}")
                                       .format(branch=repr(ref.name),
                                               remote_branch=repr(command_context.selected_branch.upstream.name)),
                                       throw)

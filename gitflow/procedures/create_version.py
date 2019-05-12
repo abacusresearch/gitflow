@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Callable, Union, Optional
+from typing import Callable, Optional
 
 import semver
 
@@ -21,7 +21,7 @@ from gitflow.version import VersionConfig
 
 
 def create_version_tag(command_context: CommandContext,
-                       operation: Callable[[VersionConfig, Optional[str], Optional[int]], str]) -> Result:
+                       operation: Callable[[VersionConfig, Optional[str], Optional[int]], Result]) -> Result:
     result = Result()
     context: Context = command_context.context
 
@@ -455,7 +455,7 @@ def create_version_tag(command_context: CommandContext,
 
 
 def create_version_branch(command_context: CommandContext,
-                          operation: Callable[[VersionConfig, Optional[str], Optional[int]], str]) -> Result:
+                          operation: Callable[[VersionConfig, Optional[str], Optional[int]], Result]) -> Result:
     result = Result()
     context: Context = command_context.context
 
@@ -738,7 +738,7 @@ def create_version_branch(command_context: CommandContext,
     return result
 
 
-def call(context: Context, operation: Callable[[VersionConfig, str], Union[str, None]]) -> Result:
+def call(context: Context, operation: Callable[[VersionConfig, Optional[str], Optional[int]], Result]) -> Result:
     command_context = get_command_context(
         context=context,
         object_arg=context.args['<object>']
@@ -779,7 +779,7 @@ def call(context: Context, operation: Callable[[VersionConfig, str], Union[str, 
         tag_result = create_version_tag(command_context, operation)
         command_context.add_subresult(tag_result)
 
-    elif isinstance(operation, scheme_procedures.version_set):
+    elif isinstance(operation, scheme_procedures.VersionSet):
         check_requirements(command_context=command_context,
                            ref=command_context.selected_ref,
                            branch_classes=None,

@@ -229,7 +229,7 @@ def version_bump_to_release(version_config: VersionConfig, version: Optional[str
     return result
 
 
-class version_set(object):
+class VersionSet(object):
     __new_version = None
 
     def __init__(self, new_version):

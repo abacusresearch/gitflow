@@ -87,8 +87,9 @@ def get_cmd(command_funcs, name: str, prefix: str):
     """
     :param command_funcs: a list of functions prefixed with 'cmd_'.
     Pattern: cmd_<command_name>, '_' in <command_name> translate to '-'.
-    :param args: command line arguments
-    :return: the first function present in args.
+    :param name: function name (sub-command)
+    :param prefix: name prefix to add before searching for the function
+    :return: the first function present in command_funcs.
     """
     for func in command_funcs:
         if not isinstance(func, types.FunctionType):
