@@ -5,8 +5,6 @@ from io import StringIO
 from tempfile import TemporaryDirectory
 from typing import Tuple, Optional, Union, List
 
-import pytest
-
 from gitflow import __main__
 from gitflow.properties import PropertyIO
 
@@ -114,7 +112,7 @@ class TestInTempDir(object):
             eprint("missing:")
             eprint(*["    " + value for value in diff.removed()], sep='\n')
 
-            pytest.fail("Mismatching lists")
+            assert False, "Mismatching lists"
 
     def assert_same_pairs(self, expected: dict, actual: dict):
         diff = DictDiffer(expected, actual)
@@ -126,7 +124,7 @@ class TestInTempDir(object):
             eprint("changed:")
             eprint(*["    " + key + ": " + value for key, value in diff.changed().items()], sep='\n')
 
-            pytest.fail("Mismatching dictionaries")
+            assert False, "Mismatching dictionaries"
 
 
 class TestFlowBase(TestInTempDir):

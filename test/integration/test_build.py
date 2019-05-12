@@ -1,13 +1,10 @@
 import os
 
-import pytest
-
 from gitflow import const
 from gitflow.properties import PropertyIO
 from test.integration.base import TestFlowBase
 
 
-@pytest.mark.slow
 class TestBuild(TestFlowBase):
     def setup_method(self, method):
         TestFlowBase.setup_method(self, method)
