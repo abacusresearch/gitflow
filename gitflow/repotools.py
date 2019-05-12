@@ -650,7 +650,7 @@ def get_file_entry(context: RepoContext, object: Object, path: str) -> TreeEntry
         assert len(attrs) == 4
 
         assert parts[1][-1] == '\0'
-        parts[1] = parts[:-1]
+        parts[1] = parts[1][:-1]
 
         entry.file_flags = attrs[0]
         entry.object_type = attrs[1]
