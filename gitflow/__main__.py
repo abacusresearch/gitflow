@@ -2,26 +2,36 @@
 git-flow - Manage version branches and tags
 
 Usage:
- git-flow status [(-a|--all) | <object>]
+ git-flow status
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow (bump-major|bump-minor) [-d|--dry-run] [-y|--assume-yes] [<object>]
+        [(-a|--all) | <object>]
+ git-flow (bump-major|bump-minor)
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [-d|--dry-run] [-y|--assume-yes] [<object>]
+        [-d|--dry-run] [-y|--assume-yes] [<object>]
+ git-flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release)
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow bump-to [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
+        [-d|--dry-run] [-y|--assume-yes] [<object>]
+ git-flow bump-to
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow discontinue [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
+        [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
+ git-flow discontinue
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow start [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
+        [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
+ git-flow start
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow finish [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
+        [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
+ git-flow finish
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow log [<object>] [-- <git-arg>...]
+        [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
+ git-flow log
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow (assemble|test|integration-test) [-d|--dry-run] [--inplace| [<object>]]
+        [<object>] [-- <git-arg>...]
+ git-flow (assemble|test|integration-test)
         [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose]... [-p|--pretty]
- git-flow drop-cache [-d|--dry-run]
+        [-d|--dry-run] [--inplace| [<object>]]
+ git-flow drop-cache
         [-B|--batch] [-v|--verbose]... [-p|--pretty]
+        [-d|--dry-run]
  git-flow convert-config <input-file> <output-file>
  git-flow (-h|--help)
  git-flow --version
