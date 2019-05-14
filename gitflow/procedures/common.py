@@ -174,7 +174,7 @@ def fetch_all_and_ff(context: RepoContext, result_out: Result, remote: [repotool
     if returncode != os.EX_OK:
         result_out.warn(
             _("Failed to fetch from {remote}")
-                .format(repr(remote_name)),
+                .format(remote=repr(remote_name)),
             None)
 
     returncode, out, err = repotools.git(context, 'merge', '--ff-only')
