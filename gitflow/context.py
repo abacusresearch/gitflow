@@ -10,6 +10,7 @@ import collections
 from gitflow import cli, const, repotools, _, utils
 from gitflow.common import Result
 from gitflow.const import VersioningScheme
+from gitflow.procedures.scheme.versioning_scheme import VersioningSchemeImpl
 from gitflow.properties import PropertyIO
 from gitflow.repotools import RepoContext
 from gitflow.version import VersionMatcher, VersionConfig
@@ -160,6 +161,9 @@ class Context(AbstractContext):
 
     version_tag_matcher: VersionMatcher = None
     discontinuation_tag_matcher: VersionMatcher = None
+
+    # version scheme implementation
+    versioning_scheme: VersioningSchemeImpl = None
 
     # resources
     temp_dirs: list = None
@@ -371,6 +375,13 @@ class Context(AbstractContext):
                                 versioning_scheme=utils.quote(versioning_scheme, '\'')))
 
         context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
+
+        if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
+            from gitflow.procedures.scheme.semver import SemVer
+            context.versioning_scheme = SemVer(context.config.version_config.initial_version)
+        elif context.config.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
+            from gitflow.procedures.scheme.semver import SemVer
+            context.versioning_scheme = SemVer(context.config.version_config.initial_version)
 
         if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
             qualifiers = config.get(const.CONFIG_VERSION_TYPES, const.DEFAULT_PRE_RELEASE_QUALIFIERS)

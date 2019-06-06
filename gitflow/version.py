@@ -265,15 +265,6 @@ def create_initial_branch_version(config: VersionConfig, branch_base_version):
     return new_version
 
 
-def format_version_info(version_info: semver.VersionInfo):
-    return semver.format_version(
-        version_info.major,
-        version_info.minor,
-        version_info.patch,
-        version_info.prerelease,
-        version_info.build)
-
-
 def _nat_cmp(a, b):
     def convert(text):
         return int(text) if re.match('^[0-9]+$', text) else text
@@ -460,11 +451,6 @@ def determine_version_delta(a: Version, b: Version, prerelase_keywords_list: lis
         index += 1
 
     return delta
-
-
-def compare_version_info(a: semver.VersionInfo, b: semver.VersionInfo):
-    # TODO avoid superfluous conversions
-    return semver.compare(format_version_info(a), format_version_info(b))
 
 
 def evaluate_numeric_increment(result: Result, field_name: str, reset: bool, reset_val: int, strict: bool, a: int,

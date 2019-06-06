@@ -373,7 +373,7 @@ def get_branch_name_for_version(context: Context, version_on_branch: Union[semve
 
 def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo):
     return (context.version_tag_matcher.ref_name_infix or '') \
-           + version.format_version_info(version_info)
+           + context.versioning_scheme.format_version_info(version_info)
 
 
 def get_discontinuation_tag_name_for_version(context, version: Union[semver.VersionInfo, version.Version]):

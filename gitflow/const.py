@@ -15,12 +15,13 @@ class VersioningScheme(Enum):
     # SemVer tags
     SEMVER = 1,
     # SemVer tags, sequence number tags
-    SEMVER_WITH_SEQ = 2,
+    SEMVER_WITH_SEQ = 2
 
 
 VERSIONING_SCHEMES = {
     'semver': VersioningScheme.SEMVER,
     'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
+    'semver_with_seq': VersioningScheme.SEMVER_WITH_SEQ,
 }
 
 # config keys

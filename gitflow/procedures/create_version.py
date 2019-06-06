@@ -33,7 +33,8 @@ def create_version_tag(command_context: CommandContext,
     selected_branch = command_context.selected_ref
     selected_branch_base_version = context.release_branch_matcher.format(command_context.selected_ref.name)
     if selected_branch_base_version is not None:
-        selected_branch_base_version_info = semver.parse_version_info(selected_branch_base_version)
+        selected_branch_base_version_info = context.versioning_scheme.parse_version_info(
+            selected_branch_base_version)
     else:
         selected_branch_base_version_info = None
 
@@ -74,7 +75,7 @@ def create_version_tag(command_context: CommandContext,
 
         branch_base_version = context.release_branch_matcher.format(release_branch.name)
         if branch_base_version is not None:
-            branch_base_version_info = semver.parse_version_info(branch_base_version)
+            branch_base_version_info = context.versioning_scheme.parse_version_info(branch_base_version)
         else:
             branch_base_version_info = None
 
@@ -107,7 +108,8 @@ def create_version_tag(command_context: CommandContext,
                             result.fail(os.EX_DATAERR,
                                         _("Cannot bump version."),
                                         _("Found stray version tag: {version}.")
-                                        .format(version=repr(version.format_version_info(version_info)))
+                                        .format(
+                                            version=repr(context.versioning_scheme.format_version_info(version_info)))
                                         )
                         else:
                             # when no merge base is used, abort at the first mismatching tag
@@ -180,7 +182,7 @@ def create_version_tag(command_context: CommandContext,
         if result.has_errors():
             return result
     else:
-        template_version_info = semver.parse_version_info(context.config.version_config.initial_version)
+        template_version_info = context.versioning_scheme.parse_version_info(context.config.version_config.initial_version)
         new_version = semver.format_version(
             major=selected_branch_base_version_info.major,
             minor=selected_branch_base_version_info.minor,
@@ -190,7 +192,7 @@ def create_version_tag(command_context: CommandContext,
             build=template_version_info.build,
         )
 
-    new_version_info = semver.parse_version_info(new_version)
+    new_version_info = context.versioning_scheme.parse_version_info(new_version)
     new_sequential_version = scheme_procedures.get_sequence_number(context.config.version_config, new_version_info)
 
     if new_version_info.major != selected_branch_base_version_info.major or new_version_info.minor != selected_branch_base_version_info.minor:
@@ -555,7 +557,7 @@ def create_version_branch(command_context: CommandContext,
 
     if latest_branch is not None:
         latest_branch_version = context.release_branch_matcher.format(latest_branch.name)
-        latest_branch_version_info = semver.parse_version_info(latest_branch_version)
+        latest_branch_version_info = context.versioning_scheme.parse_version_info(latest_branch_version)
     else:
         latest_branch_version = None
         latest_branch_version_info = None
@@ -566,10 +568,13 @@ def create_version_branch(command_context: CommandContext,
         result.add_subresult(version_result)
 
         new_version = version_result.value
-        new_version_info = semver.parse_version_info(new_version)
+        new_version_info = context.versioning_scheme.parse_version_info(new_version)
     else:
-        new_version_info = semver.parse_version_info(context.config.version_config.initial_version)
-        new_version = version.format_version_info(new_version_info)
+        new_version_info = context.versioning_scheme.parse_version_info(
+            context.config.version_config.initial_version
+            if context.config.version_config.initial_version
+            else context.versioning_scheme.get_initial_version())
+        new_version = context.versioning_scheme.format_version_info(new_version_info)
 
     scheme_procedures.get_sequence_number(context.config.version_config, new_version_info)
 
@@ -797,7 +802,7 @@ def call(context: Context, operation: Callable[[VersionConfig, Optional[str], Op
                                  _("Illegal argument."),
                                  _("Failed to parse version.")
                                  )
-        new_version_info = semver.parse_version_info(new_version)
+        new_version_info = context.versioning_scheme.parse_version_info(new_version)
 
         branch_name = get_branch_name_for_version(context, new_version_info)
 
