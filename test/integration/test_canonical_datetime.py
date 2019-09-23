@@ -12,7 +12,7 @@ class TestFlow(TestFlowBase):
     version_tag_prefix: str = None
 
     def version_from_tag_ref(self, ref: str) -> str:
-        match = re.match('^refs/tags/(\d+)$', ref)
+        match = re.match('^refs/tags/([0-9]+)$', ref)
         if match is None:
             return None
         return match.group(1)
