@@ -254,3 +254,7 @@ Development
 Install all dependencies::
 
     pip install -r build_requirements.txt -r requirements.txt -r test_requirements.txt
+
+Update all dependencies:
+
+    python -m pur -r build_requirements.txt -r requirements.txt -r test_requirements.txt
