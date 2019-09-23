@@ -163,22 +163,35 @@ class TestFlowBase(TestInTempDir):
         proc = subprocess.Popen(args=['git', 'init', '--bare', self.git_origin])
         proc.wait()
         assert proc.returncode == os.EX_OK
+
         proc = subprocess.Popen(args=['git', 'clone', self.git_origin, self.git_working_copy])
         proc.wait()
         assert proc.returncode == os.EX_OK
+
+        proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'user.name', 'gitflow'])
+        proc.wait()
+        assert proc.returncode == os.EX_OK
+
+        proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'user.email', 'gitflow@test.void'])
+        proc.wait()
+        assert proc.returncode == os.EX_OK
+
+        proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'push.default', 'current'])
+        proc.wait()
+        assert proc.returncode == os.EX_OK
+
         if self.remote_name is not None and self.remote_name != 'origin':
             proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'remote', 'rename', 'origin', self.remote_name])
             proc.wait()
             assert proc.returncode == os.EX_OK
-        proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'user.name', 'gitflow'])
-        proc.wait()
-        assert proc.returncode == os.EX_OK
-        proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'user.email', 'gitflow@test.void'])
-        proc.wait()
-        assert proc.returncode == os.EX_OK
-        proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'push.default', 'current'])
-        proc.wait()
-        assert proc.returncode == os.EX_OK
+
+            proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'remote.pushdefault', self.remote_name])
+            proc.wait()
+            assert proc.returncode == os.EX_OK
+
+            proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'fetch', '--all', '--prune'])
+            proc.wait()
+            assert proc.returncode == os.EX_OK
 
         # switch to the working copy
         os.chdir(self.git_working_copy)
