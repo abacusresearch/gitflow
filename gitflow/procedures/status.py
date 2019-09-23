@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Dict
 
 import colors
 import semver
@@ -7,7 +8,7 @@ import semver
 from gitflow import repotools, const, cli, _, utils, version
 from gitflow.common import Result
 from gitflow.procedures.common import get_branch_version_component_for_version, get_discontinuation_tags, \
-    update_branch_info, get_command_context, check_in_repo
+    update_branch_info, get_command_context, check_in_repo, BranchInfo
 
 
 def call(context) -> Result:
@@ -22,7 +23,7 @@ def call(context) -> Result:
     unique_version_codes = list()
 
     upstreams = repotools.git_get_upstreams(context.repo)
-    branch_info_dict = dict()
+    branch_info_dict: Dict[str, BranchInfo] = dict()
 
     if context.args['--all'] > 0:
         selected_refs = repotools.git_list_refs(context.repo, repotools.create_ref_name(const.REMOTES_PREFIX,
@@ -62,7 +63,7 @@ def call(context) -> Result:
                 i = 0
                 for local in branch_info.local:
                     local_branch_color = status_local_color
-                    if not branch_info.upstream.short_name.endswith('/' + local.short_name):
+                    if branch_info.upstream.unqualified_name != local.unqualified_name:
                         command_context.error(os.EX_DATAERR,
                                               _("Local and upstream branch have a mismatching short name."),
                                               None)
