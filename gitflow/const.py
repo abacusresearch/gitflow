@@ -16,13 +16,15 @@ class VersioningScheme(Enum):
     SEMVER = 1,
     # SemVer with sequence in pre-release
     SEMVER_WITH_SEQ = 2,
-    CANONICAL_DATETIME = 3,
+    NUMERIC = 3,
+    CANONICAL_DATETIME = 4
 
 
 VERSIONING_SCHEMES = {
     'semver': VersioningScheme.SEMVER,
     'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
     'semver_with_seq': VersioningScheme.SEMVER_WITH_SEQ,
+    'numeric': VersioningScheme.NUMERIC,
     'canonical_datetime': VersioningScheme.CANONICAL_DATETIME,
 }
 

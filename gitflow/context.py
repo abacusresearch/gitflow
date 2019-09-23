@@ -417,6 +417,14 @@ class Context(AbstractContext):
 
             context.config.version_config.qualifiers = None
             context.config.version_config.initial_version = const.DEFAULT_INITIAL_SEQ_VERSION
+        elif context.config.version_config.versioning_scheme == VersioningScheme.NUMERIC:
+            from gitflow.procedures.scheme.numeric import NumericVersioning
+            context.versioning_scheme = NumericVersioning(context)
+
+            context.config.version_config.qualifiers = None
+            context.config.version_config.initial_version = '1'
+
+            context.config.allow_qualifier_increments_within_commit = False
         elif context.config.version_config.versioning_scheme == VersioningScheme.CANONICAL_DATETIME:
             from gitflow.procedures.scheme.canonical_datetime import CanonicalDateTime
             context.versioning_scheme = CanonicalDateTime(context)

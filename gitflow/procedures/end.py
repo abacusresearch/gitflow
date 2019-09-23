@@ -22,7 +22,7 @@ def call(context: Context) -> Result:
             arg_work_branch = repotools.create_ref_name(branch_prefix, branch_type, branch_name)
 
     arg_base_branch = context.args.get('<base-object>')
-    if arg_base_branch is None and context.config.version_config.versioning_scheme == const.VersioningScheme.CANONICAL_DATETIME:
+    if arg_base_branch is None and context.config.version_config.versioning_scheme in [const.VersioningScheme.NUMERIC, const.VersioningScheme.CANONICAL_DATETIME]:
         arg_base_branch = 'master'
 
     command_context = get_command_context(
