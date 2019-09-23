@@ -171,9 +171,15 @@ class VersionMatcher(object):
             major = fields.get('major')
             if major is not None:
                 major = int(major)
+            else:
+                major = 0
+
             minor = fields.get('minor')
             if minor is not None:
                 minor = int(minor)
+            else:
+                minor = 0
+
             patch = fields.get('patch')
             if patch is not None:
                 patch = int(patch)

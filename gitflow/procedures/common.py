@@ -787,14 +787,13 @@ def check_requirements(command_context: CommandContext,
                                               remote_branch=repr(command_context.selected_branch.upstream.name)),
                                       throw)
 
-    discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context,
-                                                                              ref)
-    if modifiable and len(discontinuation_tags):
-        command_context.error(os.EX_USAGE,
-                              fail_message,
-                              _("{branch} is discontinued.")
-                              .format(branch=repr(ref.name)),
-                              throw)
+    # discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context, ref)
+    # if modifiable and len(discontinuation_tags):
+    #     command_context.error(os.EX_USAGE,
+    #                           fail_message,
+    #                           _("{branch} is discontinued.")
+    #                           .format(branch=repr(ref.name)),
+    #                           throw)
 
     if not allow_unversioned_changes:
         current_branch = git_get_current_branch(command_context.context.repo)
