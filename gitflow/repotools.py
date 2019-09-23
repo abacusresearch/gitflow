@@ -80,6 +80,19 @@ class Ref(Object):
         return None
 
     @property
+    def unqualified_name(self):
+        if self.name.startswith(const.LOCAL_BRANCH_PREFIX):
+            return self.name[len(const.LOCAL_BRANCH_PREFIX):]
+        if self.name.startswith(const.REMOTES_PREFIX):
+            remote_branch_name = self.name[len(const.REMOTES_PREFIX):]
+            unqualified_name_start = remote_branch_name.find('/')
+            if unqualified_name_start < 0 or unqualified_name_start == 0:
+                raise RuntimeError("invalid remote ref")
+            remote_branch_name = remote_branch_name[unqualified_name_start + 1:]
+            return remote_branch_name
+        return None
+
+    @property
     def remote_branch_name(self):
         if self.name.startswith(const.REMOTES_PREFIX):
             return self.name[len(const.REMOTES_PREFIX):]
