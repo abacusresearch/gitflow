@@ -1,3 +1,4 @@
+import itertools
 import os
 import subprocess
 import sys
@@ -191,8 +192,7 @@ class TestInTempDir(object):
 
                 refs = self.get_ref_map()
 
-                remote_ref = repotools.create_ref_name(const.REMOTES_PREFIX, self.remote_name,
-                                                        local_ref[len(const.LOCAL_BRANCH_PREFIX):])
+                remote_ref = repotools.create_remote_branch_ref_name(remote=self.remote_name, name=local_ref)
 
                 local_hash = refs.get(local_ref)
                 remote_hash = refs.get(remote_ref)
