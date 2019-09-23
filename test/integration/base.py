@@ -83,7 +83,7 @@ class SetDiffer(object):
 class TestInTempDir(object):
     tempdir: TemporaryDirectory = None
     orig_cwd: str = None
-    remote_name: str = 'origin'
+    remote_name: str = 'test-origin'
 
     def setup_method(self, method):
         self.orig_cwd = os.getcwd()
