@@ -18,8 +18,12 @@ def call(context: Context) -> Result:
         branch_type = context.args['<type>']
         branch_name = context.args['<name>']
 
-        if branch_prefix is not None or branch_type is not None or branch_name is not None:
+        if branch_prefix is not None and branch_type is not None and branch_name is not None:
             arg_work_branch = repotools.create_ref_name(branch_prefix, branch_type, branch_name)
+
+    arg_base_branch = context.args.get('<base-object>')
+    if arg_base_branch is None and context.config.version_config.versioning_scheme == const.VersioningScheme.CANONICAL_DATETIME:
+        arg_base_branch = 'master'
 
     command_context = get_command_context(
         context=context,
@@ -30,7 +34,7 @@ def call(context: Context) -> Result:
 
     base_command_context = get_command_context(
         context=context,
-        object_arg=context.args['<base-object>']
+        object_arg=arg_base_branch
     )
 
     check_requirements(command_context=command_context,
@@ -39,7 +43,7 @@ def call(context: Context) -> Result:
                        modifiable=True,
                        with_upstream=True,  # not context.config.push_to_local
                        in_sync_with_upstream=True,
-                       fail_message=_("Version creation failed.")
+                       fail_message=_("Merge failed.")
                        )
 
     work_branch = None

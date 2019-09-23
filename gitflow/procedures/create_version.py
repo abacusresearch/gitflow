@@ -51,11 +51,6 @@ def create_branchless_version_tag(command_context: CommandContext,
     # TODO evaluate upper and lower bound version for efficiency
     abort_version_scan = False
 
-    on_selected_branch = False
-
-    before_commit = False
-    before_selected_branch = False
-
     for release_branch in release_branches:
         # fork_point = repotools.git_merge_base(context.repo, context.config.release_branch_base,
         #                                       command_context.selected_commit)
@@ -67,13 +62,18 @@ def create_branchless_version_tag(command_context: CommandContext,
         #                         base_branch=repr(context.config.release_branch_base)))
         fork_point = None
 
+        on_selected_branch = False
+
+        before_commit = False
+        before_selected_branch = False
+
         branch_base_version = context.release_branch_matcher.format(release_branch.name)
         if branch_base_version is not None:
             branch_base_version_info = context.versioning_scheme.parse_version_info(branch_base_version)
         else:
             branch_base_version_info = None
 
-        on_selected_branch = not before_selected_branch and release_branch.name == selected_branch.name
+        on_selected_branch = not before_selected_branch and release_branch.obj_name == selected_branch.obj_name
 
         for history_commit in repotools.git_list_commits(
                 context=context.repo,

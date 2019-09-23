@@ -359,8 +359,12 @@ def get_branch_version_component_for_version(context: Context,
 
 
 def get_branch_name_for_version(context: Context, version_on_branch: Union[semver.VersionInfo, version.Version]):
-    return (context.release_branch_matcher.ref_name_infix or '') \
-           + get_branch_version_component_for_version(context, version_on_branch)
+    if context.config.version_config.versioning_scheme in [const.VersioningScheme.SEMVER, const.VersioningScheme.SEMVER_WITH_SEQ]:
+        return (context.release_branch_matcher.ref_name_infix or '') \
+               + get_branch_version_component_for_version(context, version_on_branch)
+    else:
+        # TODO
+        return 'master'
 
 
 def get_tag_name_for_version(context: Context, version_info: semver.VersionInfo):

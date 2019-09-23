@@ -12,6 +12,8 @@ from gitflow.procedures.common import get_command_context, check_in_repo, check_
 from gitflow.procedures.scheme import scheme_procedures
 from gitflow.procedures.scheme.versioning_scheme import VersioningSchemeImpl
 from gitflow.version import IncrementalVersionMatcher, VersionDelta
+import gitflow.procedures.begin
+import gitflow.procedures.end
 
 
 class CanonicalDateTime(VersioningSchemeImpl):
@@ -117,3 +119,9 @@ class CanonicalDateTime(VersioningSchemeImpl):
             fetch_all_and_ff(context.repo, command_context.result, context.config.remote_name)
 
         return context.result
+
+    def cmd_start(self, context: Context):
+        return gitflow.procedures.begin.call(context)
+
+    def cmd_finish(self, context: Context):
+        return gitflow.procedures.end.call(context)

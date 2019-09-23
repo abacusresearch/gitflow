@@ -438,8 +438,7 @@ class Context(AbstractContext):
         release_branches = list(filter(
             lambda branch_ref: self.release_branch_matcher.fullmatch(branch_ref.name) is not None,
             repotools.git_list_refs(self.repo,
-                                    repotools.create_ref_name(const.REMOTES_PREFIX, self.config.remote_name),
-                                    const.LOCAL_BRANCH_PREFIX)
+                                    repotools.create_ref_name(const.REMOTES_PREFIX, self.config.remote_name))
         ))
         release_branches.sort(
             reverse=reverse,
