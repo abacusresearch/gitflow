@@ -169,6 +169,21 @@ def create_local_branch_ref_name(name):
     return None
 
 
+def create_remote_branch_ref_name(remote: Optional[str], name: str):
+    elements = list(filter(lambda element: len(element) > 0, name.split('/')))
+    if elements[:2] == ['refs', 'remotes']:
+        if remote is not None:
+            return create_ref_name(*(['refs', 'remotes', remote] + elements[3:]))
+        else:
+            return create_ref_name(*elements)
+    if elements[:2] == ['refs', 'heads']:
+        if remote is not None:
+            return create_ref_name(*(['refs', 'remotes', remote] + elements[2:]))
+        else:
+            return create_ref_name(*(['refs', 'remotes', remote] + elements[2:]))
+    return None
+
+
 def create_ref_name(*strings: str):
     return utils.split_join('/', False, False, *strings)
 
