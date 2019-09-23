@@ -92,45 +92,6 @@ ENABLE_PROFILER = False
 # ========== commands
 # mapped by cmd_<name>
 
-def cmd_bump_major(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_major)
-
-
-def cmd_bump_minor(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_minor)
-
-
-def cmd_bump_patch(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_patch)
-
-
-def cmd_bump_prerelease_type(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_qualifier)
-
-
-def cmd_bump_prerelease(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_prerelease)
-
-
-def cmd_bump_to_release(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.version_bump_to_release)
-
-
-def cmd_bump_to(context):
-    return gitflow.procedures.create_version.call(context, scheme_procedures.VersionSet(context.args['<version>']))
-
-
-def cmd_discontinue(context):
-    return gitflow.procedures.discontinue_version.call(context)
-
-
-def cmd_start(context):
-    return gitflow.procedures.begin.call(context)
-
-
-def cmd_finish(context):
-    return gitflow.procedures.end.call(context)
-
 
 def cmd_log(context):
     return gitflow.procedures.log.call(context)
@@ -229,17 +190,18 @@ def main(argv: list = sys.argv) -> int:
                 result.errors.extend(hook_result.errors)
             else:
                 commands = {
+                    'bump-major': context.versioning_scheme.get_cmd_method('bump_major'),
+                    'bump-minor': context.versioning_scheme.get_cmd_method('bump_minor'),
+                    'bump-patch': context.versioning_scheme.get_cmd_method('bump_patch'),
+                    'bump-prerelease-type': context.versioning_scheme.get_cmd_method('bump_prerelease_type'),
+                    'bump-prerelease': context.versioning_scheme.get_cmd_method('bump_prerelease'),
+                    'bump-to-release': context.versioning_scheme.get_cmd_method('bump_to_release'),
+                    'bump-to': context.versioning_scheme.get_cmd_method('bump_to'),
+                    'discontinue': context.versioning_scheme.get_cmd_method('discontinue'),
+                    'start': context.versioning_scheme.get_cmd_method('start'),
+                    'finish': context.versioning_scheme.get_cmd_method('finish'),
+
                     'status': cmd_status,
-                    'bump-major': cmd_bump_major,
-                    'bump-minor': cmd_bump_minor,
-                    'bump-patch': cmd_bump_patch,
-                    'bump-prerelease-type': cmd_bump_prerelease_type,
-                    'bump-prerelease': cmd_bump_prerelease,
-                    'bump-to-release': cmd_bump_to_release,
-                    'bump-to': cmd_bump_to,
-                    'discontinue': cmd_discontinue,
-                    'start': cmd_start,
-                    'finish': cmd_finish,
                     'log': cmd_log,
                     'assemble': cmd_build,
                     'test': cmd_build,
