@@ -71,7 +71,6 @@ import docopt
 
 import gitflow.procedures.begin
 import gitflow.procedures.build
-import gitflow.procedures.create_version
 import gitflow.procedures.discontinue_version
 import gitflow.procedures.end
 import gitflow.procedures.log
