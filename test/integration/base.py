@@ -279,7 +279,7 @@ class TestFlowBase(TestInTempDir):
             raise RuntimeError("illegal argument: pattern type is not supported: " + type(pattern))
 
     def assert_refs(self,
-                    refs: Union[set, dict],
+                    refs: dict,
                     updated: Optional[Union[set, dict]] = None,
                     added: Optional[Union[set, dict]] = None,
                     removed: Optional[Union[set, dict]] = None,
@@ -290,15 +290,15 @@ class TestFlowBase(TestInTempDir):
         :return: added refs ordered as specified in 'added'
         """
 
-        matched_refs = []
+        added_refs = []
 
-        if isinstance(refs, set):
-            refs = dict.fromkeys(refs, None)
-        if isinstance(updated, set):
+        if not isinstance(refs, dict):
+            raise RuntimeError('refs is not a dict')
+        if updated is not None and not isinstance(updated, dict):
             updated = dict.fromkeys(updated, None)
-        if isinstance(added, set):
+        if added is not None and not isinstance(added, dict):
             added = dict.fromkeys(added, None)
-        if isinstance(removed, set):
+        if removed is not None and not isinstance(removed, dict):
             removed = dict.fromkeys(removed, None)
 
         actual_refs = self.get_ref_map()
@@ -333,9 +333,10 @@ class TestFlowBase(TestInTempDir):
                     if matched_ref is None:
                         raise RuntimeError('no ref matched the specified pattern')
 
-                    matched_refs.append(matched_ref)
+                    added_refs.append(matched_ref)
+                    refs[matched_ref] = objectname
                 else:
-                    matched_refs.append(refname)
+                    added_refs.append(refname)
                     if objectname is None:
                         objectname = actual_refs.get(refname)
                     else:
@@ -347,7 +348,7 @@ class TestFlowBase(TestInTempDir):
 
         self.assert_same_pairs(refs, actual_refs)
 
-        return matched_refs
+        return added_refs
 
     def assert_first_parent(self, object: str, expected_parent: str):
         rev_entry = self.git_for_line('git', 'rev-list', '--parents', '--first-parent', '--max-count=1', object).split(
