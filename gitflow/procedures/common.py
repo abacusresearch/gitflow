@@ -233,6 +233,7 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
                 branch_info.local.append(repotools.get_ref_by_name(context.repo, ref))
 
     if branch_info is not None:
+        branch_info.ref = branch_ref
         if branch_info.local is not None:
             branch_info.local_class = list()
             for local in branch_info.local:

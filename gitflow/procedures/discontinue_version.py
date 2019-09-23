@@ -101,7 +101,7 @@ def call(context: Context) -> Result:
                         )
 
             git_or_fail(clone_context.repo, command_context.result,
-                        ['merge', '--no-ff', release_branch_info.upstream.name],
+                        ['merge', '--no-ff', repotools.create_ref_name(const.REMOTES_PREFIX, clone_context.config.remote_name, release_branch_info.ref.unqualified_name)],
                         _("Failed to merge work branch.\n"
                           "Rebase {work_branch} on {base_branch} and try again")
                         .format(work_branch=repr(release_branch.short_name),
@@ -127,7 +127,7 @@ def call(context: Context) -> Result:
             push_command.append('--dry-run')
         if context.verbose:
             push_command.append('--verbose')
-        push_command.append(context.config.remote_name)
+        push_command.append(clone_context.config.remote_name)
 
         push_command.append(base_branch_ref.name + ':' + repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                                    base_branch_ref.short_name))
