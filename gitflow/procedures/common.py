@@ -188,7 +188,7 @@ def get_branch_classes(context: Context, ref: Union[repotools.Ref, str]) -> List
     ref_name = repotools.ref_name(ref)
 
     # TODO optimize
-    branch_class = None
+    # TODO return a set
     branch_classes = list()
     if context.release_base_branch_matcher.fullmatch(ref_name) is not None:
         branch_classes.append(const.BranchClass.DEVELOPMENT_BASE)
