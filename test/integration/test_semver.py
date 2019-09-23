@@ -101,9 +101,7 @@ class TestFlow(TestFlowBase):
             'version': '1.0.0-alpha.1'
         })
 
-        self.checkout("master")
-        self.commit()
-        self.push()
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
 
         exit_code = self.git_flow('bump-minor', '--assume-yes')
         assert exit_code == os.EX_OK
@@ -489,12 +487,14 @@ class TestFlow(TestFlowBase):
 
         exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/heads/dev/feature/test-feature',
+        })
 
         self.assert_head('refs/heads/dev/feature/test-feature')
 
-        for _ in itertools.repeat(None, 3):
-            self.commit()
-        self.push('-u', self.remote_name, 'dev/feature/test-feature')
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/dev/feature/test-feature')
+
         exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 
@@ -531,14 +531,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_head('refs/heads/prod/fix/test-fix')
 
-        for _ in itertools.repeat(None, 3):
-            head = self.commit()
-        self.push('-u')
-        self.assert_refs(refs, added={
-            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix': head
-        }, updated={
-            'refs/heads/prod/fix/test-fix': head
-        })
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/prod/fix/test-fix')
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
         assert exit_code == os.EX_OK
@@ -585,14 +578,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_head('refs/heads/prod/fix/test-fix')
 
-        for _ in itertools.repeat(None, 3):
-            head = self.commit()
-        self.push('-u')
-        self.assert_refs(refs, updated={
-            'refs/heads/prod/fix/test-fix': head
-        }, added={
-            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix': head
-        })
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/prod/fix/test-fix')
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
         assert exit_code == os.EX_OK
@@ -613,14 +599,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_head('refs/heads/prod/fix/test-fix2')
 
-        for _ in itertools.repeat(None, 3):
-            head = self.commit()
-        self.push('-u')
-        self.assert_refs(refs, added={
-            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix2': head
-        }, updated={
-            'refs/heads/prod/fix/test-fix2': head,
-        })
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/prod/fix/test-fix2')
 
         exit_code = self.git_flow('finish')
         assert exit_code == os.EX_OK
@@ -677,14 +656,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_head('refs/heads/dev/feature/test-feature')
 
-        for _ in itertools.repeat(None, 3):
-            head = self.commit()
-        self.push('-u')
-        self.assert_refs(refs, added={
-            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature',
-        }, updated={
-            'refs/heads/dev/feature/test-feature': head
-        })
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/dev/feature/test-feature')
 
         exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK

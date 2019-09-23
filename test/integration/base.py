@@ -36,7 +36,8 @@ class DictDiffer(object):
         self.intersect = set(self.a.keys()).intersection(self.b.keys())
 
     def has_differences(self) -> bool:
-        return bool((len(self.a) - len(self.b)) or (len(self.a) - len(self.intersect)) or len(self.added()) or len(self.removed()) or len(self.changed()))
+        return bool((len(self.a) - len(self.b)) or (len(self.a) - len(self.intersect)) or len(self.added()) or len(
+            self.removed()) or len(self.changed()))
 
     def added(self) -> dict:
         return dict(
@@ -50,7 +51,8 @@ class DictDiffer(object):
 
     def changed(self) -> dict:
         return dict(
-            (key, (self.a[key], self.b[key])) for key in self.intersect if not self.value_matcher(self.a[key], self.b[key])
+            (key, (self.a[key], self.b[key])) for key in self.intersect if
+            not self.value_matcher(self.a[key], self.b[key])
         )
 
     def unchanged(self) -> dict:
@@ -96,7 +98,6 @@ class TestInTempDir(object):
     def teardown_method(self, method):
         self.tempdir.cleanup()
         os.chdir(self.orig_cwd)
-
 
     def git(self, *args) -> int:
         proc = subprocess.Popen(args=['git'] + [*args])
@@ -170,7 +171,8 @@ class TestInTempDir(object):
             # git_flow_binary = shutil.which('git-flow')
             # proc = subprocess.Popen(args=[git_flow_binary, '-B'] + [*args])
             # return proc.wait()
-            proc = subprocess.Popen(args=['git-flow'] + args_, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
+            proc = subprocess.Popen(args=['git-flow'] + args_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    cwd=os.getcwd())
             out, err = proc.communicate()
             print(out.decode("utf-8"))
             eprint(err.decode("utf-8"))
@@ -232,7 +234,8 @@ class TestInTempDir(object):
             eprint("missing:")
             eprint(*["    " + key + ": " + repr(value) for key, value in diff.removed().items()], sep='\n')
             eprint("changed:")
-            eprint(*["    " + key + ": " + repr(values[0]) + ", was " + repr(values[1]) for key, values in diff.changed().items()], sep='\n')
+            eprint(*["    " + key + ": " + repr(values[0]) + ", was " + repr(values[1]) for key, values in
+                     diff.changed().items()], sep='\n')
 
             assert False, "Mismatching dictionaries"
 
@@ -269,11 +272,13 @@ class TestFlowBase(TestInTempDir):
         assert proc.returncode == os.EX_OK
 
         if self.remote_name is not None and self.remote_name != 'origin':
-            proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'remote', 'rename', 'origin', self.remote_name])
+            proc = subprocess.Popen(
+                args=['git', '-C', self.git_working_copy, 'remote', 'rename', 'origin', self.remote_name])
             proc.wait()
             assert proc.returncode == os.EX_OK
 
-            proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'remote.pushdefault', self.remote_name])
+            proc = subprocess.Popen(
+                args=['git', '-C', self.git_working_copy, 'config', 'remote.pushdefault', self.remote_name])
             proc.wait()
             assert proc.returncode == os.EX_OK
 
@@ -290,6 +295,36 @@ class TestFlowBase(TestInTempDir):
             assert exit_code == os.EX_OK
         finally:
             super().teardown_method(self)
+
+    def checkout_commit_and_push(self, refs: dict, local_branch_name: str):
+        head = None
+
+        assert local_branch_name.startswith(const.LOCAL_BRANCH_PREFIX)
+
+        remote_branch_name = repotools.create_remote_branch_ref_name(remote=self.remote_name, name=local_branch_name)
+        short_branch_name = local_branch_name[len(const.LOCAL_BRANCH_PREFIX):]
+
+        ref_map = self.get_ref_map()
+
+        local_exists = local_branch_name in ref_map.keys()
+        remote_exists = remote_branch_name in ref_map.keys()
+
+        self.git('checkout', '-B', short_branch_name, local_branch_name if local_exists else remote_branch_name)
+
+        for _ in itertools.repeat(None, 3):
+            head = self.commit()
+
+        self.push('-u', self.remote_name)
+
+        updated = {}
+        added = {}
+
+        (updated if local_exists else added)[local_branch_name] = head
+        (updated if remote_exists else added)[remote_branch_name] = head
+
+        self.assert_refs(refs, updated=updated, added=added)
+
+        return head
 
     @staticmethod
     def match_pattern(pattern, value):
