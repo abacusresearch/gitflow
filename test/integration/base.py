@@ -34,8 +34,8 @@ class DictDiffer(object):
         self.value_matcher = value_matcher if value_matcher is not None else lambda a, b: a is None or a == b
         self.intersect = set(self.a.keys()).intersection(self.b.keys())
 
-    def has_changed(self) -> bool:
-        return len(self.changed()) != 0
+    def has_differences(self) -> bool:
+        return bool((len(self.a) - len(self.b)) or (len(self.a) - len(self.intersect)) or len(self.added()) or len(self.removed()) or len(self.changed()))
 
     def added(self) -> dict:
         return dict(
@@ -54,7 +54,7 @@ class DictDiffer(object):
 
     def unchanged(self) -> dict:
         return dict(
-            (key, self.a[key]) for key in self.intersect if self.a[key] == self.b[key]
+            (key, self.a[key]) for key in self.intersect if self.value_matcher(self.a[key], self.b[key])
         )
 
 
@@ -138,7 +138,7 @@ class TestInTempDir(object):
 
     def assert_same_pairs(self, expected: dict, actual: dict, value_matcher: Callable = None):
         diff = DictDiffer(expected, actual, value_matcher)
-        if diff.has_changed():
+        if diff.has_differences():
             eprint("extra:")
             eprint(*["    " + key + ": " + repr(value) for key, value in diff.added().items()], sep='\n')
             eprint("missing:")
