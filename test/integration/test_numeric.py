@@ -54,7 +54,7 @@ class TestFlow(TestFlowBase):
             'refs/heads/master': head,
             'refs/remotes/origin/master': head,
         }, added={
-            'refs/tags/' + self.version_tag_prefix + '1'
+            'refs/tags/' + self.version_tag_prefix + '1': head
         })
         return refs
 
