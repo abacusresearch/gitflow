@@ -3,9 +3,9 @@ import os
 from gitflow import _, const, repotools, cli
 from gitflow.common import Result
 from gitflow.context import Context
-from gitflow.procedures.common import get_command_context, check_requirements, get_branch_class, get_branch_info, \
+from gitflow.procedures.common import get_command_context, check_requirements, get_branch_info, \
     select_ref, \
-    git, git_or_fail, check_in_repo
+    git, git_or_fail, check_in_repo, get_branch_classes
 from gitflow.repotools import BranchSelection
 
 
@@ -55,7 +55,7 @@ def call(context: Context) -> Result:
 
     work_branch_name = repotools.create_ref_name(branch_supertype, branch_type, branch_short_name)
     work_branch_ref_name = repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX, work_branch_name)
-    work_branch_class = get_branch_class(context, work_branch_ref_name)
+    work_branch_classes = get_branch_classes(context, work_branch_ref_name)
 
     if True:
         work_branch_info = get_branch_info(command_context, work_branch_ref_name)
@@ -65,19 +65,19 @@ def call(context: Context) -> Result:
                          .format(branch=repr(work_branch_name)),
                          None)
 
-    allowed_base_branch_class = const.BRANCHING[work_branch_class]
+    allowed_base_branch_classes = [const.BRANCHING[work_branch_class] for work_branch_class in work_branch_classes if const.BRANCHING[work_branch_class] is not None]
 
-    base_branch, base_branch_class = select_ref(command_context.result, command_context.selected_branch,
+    base_branch, base_branch_classes = select_ref(command_context.result, command_context.selected_branch,
                                                 BranchSelection.BRANCH_PREFER_LOCAL)
     if not command_context.selected_explicitly and branch_supertype == const.BRANCH_PREFIX_DEV:
         base_branch_info = get_branch_info(command_context,
                                            repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                      context.config.release_branch_base))
-        base_branch, base_branch_class = select_ref(command_context.result,
+        base_branch, base_branch_classes = select_ref(command_context.result,
                                                     base_branch_info,
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
 
-    if allowed_base_branch_class != base_branch_class:
+    if not (set(allowed_base_branch_classes) & set(base_branch_classes)):
         context.fail(os.EX_USAGE,
                      _("The branch {branch} is not a valid base for {supertype} branches.")
                      .format(branch=repr(base_branch.name),

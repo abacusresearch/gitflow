@@ -63,16 +63,16 @@ def call(context: Context) -> Result:
                      .format(branch=repr(work_branch.branch_name())),
                      None)
 
-    work_branch_ref, work_branch_class = select_ref(command_context.result,
+    work_branch_ref, work_branch_classes = select_ref(command_context.result,
                                                     work_branch_info,
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
 
-    allowed_base_branch_class = const.BRANCHING[work_branch_class]
+    allowed_base_branch_classes = [const.BRANCHING[work_branch_class] for work_branch_class in work_branch_classes if const.BRANCHING[work_branch_class] is not None]
 
     base_branch_info = get_branch_info(base_command_context,
                                        base_command_context.selected_ref)
 
-    base_branch_ref, base_branch_class = select_ref(command_context.result,
+    base_branch_ref, base_branch_classes = select_ref(command_context.result,
                                                     base_branch_info,
                                                     BranchSelection.BRANCH_PREFER_LOCAL)
     if not base_command_context.selected_explicitly:
@@ -80,7 +80,7 @@ def call(context: Context) -> Result:
             base_branch_info = get_branch_info(base_command_context,
                                                repotools.create_ref_name(const.LOCAL_BRANCH_PREFIX,
                                                                          context.config.release_branch_base))
-            base_branch_ref, base_branch_class = select_ref(command_context.result,
+            base_branch_ref, base_branch_classes = select_ref(command_context.result,
                                                             base_branch_info,
                                                             BranchSelection.BRANCH_PREFER_LOCAL)
         elif work_branch.prefix == const.BRANCH_PREFIX_PROD:
@@ -100,12 +100,12 @@ def call(context: Context) -> Result:
                 if merge_base is not None:
                     base_branch_info = get_branch_info(base_command_context, release_branch_ref)
 
-                    base_branch_ref, base_branch_class = select_ref(command_context.result,
+                    base_branch_ref, base_branch_classes = select_ref(command_context.result,
                                                                     base_branch_info,
                                                                     BranchSelection.BRANCH_PREFER_LOCAL)
                     break
 
-    if allowed_base_branch_class != base_branch_class:
+    if not (set(allowed_base_branch_classes) & set(base_branch_classes)):
         context.fail(os.EX_USAGE,
                      _("The branch {branch} is not a valid base for {supertype} branches.")
                      .format(branch=repr(base_branch_ref.name),

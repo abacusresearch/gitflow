@@ -59,7 +59,7 @@ class BranchInfo(object):
     local: list = None
     local_class: list = None
     upstream: repotools.Ref = None
-    upstream_class: const.BranchClass = None
+    upstream_class: list = None
 
 
 class CommandContext(object):
@@ -106,11 +106,11 @@ class CommandContext(object):
 
 
 def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSelection) \
-        -> [repotools.Ref, const.BranchClass]:
+        -> [repotools.Ref, List[const.BranchClass]]:
     if branch_info.local is not None and len(branch_info.local) and branch_info.upstream is not None:
-        if branch_info.local_class[0] != branch_info.upstream_class:
+        if not (set(branch_info.local_class) & set(branch_info.upstream_class)):
             result_out.error(os.EX_DATAERR,
-                             _("Local and upstream branch have a mismatching branch class."),
+                             _("Local and upstream branch have no matching branch class."),
                              None)
         if not branch_info.upstream.short_name.endswith('/' + branch_info.local[0].short_name):
             result_out.error(os.EX_DATAERR,
@@ -118,20 +118,20 @@ def select_ref(result_out: Result, branch_info: BranchInfo, selection: BranchSel
                              None)
 
     candidate = None
-    candidate_class = None
+    candidate_classes = None
     if selection == BranchSelection.BRANCH_PREFER_LOCAL:
         candidate = branch_info.local[0] or branch_info.upstream
-        candidate_class = branch_info.local_class[0] or branch_info.upstream_class
+        candidate_classes = branch_info.local_class or branch_info.upstream_class
     elif selection == BranchSelection.BRANCH_LOCAL_ONLY:
         candidate = branch_info.local[0]
-        candidate_class = branch_info.local_class[0]
+        candidate_classes = branch_info.local_class
     elif selection == BranchSelection.BRANCH_PREFER_REMOTE:
         candidate = branch_info.upstream or branch_info.local[0]
-        candidate_class = branch_info.upstream_class or branch_info.local_class[0]
+        candidate_classes = branch_info.upstream_class or branch_info.local_class
     elif selection == BranchSelection.BRANCH_REMOTE_ONLY:
         candidate = branch_info.upstream
-        candidate_class = branch_info.upstream_class
-    return candidate, candidate_class
+        candidate_classes = branch_info.upstream_class
+    return candidate, candidate_classes
 
 
 def git(context: RepoContext, command: list) -> int:
@@ -206,18 +206,6 @@ def get_branch_classes(context: Context, ref: Union[repotools.Ref, str]) -> List
     return branch_classes
 
 
-def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
-    branch_classes = get_branch_classes(context, ref)
-
-    if len(branch_classes) == 1:
-        branch_class = branch_classes[0]
-    elif len(branch_classes) == 0:
-        branch_class = None
-    else:
-        raise Exception("internal error")
-    return branch_class
-
-
 def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
                        branch_ref: repotools.Ref) -> BranchInfo:
     # TODO optimize
@@ -246,10 +234,10 @@ def update_branch_info(context: Context, branch_info_out: dict, upstreams: dict,
         if branch_info.local is not None:
             branch_info.local_class = list()
             for local in branch_info.local:
-                branch_info.local_class.append(get_branch_class(context, local.name))
+                branch_info.local_class.extend(get_branch_classes(context, local.name))
                 branch_info_out[local.name] = branch_info
         if branch_info.upstream is not None:
-            branch_info.upstream_class = get_branch_class(context, branch_info.upstream.name)
+            branch_info.upstream_class = get_branch_classes(context, branch_info.upstream.name)
             branch_info_out[branch_info.upstream.name] = branch_info
 
     return branch_info
@@ -751,14 +739,13 @@ def check_requirements(command_context: CommandContext,
                        fail_message: str,
                        allow_unversioned_changes: bool = None,
                        throw=True):
-    branch_class = get_branch_class(command_context.context, ref)
+    actual_branch_classes = get_branch_classes(command_context.context, ref)
 
-    if branch_classes is not None and branch_class not in branch_classes:
+    if branch_classes is not None and not (set(actual_branch_classes) & set(branch_classes)):
         command_context.error(os.EX_USAGE,
                               fail_message,
-                              _("The branch {branch} is of type {type} must be one of these types:{allowed_types}")
+                              _("The branch {branch} must be one of these types:{allowed_types}")
                               .format(branch=repr(ref.name),
-                                      type=repr(branch_class.name if branch_class is not None else None),
                                       allowed_types='\n - ' + '\n - '.join(
                                           branch_class.name for branch_class in branch_classes)),
                               throw)
