@@ -1,6 +1,7 @@
 import itertools
 import os
 import re
+import time
 
 from gitflow import const
 from gitflow.procedures.scheme.canonical_datetime import CanonicalDateTime
@@ -56,24 +57,36 @@ class TestFlow(TestFlowBase):
         self.push()
 
         self.assert_refs({
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
+        })
+
+    def create_first_version(self):
+        refs = dict()
+        self.assert_refs(refs, added={
             'refs/heads/master',
             'refs/remotes/' + self.remote_name + '/master'
         })
 
-    def create_first_version(self):
-        head = self.git_get_hash('master')
-        refs = {
-            'refs/heads/master': head,
-            'refs/remotes/' + self.remote_name + '/master': head,
-        }
+        expected_version_range = []
+        expected_version_range.append(CanonicalDateTime.generate_version())
+
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
+
+        expected_version_range.append(CanonicalDateTime.generate_version())
+
         head = self.git_get_hash('master')
-        self.assert_refs(refs, updated={
+        new_tag = 'refs/tags/' + self.version_tag_prefix + '1'
+        added_refs = self.assert_refs(refs, added={
+            self.version_tag(expected_version_range): head
+        }, updated={
             'refs/heads/master': head,
-            'refs/remotes/' + self.remote_name + '/master': head,
-        }, added={
-            'refs/tags/' + self.version_tag_prefix + '1': head
+            'refs/remotes/' + self.remote_name + '/master': head
+        }, key_matcher=TestFlowBase.match_pattern)
+
+        self.assert_project_properties_contain({
+            'version': self.version_from_tag_ref(added_refs[0]),
         })
 
         properties = self.load_project_properties()
@@ -127,8 +140,8 @@ class TestFlow(TestFlowBase):
 
     def test_bump_minor(self):
         refs = {
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master',
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None,
         }
 
         exit_code = self.git_flow('bump-minor', '--assume-yes')
@@ -137,8 +150,8 @@ class TestFlow(TestFlowBase):
 
     def test_bump_patch(self):
         refs = {
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master',
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None,
         }
 
         exit_code = self.git_flow('bump-patch', '--assume-yes')
@@ -199,8 +212,8 @@ class TestFlow(TestFlowBase):
 
     def test_begin_end_dev_feature_from_another_branch(self):
         refs = {
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master',
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None,
         }
 
         self.assert_head('refs/heads/master')
@@ -215,10 +228,12 @@ class TestFlow(TestFlowBase):
         })
 
         for _ in itertools.repeat(None, 3):
-            self.commit()
+            head = self.commit()
         self.push('-u', self.remote_name, 'dev/feature/test-feature')
-        self.assert_refs(refs, added={
-            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature',
+        self.assert_refs(refs, updated={
+            'refs/heads/dev/feature/test-feature': head
+        }, added={
+            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature': head,
         })
 
         self.checkout("master")
@@ -250,6 +265,8 @@ class TestFlow(TestFlowBase):
         }, added={
             'refs/remotes/' + self.remote_name + '/prod/fix/test-fix'
         })
+
+        time.sleep(1)
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', 'master')
         assert exit_code == os.EX_OK

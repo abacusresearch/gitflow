@@ -51,8 +51,8 @@ class TestBuild(TestFlowBase):
         self.push()
 
         self.assert_refs({
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master'
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
         })
 
     def test_assemble(self):

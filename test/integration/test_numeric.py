@@ -37,8 +37,8 @@ class TestFlow(TestFlowBase):
         self.push()
 
         self.assert_refs({
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master'
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
         })
 
     def create_first_version(self):
@@ -100,8 +100,8 @@ class TestFlow(TestFlowBase):
 
     def test_bump_minor(self):
         refs = {
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master',
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None,
         }
 
         exit_code = self.git_flow('bump-minor', '--assume-yes')
@@ -110,8 +110,8 @@ class TestFlow(TestFlowBase):
 
     def test_bump_patch(self):
         refs = {
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master',
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None,
         }
 
         exit_code = self.git_flow('bump-patch', '--assume-yes')
@@ -175,8 +175,8 @@ class TestFlow(TestFlowBase):
 
     def test_begin_end_dev_feature_from_another_branch(self):
         refs = {
-            'refs/heads/master',
-            'refs/remotes/' + self.remote_name + '/master',
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None,
         }
 
         self.assert_head('refs/heads/master')
@@ -191,10 +191,12 @@ class TestFlow(TestFlowBase):
         })
 
         for _ in itertools.repeat(None, 3):
-            self.commit()
+            head = self.commit()
         self.push('-u', self.remote_name, 'dev/feature/test-feature')
-        self.assert_refs(refs, added={
-            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature',
+        self.assert_refs(refs, updated={
+            'refs/heads/dev/feature/test-feature': head,
+        }, added={
+            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature': head,
         })
 
         self.checkout("master")
