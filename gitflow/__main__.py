@@ -214,29 +214,35 @@ def main(argv: list = sys.argv) -> int:
 
                 for command_name, command_func in commands.items():
                     if args[command_name] is True:
-                        command_funcs.append(command_func)
+                        if command_func is not None:
+                            command_funcs.append(command_func)
+                        else:
+                            result.error(os.EX_USAGE, _("unsupported command: {command}").format(command=command_name), None)
 
-                if not len(command_funcs):
-                    cli.fail(os.EX_SOFTWARE, "unimplemented command")
+                if not result.has_errors():
+                    if context.verbose >= const.TRACE_VERBOSITY:
+                        cli.print("commands: " + repr(command_funcs))
 
-                if context.verbose >= const.TRACE_VERBOSITY:
-                    cli.print("commands: " + repr(command_funcs))
+                    start_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
 
-                start_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
+                    for command_func in command_funcs:
+                        try:
+                            command_result = command_func(context)
+                        except GitFlowException as e:
+                            command_result = e.result
 
-                for command_func in command_funcs:
-                    try:
-                        command_result = command_func(context)
-                    except GitFlowException as e:
-                        command_result = e.result
-                    result.errors.extend(command_result.errors)
-                    if result.has_errors():
-                        break
+                        if command_result is not None:
+                            result.errors.extend(command_result.errors)
+                        else:
+                            result.error(os.EX_SOFTWARE, _("internal error: command implementation {command_func} did not return a result").format(command_func=command_func), None)
 
-                current_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
-                if current_branch is not None and current_branch != start_branch:
-                    cli.print(_("You are now on {branch}.")
-                              .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
+                        if result.has_errors():
+                            break
+
+                    current_branch = repotools.git_get_current_branch(context.repo) if context.repo is not None else None
+                    if current_branch is not None and current_branch != start_branch:
+                        cli.print(_("You are now on {branch}.")
+                                  .format(branch=repr(current_branch.short_name) if current_branch is not None else '-'))
         finally:
             context.cleanup()
 
