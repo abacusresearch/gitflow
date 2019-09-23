@@ -419,7 +419,7 @@ def create_branchless_version_tag(command_context: CommandContext,
         # run version change hooks on release branch
         checkout_command = ['checkout', '--force', '--track', '-B', selected_branch.short_name,
                             repotools.create_ref_name(const.REMOTES_PREFIX,
-                                                      context.config.remote_name,
+                                                      'origin',
                                                       selected_branch.short_name)]
         returncode, out, err = repotools.git(cloned_repo, *checkout_command)
         if returncode != os.EX_OK:
@@ -495,7 +495,7 @@ def create_branchless_version_tag(command_context: CommandContext,
             push_command.append('--dry-run')
         if context.verbose:
             push_command.append('--verbose')
-        push_command.append(context.config.remote_name)
+        push_command.append(clone_context.config.remote_name)
 
         # push the release branch commit or its version increment commit
         if new_branch_ref_object is not None:

@@ -986,10 +986,11 @@ def execute_build_steps(command_context: CommandContext, types: list = None):
                 if not command_context.context.dry_run:
                     try:
                         proc = subprocess.Popen(args=command,
-                                                stdout=sys.stdout if show_output else subprocess.DEVNULL,
-                                                stderr=sys.stderr if show_output else subprocess.DEVNULL,
+                                                stdout=None if show_output else subprocess.DEVNULL,
+                                                stderr=None if show_output else subprocess.DEVNULL,
                                                 cwd=command_context.context.root)
                         out, err = proc.communicate()
+                        # proc.wait()
                         if proc.returncode != os.EX_OK:
                             command_context.fail(os.EX_DATAERR,
                                                  _("{stage}:{step} failed.")
