@@ -21,6 +21,7 @@ class TestFlow(TestFlowBase):
             const.CONFIG_VERSION_PROPERTY: 'version',
             const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
             const.CONFIG_VERSION_TAG_PREFIX: None,
+            const.CONFIG_VERSION_TAG_PATTERN: '(?P<unique_code>0|[1-9][0-9]*)',
             const.CONFIG_RELEASE_BRANCH_PREFIX: None,
             const.CONFIG_RELEASE_BRANCH_PATTERN: 'master'
         }
@@ -57,15 +58,21 @@ class TestFlow(TestFlowBase):
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
+
+        new_master = self.git_get_hash('master')
+        new_tag = 'refs/tags/' + self.version_tag_prefix + '1'
         self.assert_refs(refs, added={
-            'refs/tags/' + self.version_tag_prefix + '1': 'refs/heads/master'
+            new_tag: new_master
+        }, updated={
+            'refs/heads/master': new_master,
+            'refs/remotes/origin/master': new_master
         })
 
         self.assert_project_properties_contain({
             'version': '1',
         })
 
-        # the head commit is already tagged, further bumps shall not be possible
+        # the head commit is the base of a release branch, further bumps shall not be possible
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_USAGE
         self.assert_refs(refs)

@@ -89,8 +89,8 @@ def create_branchless_version_tag(command_context: CommandContext,
             for tag_ref in repotools.git_get_tags_by_referred_object(context.repo, history_commit.obj_name):
                 version_info = context.version_tag_matcher.to_version_info(tag_ref.name)
                 if version_info is not None:
-                    tag_matches = version_info.major == branch_base_version_info.major \
-                                  and version_info.minor == branch_base_version_info.minor
+                    tag_matches = branch_base_version_info is None or (version_info.major == branch_base_version_info.major \
+                                  and version_info.minor == branch_base_version_info.minor)
 
                     if tag_matches:
                         if version_tag_refs is None:
@@ -176,17 +176,9 @@ def create_branchless_version_tag(command_context: CommandContext,
         if result.has_errors():
             return result
     else:
-        template_version_info = context.versioning_scheme.parse_version_info(context.config.version_config.initial_version)
-        new_version = semver.format_version(
-            major=int(latest_branch_version or '0'),
-            minor=0,
-            patch=template_version_info.patch,
-            prerelease=str(global_sequence_number + 1) if context.config.tie_sequential_version_to_semantic_version and global_sequence_number is not None else template_version_info.prerelease,
-            build=template_version_info.build,
-        )
+        new_version = '1'
 
-    new_version_info = context.versioning_scheme.parse_version_info(new_version)
-    new_sequential_version = scheme_procedures.get_sequence_number(context.config.version_config, new_version_info)
+    new_sequential_version = None
 
     try:
         config_in_selected_commit = read_config_in_commit(context.repo, command_context.selected_commit)
@@ -229,27 +221,11 @@ def create_branchless_version_tag(command_context: CommandContext,
                 version_tags_on_same_commit[0].name)
             prerelease_keywords_list = [context.config.version_config.qualifiers, 1]
 
-            preceding_commit_version_ = version.parse_version(preceding_commit_version)
-            new_commit_version_ = version.parse_version(new_version)
-            version_delta = version.determine_version_delta(preceding_commit_version_,
-                                                            new_commit_version_,
-                                                            prerelease_keywords_list
+            preceding_commit_version_ = preceding_commit_version
+            new_commit_version_ = new_version
+            version_delta = context.versioning_scheme.compare_version(preceding_commit_version_,
+                                                            new_commit_version_
                                                             )
-
-            version_increment_eval_result = version.evaluate_version_increment(preceding_commit_version_,
-                                                                               new_commit_version_,
-                                                                               context.config.strict_mode,
-                                                                               prerelease_keywords_list)
-            result.add_subresult(version_increment_eval_result)
-            if result.has_errors():
-                return result
-
-            if not version_delta.prerelease_field_only(0, False):
-                result.fail(os.EX_USAGE,
-                            _("Tag creation failed."),
-                            _("The selected commit already has version tags.\n"
-                              "Operations on such a commit are limited to pre-release type increments.")
-                            )
 
             valid_tag = True
         else:
@@ -296,7 +272,7 @@ def create_branchless_version_tag(command_context: CommandContext,
                         _("Internal error."),
                         _("Missing result version.")
                         )
-        if latest_branch_version is not None and semver.compare(latest_branch_version, new_version) >= 0:
+        if latest_branch_version is not None and context.versioning_scheme.compare_version(latest_branch_version, new_version).difference >= 0:
             result.fail(os.EX_DATAERR,
                         _("Failed to increment version from {current} to {new}.")
                         .format(current=repr(latest_branch_version), new=repr(new_version)),
@@ -315,7 +291,7 @@ def create_branchless_version_tag(command_context: CommandContext,
         else:
             original_current_branch = None
 
-        tag_name = get_tag_name_for_version(context, new_version_info)
+        tag_name = context.versioning_scheme.get_tag_name_for_version(context, new_version)
 
         clone_result = clone_repository(context, context.config.release_branch_base)
         cloned_repo = clone_result.value

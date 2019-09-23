@@ -424,6 +424,8 @@ class Context(AbstractContext):
             context.config.version_config.qualifiers = None
             context.config.version_config.initial_version = '1'
 
+            context.config.allow_qualifier_increments_within_commit = False
+
         return context
 
     def add_temp_dir(self, dir):
@@ -434,8 +436,7 @@ class Context(AbstractContext):
 
     def get_release_branches(self, reverse: bool = True):
         release_branches = list(filter(
-            lambda branch_ref: self.release_branch_matcher.format(
-                branch_ref.name) is not None,
+            lambda branch_ref: self.release_branch_matcher.fullmatch(branch_ref.name) is not None,
             repotools.git_list_refs(self.repo,
                                     repotools.create_ref_name(const.REMOTES_PREFIX, self.config.remote_name),
                                     const.LOCAL_BRANCH_PREFIX)

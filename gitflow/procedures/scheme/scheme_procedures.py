@@ -29,6 +29,12 @@ def filter_sequence_number(version_config, prev_version, global_seq):
     return global_seq
 
 
+def version_bump_integer(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
+    result = Result()
+    result.value = str(int(version) + 1)
+    return result
+
+
 def version_bump_major(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
 
@@ -46,9 +52,9 @@ def version_bump_major(version_config: VersionConfig, version: Optional[str], gl
             version_info.major,
             version_info.minor,
             version_info.patch,
-            (version_config.qualifiers[0] + ".1" if pre_release else None)
-            if version_config.versioning_scheme != VersioningScheme.SEMVER_WITH_SEQ
-            else global_seq + 1,
+            global_seq + 1
+            if version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ
+            else (version_config.qualifiers[0] + ".1" if pre_release and version_config.qualifiers is not None and len(version_config.qualifiers) else None),
             None)
     return result
 

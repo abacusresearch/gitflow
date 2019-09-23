@@ -35,7 +35,7 @@ def call(context) -> Result:
         if branch_match:
             branch_version = context.release_branch_matcher.to_version(branch_ref.name)
 
-            branch_version_string = get_branch_version_component_for_version(context, branch_version)
+            branch_version_string = get_branch_version_component_for_version(context, branch_version) if branch_version is not None else None
 
             discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(context, branch_ref)
 
@@ -57,7 +57,7 @@ def call(context) -> Result:
 
             error_color = colors.partial(colors.color, fg='white', bg='red', style='bold')
 
-            cli.fcwrite(sys.stdout, status_color, "version: " + branch_version_string + ' [')
+            cli.fcwrite(sys.stdout, status_color, (("version: " + branch_version_string + ' ') if branch_version_string is not None else "") + '[')
             if branch_info.local is not None:
                 i = 0
                 for local in branch_info.local:
@@ -119,8 +119,8 @@ def call(context) -> Result:
 
                     # print the version tag
                     version_string = context.version_tag_matcher.format(tag.name)
-                    if version_string:
-                        version_info = semver.parse_version_info(version_string)
+                    if version_string is not None and branch_version is not None:
+                        version_info = context.versioning_scheme.parse_version_info(version_string)
                         if version_info.major == branch_version.major and version_info.minor == branch_version.minor:
                             cli.fcwriteln(sys.stdout, status_color, "    " + version_string)
                         else:

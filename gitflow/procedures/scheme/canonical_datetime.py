@@ -11,7 +11,7 @@ from gitflow.procedures import create_version
 from gitflow.procedures.common import get_command_context, check_in_repo, check_requirements, fetch_all_and_ff
 from gitflow.procedures.scheme import scheme_procedures
 from gitflow.procedures.scheme.versioning_scheme import VersioningSchemeImpl
-from gitflow.version import SemVerVersionMatcher
+from gitflow.version import IncrementalVersionMatcher, VersionDelta
 
 
 class CanonicalDateTime(VersioningSchemeImpl):
@@ -22,23 +22,21 @@ class CanonicalDateTime(VersioningSchemeImpl):
 
         remote_prefix = repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)
 
-        self.release_base_branch_matcher = SemVerVersionMatcher(
+        self.release_base_branch_matcher = IncrementalVersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             None,
             re.escape(context.config.release_branch_base),
         )
 
-        self.release_branch_matcher = SemVerVersionMatcher(
+        self.release_branch_matcher = IncrementalVersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
-            context.config_properties.get(
-                const.CONFIG_RELEASE_BRANCH_PREFIX,
-                const.DEFAULT_RELEASE_BRANCH_PREFIX),
+            None,
             context.config_properties.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
         )
 
-        self.work_branch_matcher = SemVerVersionMatcher(
+        self.work_branch_matcher = IncrementalVersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
             context.config_properties.get(
@@ -46,7 +44,7 @@ class CanonicalDateTime(VersioningSchemeImpl):
                 const.DEFAULT_WORK_BRANCH_PATTERN),
         )
 
-        self.version_tag_matcher = SemVerVersionMatcher(
+        self.version_tag_matcher = IncrementalVersionMatcher(
             [const.LOCAL_TAG_PREFIX],
             context.config_properties.get(
                 const.CONFIG_VERSION_TAG_PREFIX,
@@ -55,9 +53,9 @@ class CanonicalDateTime(VersioningSchemeImpl):
                 const.CONFIG_VERSION_TAG_PATTERN,
                 const.DEFAULT_CANONICAL_DATETIME_VERSION_TAG_PATTERN)
         )
-        self.version_tag_matcher.group_unique_code = 'canonical_version'
+        self.version_tag_matcher.group_unique_code = 'unique_code'
 
-        self.discontinuation_tag_matcher = SemVerVersionMatcher(
+        self.discontinuation_tag_matcher = IncrementalVersionMatcher(
             [const.LOCAL_TAG_PREFIX],
             context.config_properties.get(
                 const.CONFIG_DISCONTINUATION_TAG_PREFIX,
@@ -76,16 +74,22 @@ class CanonicalDateTime(VersioningSchemeImpl):
         return semver.VersionInfo(major=int(version.split('.')[0]), minor=0, patch=0)
 
     def format_version_info(self, version_info: semver.VersionInfo) -> str:
-        return semver.format_version(
-            version_info.major,
-            version_info.minor,
-            version_info.patch,
-            version_info.prerelease,
-            version_info.build)
+        return str(version_info.major)
+
+    def compare_version(self, a: str, b: str) -> VersionDelta:
+        delta = VersionDelta()
+
+        delta.difference = int(a) - int(b)
+
+        return delta
 
     def compare_version_info(self, a: semver.VersionInfo, b: semver.VersionInfo):
         # TODO avoid superfluous conversions
         return semver.compare(self.format_version_info(a), self.format_version_info(b))
+
+    def get_tag_name_for_version(self, context: Context, version: str):
+        return (context.version_tag_matcher.ref_name_infix or '') \
+               + str(version)
 
     def cmd_bump_major(self, context: Context):
         command_context = get_command_context(
@@ -104,7 +108,7 @@ class CanonicalDateTime(VersioningSchemeImpl):
                            fail_message=_("Version creation failed.")
                            )
 
-        tag_result = create_version.create_branchless_version_tag(command_context, scheme_procedures.version_bump_major)
+        tag_result = create_version.create_branchless_version_tag(command_context, scheme_procedures.version_bump_integer)
         command_context.add_subresult(tag_result)
 
         if not command_context.has_errors() \

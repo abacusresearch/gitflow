@@ -266,11 +266,6 @@ def update_project_properties(context: Context,
                               prev_properties: dict,
                               new_version: str,
                               new_sequential_version: int) -> dict:
-    new_version_info = semver.parse_version_info(new_version)
-
-    if new_version_info.build is not None:
-        raise ValueError("build info must not be set in version tag")
-
     properties = prev_properties.copy() if prev_properties is not None else dict()
 
     if context.config.commit_version_property:
@@ -357,7 +352,10 @@ def execute_version_change_actions(context: Context, old_version: str, new_versi
 
 def get_branch_version_component_for_version(context: Context,
                                              version_on_branch: Union[semver.VersionInfo, version.Version]):
-    return str(version_on_branch.major) + '.' + str(version_on_branch.minor)
+    if context.config.version_config.versioning_scheme in [const.VersioningScheme.SEMVER, const.VersioningScheme.SEMVER_WITH_SEQ]:
+        return str(version_on_branch.major) + '.' + str(version_on_branch.minor)
+    else:
+        return None
 
 
 def get_branch_name_for_version(context: Context, version_on_branch: Union[semver.VersionInfo, version.Version]):

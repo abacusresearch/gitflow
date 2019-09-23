@@ -75,6 +75,97 @@ class VersionDelta(object):
         return result
 
 
+class IncrementalVersionMatcher(object):
+    pattern = None
+    group_unique_code = None
+
+    ref_name_infixes: List[str] = None
+    ref_name_infix: str = None
+    __format = None
+
+    comparator = None
+    key_func = None
+
+    def __init__(self, ref_roots: list, ref_name_infixes: Union[List[str], str, None], pattern: str,
+                 format: str = None):
+        """
+        :param pattern:
+        :param ref_name_infixes: the name prefixes of branches and tags following the conventional parents
+        'refs/heads/', 'refs/remotes/<remote>/' and 'refs/tags/'
+        :param format: format that combines version elements to a SemVer version
+        """
+
+        if ref_name_infixes is not None:
+            if not isinstance(ref_name_infixes, list):
+                ref_name_infixes = [ref_name_infixes]
+            for index, ref_name_infix in enumerate(ref_name_infixes):
+                ref_name_infixes[index] = utils.split_join('/', False, True, ref_name_infix)
+            ref_name_infixes = [infix for infix in ref_name_infixes if infix is not None and infix != '/']
+        self.ref_name_infixes = ref_name_infixes
+        self.ref_name_infix = self.ref_name_infixes[0] if self.ref_name_infixes and len(self.ref_name_infixes) else None
+
+        full_pattern = ''
+        full_pattern += '(?:'
+        full_pattern += '|'.join(re.escape(utils.split_join('/', False, True, ref_root)) for ref_root in ref_roots)
+        full_pattern += ')'
+        if ref_name_infixes is not None and len(ref_name_infixes):
+            full_pattern += '(?P<prefix>'
+            full_pattern += '|'.join(re.escape(utils.split_join('/', False, False, ref_name_infix))
+                                     for ref_name_infix in ref_name_infixes)
+            full_pattern += ')\\/'
+        full_pattern += pattern
+
+        self.pattern = re.compile(full_pattern)
+        self.group_unique_code = self.pattern.groupindex.get('unique_code')
+
+        self.__format = format
+
+        self.comparator = lambda tag_ref_a, tag_ref_b: _nat_cmp(tag_ref_a.name, tag_ref_b.name)
+        self.key_func = utils.cmp_to_key(self.comparator)
+
+    def to_version(self, string: str) -> Version:
+        version_str = self.format(string)
+        return parse_version(version_str) if version_str is not None else None
+
+    def fullmatch(self, string: str):
+        return self.pattern.fullmatch(string)
+
+    def to_dict(self, string: str) -> Optional[Dict[str, str]]:
+        """
+        :param string: input string
+        :return: dictionary containing version fields extracted from the input string
+        """
+        match = self.pattern.fullmatch(string)
+        if match is None:
+            return None
+        return match.groupdict()
+
+    def format(self, string: str) -> Optional[str]:
+        """
+        :param string: input string
+        :return string representation of version fields extracted from the input string
+        """
+        match = self.pattern.fullmatch(string)
+        if match is None:
+            return None
+        fields = match.groupdict()
+
+        return fields[self.group_unique_code] if self.group_unique_code is not None else None
+
+    def to_version_info(self, string: str):
+        version = self.format(string)
+        if version is not None:
+            return semver.VersionInfo(major=int(version), minor=0, patch=0)
+        else:
+            return None
+
+    def version_to_version_info(self, string: str):
+        if string is not None:
+            return semver.VersionInfo(major=int(string), minor=0, patch=0)
+        else:
+            return None
+
+
 class SemVerVersionMatcher(object):
     pattern = None
     group_major = None
@@ -209,6 +300,8 @@ class SemVerVersionMatcher(object):
         version = self.format(string)
         if version is not None:
             return semver.parse_version_info(version)
+        else:
+            return None
 
 
 def validate_version(config: VersionConfig, version_string):
@@ -408,6 +501,17 @@ def parse_version(version_str: str) -> Optional[Version]:
 
 
 def format_version(version: Version) -> str:
+    version_str = "%d.%d.%d" % (version.major, version.minor, version.patch)
+    if version.prerelease is not None:
+        version_str += "-%s" % '.'.join(str(token) for token in version.prerelease)
+
+    if version.build is not None:
+        version_str += "+%s" % version.build
+
+    return version_str
+
+
+def format_version_info(version: semver.VersionInfo) -> str:
     version_str = "%d.%d.%d" % (version.major, version.minor, version.patch)
     if version.prerelease is not None:
         version_str += "-%s" % '.'.join(str(token) for token in version.prerelease)
