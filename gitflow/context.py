@@ -382,6 +382,9 @@ class Context(AbstractContext):
         elif context.config.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
             from gitflow.procedures.scheme.semver import SemVer
             context.versioning_scheme = SemVer(context.config.version_config.initial_version)
+        elif context.config.version_config.versioning_scheme == VersioningScheme.CANONICAL_DATETIME:
+            from gitflow.procedures.scheme.canonical_datetime import CanonicalDateTime
+            context.versioning_scheme = CanonicalDateTime()
 
         if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
             qualifiers = config.get(const.CONFIG_VERSION_TYPES, const.DEFAULT_PRE_RELEASE_QUALIFIERS)
@@ -398,6 +401,9 @@ class Context(AbstractContext):
         elif context.config.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
             context.config.version_config.qualifiers = None
             context.config.version_config.initial_version = const.DEFAULT_INITIAL_SEQ_VERSION
+        elif context.config.version_config.versioning_scheme == VersioningScheme.CANONICAL_DATETIME:
+            context.config.version_config.qualifiers = None
+            context.config.version_config.initial_version = '1'
         else:
             context.fail(os.EX_CONFIG, "configuration error", "invalid versioning scheme")
 

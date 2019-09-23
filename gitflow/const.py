@@ -14,14 +14,16 @@ with open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'config.ini'))
 class VersioningScheme(Enum):
     # SemVer tags
     SEMVER = 1,
-    # SemVer tags, sequence number tags
-    SEMVER_WITH_SEQ = 2
+    # SemVer with sequence in pre-release
+    SEMVER_WITH_SEQ = 2,
+    CANONICAL_DATETIME = 3,
 
 
 VERSIONING_SCHEMES = {
     'semver': VersioningScheme.SEMVER,
     'semverWithSeq': VersioningScheme.SEMVER_WITH_SEQ,
     'semver_with_seq': VersioningScheme.SEMVER_WITH_SEQ,
+    'canonical_datetime': VersioningScheme.CANONICAL_DATETIME,
 }
 
 # config keys
@@ -77,6 +79,8 @@ DEFAULT_SEMVER_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch
 DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)' \
                                               r'-((?P<prerelease_type>(0|[1-9][0-9]*))?' \
                                               r'([.-](?P<prerelease_version>\d+))?)?'
+
+DEFAULT_CANONICAL_DATETIME_VERSION_TAG_PATTERN = r'(?P<year>[0-9]+)(?P<month>[0-9]{2})(?P<day>[0-9]{2})(?P<hour>[0-9]{2})(?P<minute>[0-9]{2})(?P<second>[0-9]{2})'
 
 DEFAULT_DISCONTINUATION_TAG_PREFIX = 'discontinued/'
 
