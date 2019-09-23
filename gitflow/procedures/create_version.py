@@ -473,7 +473,7 @@ def create_version_tag(command_context: CommandContext,
         else:
             branch_base_version_info = None
 
-        on_selected_branch = not before_selected_branch and release_branch.name == selected_branch.name
+        on_selected_branch = not before_selected_branch and release_branch.obj_name == selected_branch.obj_name
 
         for history_commit in repotools.git_list_commits(
                 context=context.repo,
