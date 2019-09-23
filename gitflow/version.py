@@ -279,14 +279,20 @@ def _nat_cmp(a, b):
         return [convert(c) for c in key.split('.')]
 
     def cmp_prerelease_tag(a, b):
-        if isinstance(a, int) and isinstance(b, int):
-            return cmp(a, b)
-        elif isinstance(a, int):
+        a = str(a)
+        b = str(b)
+
+        if a == b:
+            return 0
+
+        if a.isnumeric() and b.isnumeric():
+            return int(b) - int(a)
+        elif a.isnumeric():
             return -1
-        elif isinstance(b, int):
+        elif b.isnumeric():
             return 1
         else:
-            return cmp(a, b)
+            return -1 if a < b else 1
 
     a, b = a or '', b or ''
     a_parts, b_parts = split_key(a), split_key(b)
@@ -295,7 +301,7 @@ def _nat_cmp(a, b):
         if cmp_result != 0:
             return cmp_result
     else:
-        return cmp(len(a), len(b))
+        return len(b) - len(a)
 
 
 def _nat_cmp_v(a, b, keywords: list = None):
