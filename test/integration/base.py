@@ -34,7 +34,7 @@ class DictDiffer(object):
         self.intersect = set(self.a.keys()).intersection(self.b.keys())
 
     def has_changed(self) -> bool:
-        return self.a != self.b
+        return len(self.changed()) != 0
 
     def added(self) -> dict:
         return dict(
@@ -48,7 +48,7 @@ class DictDiffer(object):
 
     def changed(self) -> dict:
         return dict(
-            (key, (self.a[key], self.b[key])) for key in self.intersect if self.a[key] != self.b[key]
+            (key, (self.a[key], self.b[key])) for key in self.intersect if self.a[key] is not None and self.a[key] != self.b[key]
         )
 
     def unchanged(self) -> dict:
@@ -249,71 +249,49 @@ class TestFlowBase(TestInTempDir):
         return lines[0]
 
     def assert_refs(self,
-                    refs: Optional[Union[set, dict]],
+                    refs: Union[set, dict],
                     updated: Optional[Union[set, dict]] = None,
                     added: Optional[Union[set, dict]] = None,
                     removed: Optional[Union[set, dict]] = None):
 
-        if isinstance(refs, dict):
-            if isinstance(updated, set):
-                updated = dict.fromkeys(updated, None)
-            if isinstance(added, set):
-                added = dict.fromkeys(added, None)
-            if isinstance(removed, set):
-                removed = dict.fromkeys(removed, None)
+        if isinstance(refs, set):
+            refs = dict.fromkeys(refs, None)
+        if isinstance(updated, set):
+            updated = dict.fromkeys(updated, None)
+        if isinstance(added, set):
+            added = dict.fromkeys(added, None)
+        if isinstance(removed, set):
+            removed = dict.fromkeys(removed, None)
 
-            actual_refs = self.get_ref_map()
+        actual_refs = self.get_ref_map()
 
-            if added is not None and removed is not None:
-                if not added.keys().isdisjoint(removed.keys()):
-                    raise ValueError('added and removed elements are not disjoint')
+        if added is not None and removed is not None:
+            if not added.keys().isdisjoint(removed.keys()):
+                raise ValueError('added and removed elements are not disjoint')
 
-            if updated is not None:
-                if not frozenset(updated.keys()).issubset(frozenset(refs.keys())):
-                    raise ValueError('updated is not a subset of refs')
-                for refname, objectname in updated.items():
-                    if objectname is None:
-                        objectname = actual_refs.get(refname)
-                    else:
-                        objectname = actual_refs.get(objectname) or objectname
-                    refs[refname] = objectname
-            if added is not None:
-                if not added.keys().isdisjoint(refs.keys()):
-                    raise ValueError('added and refs are not disjoint')
-                for refname, objectname in added.items():
-                    if objectname is None:
-                        objectname = actual_refs.get(refname)
-                    else:
-                        objectname = actual_refs.get(objectname) or objectname
-                    refs[refname] = objectname
-            if removed is not None:
-                if not removed.keys() <= refs.keys():
-                    raise ValueError('refs is not a superset of removed')
-                for refname, objectname in removed.items():
-                    if objectname is None:
-                        objectname = actual_refs.get(refname)
-                    else:
-                        objectname = actual_refs.get(refname) or objectname
-                    old_objectname = refs.pop(refname)
+        if updated is not None:
+            if not frozenset(updated.keys()).issubset(frozenset(refs.keys())):
+                raise ValueError('updated is not a subset of refs')
+            for refname, objectname in updated.items():
+                if objectname is None:
+                    objectname = actual_refs.get(refname)
+                else:
+                    objectname = actual_refs.get(objectname) or objectname
+                refs[refname] = objectname
+        if added is not None:
+            if not added.keys().isdisjoint(refs.keys()):
+                raise ValueError('added and refs are not disjoint')
+            for refname, objectname in added.items():
+                if objectname is None:
+                    objectname = actual_refs.get(refname)
+                else:
+                    objectname = actual_refs.get(objectname) or objectname
+                refs[refname] = objectname
+        if removed is not None:
+            if not removed.keys() <= refs.keys():
+                raise ValueError('refs is not a superset of removed')
 
-            self.assert_same_pairs(refs, actual_refs)
-        else:
-            if isinstance(updated, dict) or isinstance(added, dict) or isinstance(removed, dict):
-                raise ValueError('cannot operate on a set using dict operands')
-
-            if added is not None and removed is not None:
-                if added.intersection(removed):
-                    raise ValueError('added and removed elements intersect')
-
-            if added is not None:
-                if added.intersection(refs):
-                    raise ValueError('added and refs intersect')
-                refs.update(added)
-            if removed is not None:
-                if refs.issuperset(removed):
-                    raise ValueError('refs is not a superset of removed')
-                refs.difference_update(removed)
-            self.assert_same_elements(refs, self.get_ref_set())
+        self.assert_same_pairs(refs, actual_refs)
 
     def assert_first_parent(self, object: str, expected_parent: str):
         rev_entry = self.git_for_line('git', 'rev-list', '--parents', '--first-parent', '--max-count=1', object).split(
