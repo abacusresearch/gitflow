@@ -536,6 +536,7 @@ def clone_repository(context: Context, branch: str) -> Result:
 def create_temp_context(context: Context, result: Result, directory: str) -> Context:
     clone_context = Context.create({
         '--root': directory,
+        '--remote': context.args['--remote'],
 
         '--config': context.args['--config'],  # no override here
 

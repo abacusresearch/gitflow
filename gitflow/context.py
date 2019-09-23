@@ -1,6 +1,5 @@
 import atexit
 import os
-import re
 import shutil
 from enum import Enum
 from typing import List, Optional
@@ -391,7 +390,7 @@ class Context(AbstractContext):
                             _("The versioning scheme {versioning_scheme} is invalid.").format(
                                 versioning_scheme=utils.quote(versioning_scheme, '\'')))
 
-        context.config.remote_name = "origin"
+        context.config.remote_name = args['--remote']
         context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
         context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
                                                         const.DEFAULT_RELEASE_BRANCH_BASE)

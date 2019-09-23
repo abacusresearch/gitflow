@@ -3,31 +3,31 @@ git-flow - Manage version branches and tags
 
 Usage:
  git-flow status
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [(-a|--all) | <object>]
  git-flow (bump-major|bump-minor)
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [-y|--assume-yes] [<object>]
  git-flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release)
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [-y|--assume-yes] [<object>]
  git-flow bump-to
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
  git-flow discontinue
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
  git-flow start
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
  git-flow finish
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
  git-flow log
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [<object>] [-- <git-arg>...]
  git-flow (assemble|test|integration-test)
-        [--root=DIR] [--config=FILE] [-B|--batch] [-v|--verbose] [-p|--pretty]
+        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
         [-d|--dry-run] [--inplace| [<object>]]
  git-flow drop-cache
         [-B|--batch] [-v|--verbose] [-p|--pretty]
@@ -47,6 +47,8 @@ Selection Options:
 Workspace Options:
  --root=DIR             The working copy root.
  [default: .]
+ --remote=<remote>      The name of the remote repository to push to
+ [default: origin]
  --config=FILE          The configuration file relative to the working copy root.
                         Defaults to default file name in the following order: .gitflow.yml, gitflow.json
 
