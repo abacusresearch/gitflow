@@ -35,7 +35,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_refs({
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         })
 
     def test_status(self):
@@ -49,13 +49,13 @@ class TestFlow(TestFlowBase):
     def test_bump_major(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -78,13 +78,13 @@ class TestFlow(TestFlowBase):
     def test_bump_minor(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-minor', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -108,7 +108,7 @@ class TestFlow(TestFlowBase):
         exit_code = self.git_flow('bump-minor', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.1',
+            'refs/remotes/' + self.remote_name + '/release/1.1',
             'refs/tags/' + self.version_tag_prefix + '1.1.0-alpha.1'
         })
 
@@ -123,13 +123,13 @@ class TestFlow(TestFlowBase):
     def test_bump_patch(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -163,13 +163,13 @@ class TestFlow(TestFlowBase):
     def test_bump_patch_on_untagged_branch(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -183,7 +183,7 @@ class TestFlow(TestFlowBase):
 
         self.push('-u')
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.1'  # remote branch
+            'refs/remotes/' + self.remote_name + '/release/1.1'  # remote branch
         })
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
@@ -210,13 +210,13 @@ class TestFlow(TestFlowBase):
     def test_bump_prerelease_type(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -249,13 +249,13 @@ class TestFlow(TestFlowBase):
     def test_bump_to_release(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -288,13 +288,13 @@ class TestFlow(TestFlowBase):
     def test_bump_prerelease(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -327,13 +327,13 @@ class TestFlow(TestFlowBase):
     def test_bump_prerelease_type_on_superseded_version_tag(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -373,13 +373,13 @@ class TestFlow(TestFlowBase):
     def test_discontinue_implicitly(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -406,13 +406,13 @@ class TestFlow(TestFlowBase):
     def test_discontinue_explicitly(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -437,7 +437,7 @@ class TestFlow(TestFlowBase):
     def test_begin_end_dev_feature(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         self.assert_head('refs/heads/master')
@@ -458,7 +458,7 @@ class TestFlow(TestFlowBase):
     def test_begin_end_prod_fix(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         self.assert_head('refs/heads/master')
@@ -466,7 +466,7 @@ class TestFlow(TestFlowBase):
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -490,7 +490,7 @@ class TestFlow(TestFlowBase):
             self.commit()
         self.push('-u')
         self.assert_refs(refs, added={
-            'refs/remotes/origin/prod/fix/test-fix'
+            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix'
         })
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
@@ -502,7 +502,7 @@ class TestFlow(TestFlowBase):
     def test_misc(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         }
 
         self.assert_head('refs/heads/master')
@@ -510,7 +510,7 @@ class TestFlow(TestFlowBase):
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/1.0',
+            'refs/remotes/' + self.remote_name + '/release/1.0',
             'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
         })
 
@@ -539,7 +539,7 @@ class TestFlow(TestFlowBase):
             self.commit()
         self.push('-u')
         self.assert_refs(refs, added={
-            'refs/remotes/origin/prod/fix/test-fix'
+            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix'
         })
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
@@ -561,7 +561,7 @@ class TestFlow(TestFlowBase):
             self.commit()
         self.push('-u')
         self.assert_refs(refs, added={
-            'refs/remotes/origin/prod/fix/test-fix2'
+            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix2'
         })
 
         exit_code = self.git_flow('finish')
@@ -611,7 +611,7 @@ class TestFlow(TestFlowBase):
             self.commit()
         self.push('-u')
         self.assert_refs(refs, added={
-            'refs/remotes/origin/dev/feature/test-feature',
+            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature',
         })
 
         exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
@@ -623,7 +623,7 @@ class TestFlow(TestFlowBase):
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         self.assert_refs(refs, added={
-            'refs/remotes/origin/release/2.0',
+            'refs/remotes/' + self.remote_name + '/release/2.0',
             'refs/tags/' + self.version_tag_prefix + '2.0.0-alpha.1',
         })
 

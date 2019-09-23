@@ -38,21 +38,21 @@ class TestFlow(TestFlowBase):
 
         self.assert_refs({
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         })
 
     def create_first_version(self):
         head = self.git_get_hash('master')
         refs = {
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head,
+            'refs/remotes/' + self.remote_name + '/master': head,
         }
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
         head = self.git_get_hash('master')
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head,
+            'refs/remotes/' + self.remote_name + '/master': head,
         }, added={
             'refs/tags/' + self.version_tag_prefix + '1': head
         })
@@ -70,7 +70,7 @@ class TestFlow(TestFlowBase):
         refs = dict()
         self.assert_refs(refs, added={
             'refs/heads/master',
-            'refs/remotes/origin/master'
+            'refs/remotes/' + self.remote_name + '/master'
         })
 
         exit_code = self.git_flow('bump-major', '--assume-yes')
@@ -82,7 +82,7 @@ class TestFlow(TestFlowBase):
             new_tag: head
         }, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head
+            'refs/remotes/' + self.remote_name + '/master': head
         })
 
         self.assert_project_properties_contain({
@@ -101,7 +101,7 @@ class TestFlow(TestFlowBase):
     def test_bump_minor(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master',
+            'refs/remotes/' + self.remote_name + '/master',
         }
 
         exit_code = self.git_flow('bump-minor', '--assume-yes')
@@ -111,7 +111,7 @@ class TestFlow(TestFlowBase):
     def test_bump_patch(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master',
+            'refs/remotes/' + self.remote_name + '/master',
         }
 
         exit_code = self.git_flow('bump-patch', '--assume-yes')
@@ -159,7 +159,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs, updated={
             'refs/heads/dev/feature/test-feature'
         }, added={
-            'refs/remotes/origin/dev/feature/test-feature'
+            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature'
         })
 
         exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
@@ -168,7 +168,7 @@ class TestFlow(TestFlowBase):
 
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head,
+            'refs/remotes/' + self.remote_name + '/master': head,
         })
 
         self.assert_refs(refs)
@@ -176,7 +176,7 @@ class TestFlow(TestFlowBase):
     def test_begin_end_dev_feature_from_another_branch(self):
         refs = {
             'refs/heads/master',
-            'refs/remotes/origin/master',
+            'refs/remotes/' + self.remote_name + '/master',
         }
 
         self.assert_head('refs/heads/master')
@@ -194,7 +194,7 @@ class TestFlow(TestFlowBase):
             self.commit()
         self.push('-u', self.remote_name, 'dev/feature/test-feature')
         self.assert_refs(refs, added={
-            'refs/remotes/origin/dev/feature/test-feature',
+            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature',
         })
 
         self.checkout("master")
@@ -224,7 +224,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs, updated={
             'refs/heads/prod/fix/test-fix'
         }, added={
-            'refs/remotes/origin/prod/fix/test-fix'
+            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix'
         })
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', 'master')
@@ -233,7 +233,7 @@ class TestFlow(TestFlowBase):
         head = self.git_get_hash('master')
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head,
+            'refs/remotes/' + self.remote_name + '/master': head,
         })
 
     def test_misc(self):
@@ -256,7 +256,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs, updated={
             'refs/heads/prod/fix/test-fix': head
         }, added={
-            'refs/remotes/origin/prod/fix/test-fix': head
+            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix': head
         })
 
         exit_code = self.git_flow('finish', 'prod', 'fix', 'test-fix', '1.0')
@@ -264,7 +264,7 @@ class TestFlow(TestFlowBase):
         head = self.git_get_hash('master')
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head
+            'refs/remotes/' + self.remote_name + '/master': head
         })
 
         # hotfix 2 with implicit finish on work branch
@@ -282,7 +282,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs, updated={
             'refs/heads/prod/fix/test-fix2': head
         }, added={
-            'refs/remotes/origin/prod/fix/test-fix2': head,
+            'refs/remotes/' + self.remote_name + '/prod/fix/test-fix2': head,
         })
 
         exit_code = self.git_flow('finish')
@@ -290,7 +290,7 @@ class TestFlow(TestFlowBase):
         head = self.git_get_hash('master')
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head
+            'refs/remotes/' + self.remote_name + '/master': head
         })
 
         # new feature
@@ -312,7 +312,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs, updated={
             'refs/heads/dev/feature/test-feature': head
         }, added={
-            'refs/remotes/origin/dev/feature/test-feature': head
+            'refs/remotes/' + self.remote_name + '/dev/feature/test-feature': head
         })
 
         exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
@@ -320,7 +320,7 @@ class TestFlow(TestFlowBase):
         head = self.git_get_hash('master')
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head
+            'refs/remotes/' + self.remote_name + '/master': head
         })
 
         self.assert_head('refs/heads/master')
@@ -331,7 +331,7 @@ class TestFlow(TestFlowBase):
         head = self.git_get_hash('master')
         self.assert_refs(refs, updated={
             'refs/heads/master': head,
-            'refs/remotes/origin/master': head
+            'refs/remotes/' + self.remote_name + '/master': head
         }, added={
             'refs/tags/' + self.version_tag_prefix + '2': head,
         })
