@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Union
+from typing import Union, List
 
 import semver
 
@@ -184,7 +184,7 @@ def fetch_all_and_ff(context: RepoContext, result_out: Result, remote: [repotool
             None)
 
 
-def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
+def get_branch_classes(context: Context, ref: Union[repotools.Ref, str]) -> List[const.BranchClass]:
     ref_name = repotools.ref_name(ref)
 
     # TODO optimize
@@ -203,6 +203,12 @@ def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
             branch_classes.append(const.BranchClass.WORK_PROD)
         else:
             raise ValueError("invalid prefix: " + prefix)
+    return branch_classes
+
+
+def get_branch_class(context: Context, ref: Union[repotools.Ref, str]):
+    branch_classes = get_branch_classes(context, ref)
+
     if len(branch_classes) == 1:
         branch_class = branch_classes[0]
     elif len(branch_classes) == 0:
