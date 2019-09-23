@@ -5,7 +5,7 @@ from io import StringIO
 from tempfile import TemporaryDirectory
 from typing import Tuple, Optional, Union, List, Callable
 
-from gitflow import __main__
+from gitflow import __main__, repotools, const
 from gitflow.properties import PropertyIO
 
 git_flow_test_installed = os.environ.get('GIT_FLOW_TEST_INSTALLED')
@@ -96,8 +96,74 @@ class TestInTempDir(object):
         self.tempdir.cleanup()
         os.chdir(self.orig_cwd)
 
+
+    def git(self, *args) -> int:
+        proc = subprocess.Popen(args=['git'] + [*args])
+        proc.wait()
+        return proc.returncode
+
+    def git_for_lines(self, *args) -> List[str]:
+        proc = subprocess.Popen(args=args,
+                                stdout=subprocess.PIPE)
+        out, err = proc.communicate()
+        assert proc.returncode == os.EX_OK
+        return out.decode('utf-8').splitlines()
+
+    def git_for_line(self, *args) -> str:
+        lines = self.git_for_lines(*args)
+        assert len(lines) == 1
+        return lines[0]
+
+    def git_get_commit_count(self) -> int:
+        return int(self.git_for_line('git', 'rev-list', '--all', '--count'))
+
+    def git_get_hash(self, object: str) -> str:
+        return self.git_for_line('git', 'rev-parse', object)
+
+    def get_ref_map(self, *args) -> dict:
+        lines = self.git_for_lines('git', 'for-each-ref', '--format', '%(refname);%(objectname)', *args)
+
+        result = dict()
+        for line in lines:
+            entry = line.split(';')
+            result[entry[0]] = entry[1]
+        return result
+
+    def get_ref_set(self, *args) -> set:
+        lines = self.git_for_lines('git', 'for-each-ref', '--format', '%(refname)', *args)
+        return set(lines)
+
+    def commit(self, message: str = None) -> str:
+        # TODO atomic operation
+        if message is None:
+            message = "Test Commit #" + str(self.git_get_commit_count())
+        exit_code = self.git('commit', '--allow-empty', '-m', message)
+        assert exit_code == os.EX_OK
+        return self.git_get_hash('HEAD')
+
+    def add(self, *files: str):
+        exit_code = self.git('add', *files)
+        assert exit_code == os.EX_OK
+
+    def push(self, *args):
+        exit_code = self.git('push', *args)
+        assert exit_code == os.EX_OK
+
+    def checkout(self, branch: str):
+        exit_code = self.git('checkout', branch)
+        assert exit_code == os.EX_OK
+
+    def current_head(self):
+        lines = self.git_for_lines('git', 'rev-parse', '--revs-only', '--symbolic-full-name', 'HEAD')
+        return lines[0]
+
+    def current_head_commit(self):
+        lines = self.git_for_lines('git', 'rev-parse', '--revs-only', 'HEAD')
+        return lines[0]
+
     def git_flow(self, *args) -> int:
         args_ = (['--remote', self.remote_name] if self.remote_name is not None else []) + ['-B'] + [*args]
+        returncode = None
 
         if git_flow_test_installed:
             # git_flow_binary = shutil.which('git-flow')
@@ -107,11 +173,33 @@ class TestInTempDir(object):
             out, err = proc.communicate()
             print(out.decode("utf-8"))
             eprint(err.decode("utf-8"))
-            return proc.returncode
+            returncode = proc.returncode
         else:
-            return __main__.main([__name__] + [*args_])
+            returncode = __main__.main([__name__] + [*args_])
 
-    def git_flow_for_lines(self, *args) -> Tuple[int, str]:
+        return returncode
+
+    def assert_in_sync_with_remote(self, local_ref=None):
+        if local_ref is None:
+            local_ref = self.current_head()
+
+        proc = subprocess.Popen(args=['git', 'for-each-ref', '--count', '1'])
+        proc.wait()
+        if proc.returncode == os.EX_OK:
+            if local_ref.startswith(const.LOCAL_BRANCH_PREFIX):
+                self.git_for_lines('git', 'fetch', self.remote_name)
+
+                refs = self.get_ref_map()
+
+                remote_ref = repotools.create_ref_name(const.REMOTES_PREFIX, self.remote_name,
+                                                        local_ref[len(const.LOCAL_BRANCH_PREFIX):])
+
+                local_hash = refs.get(local_ref)
+                remote_hash = refs.get(remote_ref)
+
+                assert remote_hash is None or local_hash == remote_hash
+
+    def git_flow_for_lines(self, *args) -> Tuple[int, List[str]]:
         prev_stdout = sys.stdout
         sys.stdout = stdout_buf = StringIO()
 
@@ -202,70 +290,6 @@ class TestFlowBase(TestInTempDir):
             assert exit_code == os.EX_OK
         finally:
             super().teardown_method(self)
-
-    def git(self, *args) -> int:
-        proc = subprocess.Popen(args=['git'] + [*args])
-        proc.wait()
-        return proc.returncode
-
-    def git_for_lines(self, *args) -> List[str]:
-        proc = subprocess.Popen(args=args,
-                                stdout=subprocess.PIPE)
-        out, err = proc.communicate()
-        assert proc.returncode == os.EX_OK
-        return out.decode('utf-8').splitlines()
-
-    def git_for_line(self, *args) -> str:
-        lines = self.git_for_lines(*args)
-        assert len(lines) == 1
-        return lines[0]
-
-    def git_get_commit_count(self) -> int:
-        return int(self.git_for_line('git', 'rev-list', '--all', '--count'))
-
-    def git_get_hash(self, object: str) -> str:
-        return self.git_for_line('git', 'rev-parse', object)
-
-    def get_ref_map(self, *args) -> dict:
-        lines = self.git_for_lines('git', 'for-each-ref', '--format', '%(refname);%(objectname)', *args)
-
-        result = dict()
-        for line in lines:
-            entry = line.split(';')
-            result[entry[0]] = entry[1]
-        return result
-
-    def get_ref_set(self, *args) -> set:
-        lines = self.git_for_lines('git', 'for-each-ref', '--format', '%(refname)', *args)
-        return set(lines)
-
-    def commit(self, message: str = None) -> str:
-        # TODO atomic operation
-        if message is None:
-            message = "Test Commit #" + str(self.git_get_commit_count())
-        exit_code = self.git('commit', '--allow-empty', '-m', message)
-        assert exit_code == os.EX_OK
-        return self.git_get_hash('HEAD')
-
-    def add(self, *files: str):
-        exit_code = self.git('add', *files)
-        assert exit_code == os.EX_OK
-
-    def push(self, *args):
-        exit_code = self.git('push', *args)
-        assert exit_code == os.EX_OK
-
-    def checkout(self, branch: str):
-        exit_code = self.git('checkout', branch)
-        assert exit_code == os.EX_OK
-
-    def current_head(self):
-        lines = self.git_for_lines('git', 'rev-parse', '--revs-only', '--symbolic-full-name', 'HEAD')
-        return lines[0]
-
-    def current_head_commit(self):
-        lines = self.git_for_lines('git', 'rev-parse', '--revs-only', 'HEAD')
-        return lines[0]
 
     @staticmethod
     def match_pattern(pattern, value):
