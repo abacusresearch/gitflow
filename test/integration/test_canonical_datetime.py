@@ -188,11 +188,11 @@ class TestFlow(TestFlowBase):
         })
 
         for _ in itertools.repeat(None, 3):
-            self.commit()
+            head = self.commit()
 
         self.push('-u', self.remote_name, 'dev/feature/test-feature')
         self.assert_refs(refs, updated={
-            'refs/heads/dev/feature/test-feature'
+            'refs/heads/dev/feature/test-feature': head
         }, added={
             'refs/remotes/' + self.remote_name + '/dev/feature/test-feature'
         })
@@ -258,10 +258,10 @@ class TestFlow(TestFlowBase):
         self.assert_head('refs/heads/prod/fix/test-fix')
 
         for _ in itertools.repeat(None, 3):
-            self.commit()
+            head = self.commit()
         self.push('-u')
         self.assert_refs(refs, updated={
-            'refs/heads/prod/fix/test-fix'
+            'refs/heads/prod/fix/test-fix': head
         }, added={
             'refs/remotes/' + self.remote_name + '/prod/fix/test-fix'
         })

@@ -280,7 +280,7 @@ class TestFlowBase(TestInTempDir):
 
     def assert_refs(self,
                     refs: dict,
-                    updated: Optional[Union[set, dict]] = None,
+                    updated: Optional[Union[dict]] = None,
                     added: Optional[Union[set, dict]] = None,
                     removed: Optional[Union[set, dict]] = None,
                     key_matcher: Callable = None,
@@ -295,7 +295,7 @@ class TestFlowBase(TestInTempDir):
         if not isinstance(refs, dict):
             raise RuntimeError('refs is not a dict')
         if updated is not None and not isinstance(updated, dict):
-            updated = dict.fromkeys(updated, None)
+            raise RuntimeError('updated is not a dict')
         if added is not None and not isinstance(added, dict):
             added = dict.fromkeys(added, None)
         if removed is not None and not isinstance(removed, dict):
