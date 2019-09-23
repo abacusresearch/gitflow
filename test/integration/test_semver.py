@@ -449,7 +449,7 @@ class TestFlow(TestFlowBase):
 
         for _ in itertools.repeat(None, 3):
             self.commit()
-        self.push('-u', 'origin', 'dev/feature/test-feature')
+        self.push('-u', self.remote_name, 'dev/feature/test-feature')
         exit_code = self.git_flow('finish', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
 

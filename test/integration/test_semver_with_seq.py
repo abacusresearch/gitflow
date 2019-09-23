@@ -505,7 +505,7 @@ class TestFlow(TestFlowBase):
         for _ in itertools.repeat(None, 3):
             self.commit()
 
-        self.push('-u', 'origin', 'dev/feature/test-feature')
+        self.push('-u', self.remote_name, 'dev/feature/test-feature')
         self.assert_refs(refs, added={
             'refs/remotes/origin/dev/feature/test-feature'
         })
@@ -536,7 +536,7 @@ class TestFlow(TestFlowBase):
 
         for _ in itertools.repeat(None, 3):
             self.commit()
-        self.push('-u', 'origin', 'dev/feature/test-feature')
+        self.push('-u', self.remote_name, 'dev/feature/test-feature')
         self.assert_refs(refs, added={
             'refs/remotes/origin/dev/feature/test-feature',
         })

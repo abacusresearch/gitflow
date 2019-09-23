@@ -83,6 +83,7 @@ class SetDiffer(object):
 class TestInTempDir(object):
     tempdir: TemporaryDirectory = None
     orig_cwd: str = None
+    remote_name: str = 'origin'
 
     def setup_method(self, method):
         self.orig_cwd = os.getcwd()
@@ -96,13 +97,13 @@ class TestInTempDir(object):
         os.chdir(self.orig_cwd)
 
     def git_flow(self, *args) -> int:
-        args_ = ['-B'] + [*args]
+        args_ = (['--remote', self.remote_name] if self.remote_name is not None else []) + ['-B'] + [*args]
 
         if git_flow_test_installed:
             # git_flow_binary = shutil.which('git-flow')
             # proc = subprocess.Popen(args=[git_flow_binary, '-B'] + [*args])
             # return proc.wait()
-            proc = subprocess.Popen(args=['git-flow'] + [*args_], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
+            proc = subprocess.Popen(args=['git-flow'] + args_, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
             out, err = proc.communicate()
             print(out.decode("utf-8"))
             eprint(err.decode("utf-8"))
@@ -165,6 +166,10 @@ class TestFlowBase(TestInTempDir):
         proc = subprocess.Popen(args=['git', 'clone', self.git_origin, self.git_working_copy])
         proc.wait()
         assert proc.returncode == os.EX_OK
+        if self.remote_name is not None and self.remote_name != 'origin':
+            proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'remote', 'rename', 'origin', self.remote_name])
+            proc.wait()
+            assert proc.returncode == os.EX_OK
         proc = subprocess.Popen(args=['git', '-C', self.git_working_copy, 'config', 'user.name', 'gitflow'])
         proc.wait()
         assert proc.returncode == os.EX_OK
