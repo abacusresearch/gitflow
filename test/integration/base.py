@@ -42,7 +42,7 @@ class DictDiffer(object):
 
     def changed(self) -> dict:
         return dict(
-            (key, self.a[key]) for key in self.intersect if self.a[key] != self.b[key]
+            (key, (self.a[key], self.b[key])) for key in self.intersect if self.a[key] != self.b[key]
         )
 
     def unchanged(self) -> dict:
@@ -118,11 +118,11 @@ class TestInTempDir(object):
         diff = DictDiffer(expected, actual)
         if diff.has_changed():
             eprint("extra:")
-            eprint(*["    " + key + ": " + value for key, value in diff.added().items()], sep='\n')
+            eprint(*["    " + key + ": " + repr(value) for key, value in diff.added().items()], sep='\n')
             eprint("missing:")
-            eprint(*["    " + key + ": " + str(value) for key, value in diff.removed().items()], sep='\n')
+            eprint(*["    " + key + ": " + repr(value) for key, value in diff.removed().items()], sep='\n')
             eprint("changed:")
-            eprint(*["    " + key + ": " + value for key, value in diff.changed().items()], sep='\n')
+            eprint(*["    " + key + ": " + repr(values[0]) + ", was " + repr(values[1]) for key, values in diff.changed().items()], sep='\n')
 
             assert False, "Mismatching dictionaries"
 
@@ -246,10 +246,13 @@ class TestFlowBase(TestInTempDir):
 
     def assert_refs(self,
                     refs: Optional[Union[set, dict]],
+                    updated: Optional[Union[set, dict]] = None,
                     added: Optional[Union[set, dict]] = None,
                     removed: Optional[Union[set, dict]] = None):
 
         if isinstance(refs, dict):
+            if isinstance(updated, set):
+                updated = dict.fromkeys(updated, None)
             if isinstance(added, set):
                 added = dict.fromkeys(added, None)
             if isinstance(removed, set):
@@ -261,6 +264,15 @@ class TestFlowBase(TestInTempDir):
                 if not added.keys().isdisjoint(removed.keys()):
                     raise ValueError('added and removed elements are not disjoint')
 
+            if updated is not None:
+                if not frozenset(updated.keys()).issubset(frozenset(refs.keys())):
+                    raise ValueError('updated is not a subset of refs')
+                for refname, objectname in updated.items():
+                    if objectname is None:
+                        objectname = actual_refs.get(refname)
+                    else:
+                        objectname = actual_refs.get(objectname) or objectname
+                    refs[refname] = objectname
             if added is not None:
                 if not added.keys().isdisjoint(refs.keys()):
                     raise ValueError('added and refs are not disjoint')
@@ -282,7 +294,7 @@ class TestFlowBase(TestInTempDir):
 
             self.assert_same_pairs(refs, actual_refs)
         else:
-            if isinstance(added, dict) or isinstance(removed, dict):
+            if isinstance(updated, dict) or isinstance(added, dict) or isinstance(removed, dict):
                 raise ValueError('cannot operate on a set using dict operands')
 
             if added is not None and removed is not None:
