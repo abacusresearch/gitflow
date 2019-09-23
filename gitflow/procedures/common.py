@@ -966,6 +966,8 @@ def execute_build_steps(command_context: CommandContext, types: list = None):
     else:
         stages = command_context.context.config.build_stages
 
+    show_output = command_context.context.verbose >= const.INFO_VERBOSITY
+
     for stage in stages:
         for step in stage.steps:
             step_errors = 0
@@ -980,9 +982,10 @@ def execute_build_steps(command_context: CommandContext, types: list = None):
                 if not command_context.context.dry_run:
                     try:
                         proc = subprocess.Popen(args=command,
-                                                stdin=subprocess.PIPE,
+                                                stdout=sys.stdout if show_output else subprocess.DEVNULL,
+                                                stderr=sys.stderr if show_output else subprocess.DEVNULL,
                                                 cwd=command_context.context.root)
-                        proc.wait()
+                        out, err = proc.communicate()
                         if proc.returncode != os.EX_OK:
                             command_context.fail(os.EX_DATAERR,
                                                  _("{stage}:{step} failed.")
