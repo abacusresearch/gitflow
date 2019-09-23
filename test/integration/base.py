@@ -3,7 +3,7 @@ import subprocess
 import sys
 from io import StringIO
 from tempfile import TemporaryDirectory
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, Optional, Union, List, Callable
 
 from gitflow import __main__
 from gitflow.properties import PropertyIO
@@ -28,9 +28,10 @@ class DictDiffer(object):
     (4) keys same in both and unchanged values
     """
 
-    def __init__(self, a: dict, b: dict):
+    def __init__(self, a: dict, b: dict, value_matcher: Optional[Callable] = None):
         self.a = a
         self.b = b
+        self.value_matcher = value_matcher if value_matcher is not None else lambda a, b: a is None or a == b
         self.intersect = set(self.a.keys()).intersection(self.b.keys())
 
     def has_changed(self) -> bool:
@@ -48,7 +49,7 @@ class DictDiffer(object):
 
     def changed(self) -> dict:
         return dict(
-            (key, (self.a[key], self.b[key])) for key in self.intersect if self.a[key] is not None and self.a[key] != self.b[key]
+            (key, (self.a[key], self.b[key])) for key in self.intersect if not self.value_matcher(self.a[key], self.b[key])
         )
 
     def unchanged(self) -> dict:
@@ -134,8 +135,8 @@ class TestInTempDir(object):
 
             assert False, "Mismatching lists"
 
-    def assert_same_pairs(self, expected: dict, actual: dict):
-        diff = DictDiffer(expected, actual)
+    def assert_same_pairs(self, expected: dict, actual: dict, value_matcher: Callable = None):
+        diff = DictDiffer(expected, actual, value_matcher)
         if diff.has_changed():
             eprint("extra:")
             eprint(*["    " + key + ": " + repr(value) for key, value in diff.added().items()], sep='\n')
@@ -252,7 +253,15 @@ class TestFlowBase(TestInTempDir):
                     refs: Union[set, dict],
                     updated: Optional[Union[set, dict]] = None,
                     added: Optional[Union[set, dict]] = None,
-                    removed: Optional[Union[set, dict]] = None):
+                    removed: Optional[Union[set, dict]] = None,
+                    key_matcher: Callable = None,
+                    value_matcher: Callable = None) -> List[str]:
+
+        """
+        :return: added refs ordered as specified in 'added'
+        """
+
+        matched_refs = []
 
         if isinstance(refs, set):
             refs = dict.fromkeys(refs, None)
@@ -281,17 +290,35 @@ class TestFlowBase(TestInTempDir):
         if added is not None:
             if not added.keys().isdisjoint(refs.keys()):
                 raise ValueError('added and refs are not disjoint')
-            for refname, objectname in added.items():
-                if objectname is None:
-                    objectname = actual_refs.get(refname)
+            for refname in list(added.keys()):
+                objectname = added[refname]
+                if not isinstance(refname, str):
+                    matched_ref = None
+                    for actual_refname, actual_objectname in actual_refs.items():
+                        if key_matcher(refname, actual_refname):
+                            matched_ref = actual_refname
+                            del added[refname]
+                            added[matched_ref] = objectname
+                            break
+
+                    if matched_ref is None:
+                        raise RuntimeError('no ref matched the specified pattern')
+
+                    matched_refs.append(matched_ref)
                 else:
-                    objectname = actual_refs.get(objectname) or objectname
-                refs[refname] = objectname
+                    matched_refs.append(refname)
+                    if objectname is None:
+                        objectname = actual_refs.get(refname)
+                    else:
+                        objectname = actual_refs.get(objectname) or objectname
+                    refs[refname] = objectname
         if removed is not None:
             if not removed.keys() <= refs.keys():
                 raise ValueError('refs is not a superset of removed')
 
         self.assert_same_pairs(refs, actual_refs)
+
+        return matched_refs
 
     def assert_first_parent(self, object: str, expected_parent: str):
         rev_entry = self.git_for_line('git', 'rev-list', '--parents', '--first-parent', '--max-count=1', object).split(
