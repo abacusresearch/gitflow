@@ -141,6 +141,7 @@ class AbstractContext(object):
 
 
 class Context(AbstractContext):
+    config_properties: dict = {}
     config: Config = None
     repo: RepoContext = None
 
@@ -155,12 +156,26 @@ class Context(AbstractContext):
     pretty = False
 
     # matchers
-    release_base_branch_matcher: VersionMatcher = None
-    release_branch_matcher: VersionMatcher = None
-    work_branch_matcher: VersionMatcher = None
+    # TODO remove
+    @property
+    def release_base_branch_matcher(self) -> VersionMatcher:
+        return self.versioning_scheme.release_base_branch_matcher
 
-    version_tag_matcher: VersionMatcher = None
-    discontinuation_tag_matcher: VersionMatcher = None
+    @property
+    def release_branch_matcher(self) -> VersionMatcher:
+        return self.versioning_scheme.release_branch_matcher
+
+    @property
+    def work_branch_matcher(self) -> VersionMatcher:
+        return self.versioning_scheme.work_branch_matcher
+
+    @property
+    def version_tag_matcher(self) -> VersionMatcher:
+        return self.versioning_scheme.version_tag_matcher
+
+    @property
+    def discontinuation_tag_matcher(self) -> VersionMatcher:
+        return self.versioning_scheme.discontinuation_tag_matcher
 
     # version scheme implementation
     versioning_scheme: VersioningSchemeImpl = None
@@ -256,6 +271,8 @@ class Context(AbstractContext):
                 config = PropertyIO.get_instance_by_filename(gitflow_config_file).from_stream(json_file)
         else:
             config = object()
+
+        context.config_properties = config
 
         build_config_json = config.get(const.CONFIG_BUILD)
 
@@ -374,11 +391,14 @@ class Context(AbstractContext):
                             _("The versioning scheme {versioning_scheme} is invalid.").format(
                                 versioning_scheme=utils.quote(versioning_scheme, '\'')))
 
+        context.config.remote_name = "origin"
         context.config.version_config.versioning_scheme = const.VERSIONING_SCHEMES[versioning_scheme]
+        context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
+                                                        const.DEFAULT_RELEASE_BRANCH_BASE)
 
         if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER:
             from gitflow.procedures.scheme.semver import SemVer
-            context.versioning_scheme = SemVer(context.config.version_config.initial_version)
+            context.versioning_scheme = SemVer(context)
 
             qualifiers = config.get(const.CONFIG_VERSION_TYPES, const.DEFAULT_PRE_RELEASE_QUALIFIERS)
             if isinstance(qualifiers, str):
@@ -393,7 +413,7 @@ class Context(AbstractContext):
             context.config.version_config.initial_version = const.DEFAULT_INITIAL_VERSION
         elif context.config.version_config.versioning_scheme == VersioningScheme.SEMVER_WITH_SEQ:
             from gitflow.procedures.scheme.semver import SemVer
-            context.versioning_scheme = SemVer(context.config.version_config.initial_version)
+            context.versioning_scheme = SemVer(context)
 
             context.config.version_config.qualifiers = None
             context.config.version_config.initial_version = const.DEFAULT_INITIAL_SEQ_VERSION
@@ -403,64 +423,6 @@ class Context(AbstractContext):
 
             context.config.version_config.qualifiers = None
             context.config.version_config.initial_version = '1'
-
-        # branch config
-
-        context.config.remote_name = "origin"
-        context.config.release_branch_base = config.get(const.CONFIG_RELEASE_BRANCH_BASE,
-                                                        const.DEFAULT_RELEASE_BRANCH_BASE)
-
-        remote_prefix = repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)
-
-        context.release_base_branch_matcher = VersionMatcher(
-            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
-            None,
-            re.escape(context.config.release_branch_base),
-        )
-
-        context.release_branch_matcher = VersionMatcher(
-            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
-            config.get(
-                const.CONFIG_RELEASE_BRANCH_PREFIX,
-                const.DEFAULT_RELEASE_BRANCH_PREFIX),
-            config.get(
-                const.CONFIG_RELEASE_BRANCH_PATTERN,
-                const.DEFAULT_RELEASE_BRANCH_PATTERN),
-        )
-
-        context.work_branch_matcher = VersionMatcher(
-            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
-            [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
-            config.get(
-                const.CONFIG_WORK_BRANCH_PATTERN,
-                const.DEFAULT_WORK_BRANCH_PATTERN),
-        )
-
-        context.version_tag_matcher = VersionMatcher(
-            [const.LOCAL_TAG_PREFIX],
-            config.get(
-                const.CONFIG_VERSION_TAG_PREFIX,
-                const.DEFAULT_VERSION_TAG_PREFIX),
-            config.get(
-                const.CONFIG_VERSION_TAG_PATTERN,
-                const.DEFAULT_SEMVER_VERSION_TAG_PATTERN
-                if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER
-                else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN)
-        )
-        context.version_tag_matcher.group_unique_code = None \
-            if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER \
-            else 'prerelease_type'
-
-        context.discontinuation_tag_matcher = VersionMatcher(
-            [const.LOCAL_TAG_PREFIX],
-            config.get(
-                const.CONFIG_DISCONTINUATION_TAG_PREFIX,
-                const.DEFAULT_DISCONTINUATION_TAG_PREFIX),
-            config.get(
-                const.CONFIG_DISCONTINUATION_TAG_PATTERN,
-                const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
-            None
-        )
 
         return context
 

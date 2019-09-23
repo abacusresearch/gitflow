@@ -1,5 +1,9 @@
+import re
+
 import semver
 
+from gitflow import const, repotools
+from gitflow.const import VersioningScheme
 from gitflow.context import Context
 from gitflow.procedures.scheme import scheme_procedures
 from gitflow.procedures.scheme.versioning_scheme import VersioningSchemeImpl
@@ -7,13 +11,66 @@ import gitflow.procedures.create_version
 import gitflow.procedures.discontinue_version
 import gitflow.procedures.begin
 import gitflow.procedures.end
+from gitflow.version import VersionMatcher
 
 
 class SemVer(VersioningSchemeImpl):
     __initial_version: str = None
 
-    def __init__(self, initial_version: str):
-        self.__initial_version = initial_version
+    def __init__(self, context: Context):
+        self.__initial_version = context.config.version_config.initial_version
+
+        remote_prefix = repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)
+
+        self.release_base_branch_matcher = VersionMatcher(
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
+            None,
+            re.escape(context.config.release_branch_base),
+        )
+
+        self.release_branch_matcher = VersionMatcher(
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
+            context.config_properties.get(
+                const.CONFIG_RELEASE_BRANCH_PREFIX,
+                const.DEFAULT_RELEASE_BRANCH_PREFIX),
+            context.config_properties.get(
+                const.CONFIG_RELEASE_BRANCH_PATTERN,
+                const.DEFAULT_RELEASE_BRANCH_PATTERN),
+        )
+
+        self.work_branch_matcher = VersionMatcher(
+            [const.LOCAL_BRANCH_PREFIX, remote_prefix],
+            [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
+            context.config_properties.get(
+                const.CONFIG_WORK_BRANCH_PATTERN,
+                const.DEFAULT_WORK_BRANCH_PATTERN),
+        )
+
+        self.version_tag_matcher = VersionMatcher(
+            [const.LOCAL_TAG_PREFIX],
+            context.config_properties.get(
+                const.CONFIG_VERSION_TAG_PREFIX,
+                const.DEFAULT_VERSION_TAG_PREFIX),
+            context.config_properties.get(
+                const.CONFIG_VERSION_TAG_PATTERN,
+                const.DEFAULT_SEMVER_VERSION_TAG_PATTERN
+                if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER
+                else const.DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN)
+        )
+        self.version_tag_matcher.group_unique_code = None \
+            if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER \
+            else 'prerelease_type'
+
+        self.discontinuation_tag_matcher = VersionMatcher(
+            [const.LOCAL_TAG_PREFIX],
+            context.config_properties.get(
+                const.CONFIG_DISCONTINUATION_TAG_PREFIX,
+                const.DEFAULT_DISCONTINUATION_TAG_PREFIX),
+            context.config_properties.get(
+                const.CONFIG_DISCONTINUATION_TAG_PATTERN,
+                const.DEFAULT_DISCONTINUATION_TAG_PATTERN),
+            None
+        )
 
     def get_initial_version(self):
         return self.__initial_version
