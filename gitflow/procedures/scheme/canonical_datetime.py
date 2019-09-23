@@ -79,7 +79,7 @@ class CanonicalDateTime(VersioningSchemeImpl):
             date = commit.commit_date
         else:
             date = datetime.datetime.now(tz=pytz.timezone('UTC'))
-        return "%d%d%d%d%d%d" % (date.year, date.month, date.day, date.hour, date.minute, date.second)
+        return "%d%02d%02d%02d%02d%02d" % (date.year, date.month, date.day, date.hour, date.minute, date.second)
 
     def parse_version_info(self, version: str) -> semver.VersionInfo:
         return semver.VersionInfo(major=int(version.split('.')[0]), minor=0, patch=0)
