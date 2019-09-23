@@ -11,7 +11,7 @@ import gitflow.procedures.create_version
 import gitflow.procedures.discontinue_version
 import gitflow.procedures.begin
 import gitflow.procedures.end
-from gitflow.version import VersionMatcher
+from gitflow.version import SemVerVersionMatcher
 
 
 class SemVer(VersioningSchemeImpl):
@@ -22,13 +22,13 @@ class SemVer(VersioningSchemeImpl):
 
         remote_prefix = repotools.create_ref_name(const.REMOTES_PREFIX, context.config.remote_name)
 
-        self.release_base_branch_matcher = VersionMatcher(
+        self.release_base_branch_matcher = SemVerVersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             None,
             re.escape(context.config.release_branch_base),
         )
 
-        self.release_branch_matcher = VersionMatcher(
+        self.release_branch_matcher = SemVerVersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             context.config_properties.get(
                 const.CONFIG_RELEASE_BRANCH_PREFIX,
@@ -38,7 +38,7 @@ class SemVer(VersioningSchemeImpl):
                 const.DEFAULT_RELEASE_BRANCH_PATTERN),
         )
 
-        self.work_branch_matcher = VersionMatcher(
+        self.work_branch_matcher = SemVerVersionMatcher(
             [const.LOCAL_BRANCH_PREFIX, remote_prefix],
             [const.BRANCH_PREFIX_DEV, const.BRANCH_PREFIX_PROD],
             context.config_properties.get(
@@ -46,7 +46,7 @@ class SemVer(VersioningSchemeImpl):
                 const.DEFAULT_WORK_BRANCH_PATTERN),
         )
 
-        self.version_tag_matcher = VersionMatcher(
+        self.version_tag_matcher = SemVerVersionMatcher(
             [const.LOCAL_TAG_PREFIX],
             context.config_properties.get(
                 const.CONFIG_VERSION_TAG_PREFIX,
@@ -61,7 +61,7 @@ class SemVer(VersioningSchemeImpl):
             if context.config.version_config.versioning_scheme == VersioningScheme.SEMVER \
             else 'prerelease_type'
 
-        self.discontinuation_tag_matcher = VersionMatcher(
+        self.discontinuation_tag_matcher = SemVerVersionMatcher(
             [const.LOCAL_TAG_PREFIX],
             context.config_properties.get(
                 const.CONFIG_DISCONTINUATION_TAG_PREFIX,

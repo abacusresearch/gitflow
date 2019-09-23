@@ -75,7 +75,7 @@ class VersionDelta(object):
         return result
 
 
-class VersionMatcher(object):
+class SemVerVersionMatcher(object):
     pattern = None
     group_major = None
     group_minor = None

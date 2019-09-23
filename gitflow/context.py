@@ -13,7 +13,7 @@ from gitflow.const import VersioningScheme
 from gitflow.procedures.scheme.versioning_scheme import VersioningSchemeImpl
 from gitflow.properties import PropertyIO
 from gitflow.repotools import RepoContext
-from gitflow.version import VersionMatcher, VersionConfig
+from gitflow.version import SemVerVersionMatcher, VersionConfig
 
 
 class BuildStepType(Enum):
@@ -158,23 +158,23 @@ class Context(AbstractContext):
     # matchers
     # TODO remove
     @property
-    def release_base_branch_matcher(self) -> VersionMatcher:
+    def release_base_branch_matcher(self) -> SemVerVersionMatcher:
         return self.versioning_scheme.release_base_branch_matcher
 
     @property
-    def release_branch_matcher(self) -> VersionMatcher:
+    def release_branch_matcher(self) -> SemVerVersionMatcher:
         return self.versioning_scheme.release_branch_matcher
 
     @property
-    def work_branch_matcher(self) -> VersionMatcher:
+    def work_branch_matcher(self) -> SemVerVersionMatcher:
         return self.versioning_scheme.work_branch_matcher
 
     @property
-    def version_tag_matcher(self) -> VersionMatcher:
+    def version_tag_matcher(self) -> SemVerVersionMatcher:
         return self.versioning_scheme.version_tag_matcher
 
     @property
-    def discontinuation_tag_matcher(self) -> VersionMatcher:
+    def discontinuation_tag_matcher(self) -> SemVerVersionMatcher:
         return self.versioning_scheme.discontinuation_tag_matcher
 
     # version scheme implementation
