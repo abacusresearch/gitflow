@@ -249,6 +249,17 @@ class TestFlowBase(TestInTempDir):
         lines = self.git_for_lines('git', 'rev-parse', '--revs-only', 'HEAD')
         return lines[0]
 
+    @staticmethod
+    def match_pattern(pattern, value):
+        if isinstance(pattern, list):
+            return int(value) >= int(pattern[0]) and int(value) <= int(pattern[1])
+        elif isinstance(pattern, str):
+            return value == pattern
+        elif isinstance(pattern, Callable):
+            return pattern(value)
+        else:
+            raise RuntimeError("illegal argument: pattern type is not supported: " + type(pattern))
+
     def assert_refs(self,
                     refs: Union[set, dict],
                     updated: Optional[Union[set, dict]] = None,
@@ -332,11 +343,15 @@ class TestFlowBase(TestInTempDir):
         current_head = self.current_head()
         assert current_head == expected
 
-    def assert_project_properties_contain(self, expected: dict):
-        property_reader = PropertyIO.get_instance_by_filename(self.project_property_file)
+    def load_project_properties(self):
         try:
+            property_reader = PropertyIO.get_instance_by_filename(self.project_property_file)
             actual = property_reader.from_file(self.project_property_file)
         except FileNotFoundError:
             actual = dict()
+        return actual
+
+    def assert_project_properties_contain(self, expected: dict):
+        actual = self.load_project_properties()
 
         self.assert_same_pairs(expected, actual)

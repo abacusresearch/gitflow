@@ -1,13 +1,32 @@
 import itertools
 import os
+import re
 
 from gitflow import const
+from gitflow.procedures.scheme.canonical_datetime import CanonicalDateTime
 from gitflow.properties import PropertyIO
 from test.integration.base import TestFlowBase
 
 
 class TestFlow(TestFlowBase):
     version_tag_prefix: str = None
+
+    def version_from_tag_ref(self, ref: str) -> str:
+        match = re.match('^refs/tags/(\d+)$', ref)
+        if match is None:
+            return None
+        return match.group(1)
+
+    def match_tag_range(self, value: str, expected_earliest, expected_latest) -> bool:
+        version = self.version_from_tag_ref(value)
+
+        if version is None:
+            return False
+
+        return int(expected_earliest) <= int(version) <= int(expected_latest)
+
+    def version_tag(self, expected_version_range: list):
+        return lambda value: self.match_tag_range(value, expected_version_range[0], expected_version_range[1])
 
     def setup_method(self, method):
         TestFlowBase.setup_method(self, method)
@@ -56,7 +75,10 @@ class TestFlow(TestFlowBase):
         }, added={
             'refs/tags/' + self.version_tag_prefix + '1': head
         })
-        return refs
+
+        properties = self.load_project_properties()
+
+        return refs, properties
 
     def test_status(self):
         exit_code = self.git_flow('status')
@@ -73,20 +95,25 @@ class TestFlow(TestFlowBase):
             'refs/remotes/origin/master'
         })
 
+        expected_version_range = []
+        expected_version_range.append(CanonicalDateTime.generate_version())
+
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
 
+        expected_version_range.append(CanonicalDateTime.generate_version())
+
         head = self.git_get_hash('master')
         new_tag = 'refs/tags/' + self.version_tag_prefix + '1'
-        self.assert_refs(refs, added={
-            new_tag: head
+        added_refs = self.assert_refs(refs, added={
+            self.version_tag(expected_version_range): head
         }, updated={
             'refs/heads/master': head,
             'refs/remotes/origin/master': head
-        })
+        }, key_matcher=TestFlowBase.match_pattern)
 
         self.assert_project_properties_contain({
-            'version': '1',
+            'version': self.version_from_tag_ref(added_refs[0]),
         })
 
         # the head commit is the base of a release branch, further bumps shall not be possible
@@ -95,7 +122,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs)
 
         self.assert_project_properties_contain({
-            'version': '1',
+            'version': self.version_from_tag_ref(added_refs[0]),
         })
 
     def test_bump_minor(self):
@@ -119,31 +146,26 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs)
 
     def test_discontinue_implicitly(self):
-        refs = self.create_first_version()
+        refs, properties = self.create_first_version()
 
         exit_code = self.git_flow('discontinue', '--assume-yes')
         assert exit_code == os.EX_USAGE
         self.assert_refs(refs, added={})
 
-        self.assert_project_properties_contain({
-            'version': '1'
-        })
-
         self.assert_refs(refs)
+        self.assert_project_properties_contain(properties)
 
     def test_discontinue_explicitly(self):
-        refs = self.create_first_version()
+        refs, properties = self.create_first_version()
 
         exit_code = self.git_flow('discontinue', '--assume-yes', '1')
         assert exit_code == os.EX_USAGE
-        self.assert_refs(refs)
 
-        self.assert_project_properties_contain({
-            'version': '1'
-        })
+        self.assert_refs(refs)
+        self.assert_project_properties_contain(properties)
 
     def test_begin_end_dev_feature(self):
-        refs = self.create_first_version()
+        refs, properties = self.create_first_version()
 
         exit_code = self.git_flow('start', 'dev', 'feature', 'test-feature')
         assert exit_code == os.EX_OK
@@ -172,6 +194,8 @@ class TestFlow(TestFlowBase):
         })
 
         self.assert_refs(refs)
+        
+        self.assert_project_properties_contain(properties)
 
     def test_begin_end_dev_feature_from_another_branch(self):
         refs = {
@@ -208,7 +232,7 @@ class TestFlow(TestFlowBase):
         self.assert_refs(refs)
 
     def test_begin_end_prod_fix(self):
-        refs = self.create_first_version()
+        refs, properties = self.create_first_version()
 
         exit_code = self.git_flow('start', 'prod', 'fix', 'test-fix')
         assert exit_code == os.EX_OK
@@ -237,7 +261,7 @@ class TestFlow(TestFlowBase):
         })
 
     def test_misc(self):
-        refs = self.create_first_version()
+        refs, properties = self.create_first_version()
 
         self.assert_head('refs/heads/master')
 
@@ -326,16 +350,23 @@ class TestFlow(TestFlowBase):
         self.assert_head('refs/heads/master')
 
         # new major version
+
+        expected_version_range = []
+        expected_version_range.append(CanonicalDateTime.generate_version())
+
         exit_code = self.git_flow('bump-major', '--assume-yes')
         assert exit_code == os.EX_OK
+
+        expected_version_range.append(CanonicalDateTime.generate_version())
+
         head = self.git_get_hash('master')
-        self.assert_refs(refs, updated={
+        added_refs = self.assert_refs(refs, updated={
             'refs/heads/master': head,
             'refs/remotes/origin/master': head
         }, added={
-            'refs/tags/' + self.version_tag_prefix + '2': head,
-        })
+            self.version_tag(expected_version_range): head,
+        }, key_matcher=TestFlowBase.match_pattern)
 
         self.assert_project_properties_contain({
-            'version': '2'
+            'version': self.version_from_tag_ref(added_refs[0])
         })

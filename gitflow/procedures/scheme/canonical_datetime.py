@@ -73,9 +73,13 @@ class CanonicalDateTime(VersioningSchemeImpl):
             None
         )
 
-    def get_initial_version(self):
-        now = datetime.datetime.now(tz=pytz.timezone('UTC'))
-        return "%d%d%d%d%d%d" % now.year, now.month, now.day, now.hour, now.minute, now.second
+    @staticmethod
+    def generate_version(commit: Optional[CommitInfo] = None):
+        if commit is not None and commit.date is not None:
+            date = commit.commit_date
+        else:
+            date = datetime.datetime.now(tz=pytz.timezone('UTC'))
+        return "%d%d%d%d%d%d" % (date.year, date.month, date.day, date.hour, date.minute, date.second)
 
     def parse_version_info(self, version: str) -> semver.VersionInfo:
         return semver.VersionInfo(major=int(version.split('.')[0]), minor=0, patch=0)
@@ -115,7 +119,7 @@ class CanonicalDateTime(VersioningSchemeImpl):
                            fail_message=_("Version creation failed.")
                            )
 
-        tag_result = create_branchless_version_tag(command_context, version_bump_integer)
+        tag_result = create_branchless_version_tag(command_context, version_bump_timestamp)
         command_context.add_subresult(tag_result)
 
         if not command_context.has_errors() \
@@ -132,9 +136,9 @@ class CanonicalDateTime(VersioningSchemeImpl):
         return gitflow.procedures.end.call(context)
 
 
-def version_bump_integer(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
+def version_bump_timestamp(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
-    result.value = str(int(version) + 1)
+    result.value = CanonicalDateTime.generate_version(None)
     return result
 
 
@@ -294,7 +298,7 @@ def create_branchless_version_tag(command_context: CommandContext,
         if result.has_errors():
             return result
     else:
-        new_version = '1'
+        new_version = CanonicalDateTime.generate_version(None)
 
     new_sequential_version = None
 

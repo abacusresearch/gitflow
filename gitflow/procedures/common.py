@@ -32,6 +32,8 @@ class CommitInfo(object):
     message_parts: list = None
     parents: list = None
     files: list = None
+    commit_date: str = None
+    author_date: str = None
 
     def __init__(self):
         self.message_parts = list()
