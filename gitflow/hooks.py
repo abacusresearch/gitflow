@@ -20,7 +20,6 @@ def pre_commit(context: Context) -> Result:
                               ref=target_ref,
                               branch_classes=None,
                               modifiable=True,
-                              with_upstream=False,
                               in_sync_with_upstream=False,
                               fail_message=_("Commit rejected."),
                               throw=False
@@ -52,7 +51,6 @@ def pre_push(context: Context) -> Result:
                                   ref=command_context.selected_ref,
                                   branch_classes=None,
                                   modifiable=True,
-                                  with_upstream=False,
                                   in_sync_with_upstream=False,
                                   fail_message=_("Push rejected."),
                                   throw=False

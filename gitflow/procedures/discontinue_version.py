@@ -35,7 +35,6 @@ def call(context: Context) -> Result:
                        ref=release_branch,
                        branch_classes=[BranchClass.RELEASE],
                        modifiable=True,
-                       with_upstream=True,  # not context.config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Build failed.")
                        )

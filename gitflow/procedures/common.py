@@ -739,7 +739,6 @@ def check_requirements(command_context: CommandContext,
                        ref: repotools.Ref,
                        branch_classes: Union[list, None],
                        modifiable: bool,
-                       with_upstream: bool,
                        in_sync_with_upstream: bool,
                        fail_message: str,
                        allow_unversioned_changes: bool = None,
@@ -758,12 +757,14 @@ def check_requirements(command_context: CommandContext,
     if ref.local_branch_name is not None:
         # check, whether the  selected branch/commit is on remote
 
-        if with_upstream and command_context.selected_branch.upstream is None:
-            command_context.error(os.EX_USAGE,
-                                  fail_message,
-                                  _("{branch} does not have an upstream branch.")
-                                  .format(branch=repr(ref.name)),
-                                  throw)
+        upstream_ref = repotools.create_ref_name(const.REMOTES_PREFIX, command_context.context.config.remote_name, ref.local_branch_name)
+
+        # if with_upstream and command_context.selected_branch.upstream is None:
+        #     command_context.error(os.EX_USAGE,
+        #                           fail_message,
+        #                           _("{branch} does not have an upstream branch.")
+        #                           .format(branch=repr(ref.name)),
+        #                           throw)
 
         # if branch_info.upstream.short_name != selected_ref.short_name:
         #     result.error(os.EX_USAGE,
@@ -773,15 +774,15 @@ def check_requirements(command_context: CommandContext,
         #                         remote_branch=repr(branch_info.upstream.name))
         #                 )
 
-        if in_sync_with_upstream and command_context.selected_branch.upstream is not None:
+        if in_sync_with_upstream and upstream_ref is not None:
             push_merge_base = repotools.git_merge_base(command_context.context.repo, command_context.selected_commit,
-                                                       command_context.selected_branch.upstream)
+                                                       upstream_ref)
             if push_merge_base is None:
                 command_context.error(os.EX_USAGE,
                                       fail_message,
                                       _("{branch} does not have a common base with its upstream branch: {remote_branch}")
                                       .format(branch=repr(ref.name),
-                                              remote_branch=repr(command_context.selected_branch.upstream.name)),
+                                              remote_branch=repr(upstream_ref)),
                                       throw)
             elif push_merge_base != command_context.selected_commit:
                 command_context.error(os.EX_USAGE,
@@ -789,7 +790,7 @@ def check_requirements(command_context: CommandContext,
                                       _("{branch} is not in sync with its upstream branch.\n"
                                         "Push your changes and try again.")
                                       .format(branch=repr(ref.name),
-                                              remote_branch=repr(command_context.selected_branch.upstream.name)),
+                                              remote_branch=repr(upstream_ref)),
                                       throw)
 
     # discontinuation_tags, discontinuation_tag_name = get_discontinuation_tags(command_context.context, ref)

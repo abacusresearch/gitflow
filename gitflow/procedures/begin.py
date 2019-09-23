@@ -21,7 +21,6 @@ def call(context: Context) -> Result:
                        ref=command_context.selected_ref,
                        branch_classes=None,
                        modifiable=True,
-                       with_upstream=True,  # not context.config.push_to_local
                        in_sync_with_upstream=True,
                        fail_message=_("Version creation failed.")
                        )

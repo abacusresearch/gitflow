@@ -41,7 +41,6 @@ def call(context: Context):
                            ref=build_command_context.selected_ref,
                            branch_classes=None,
                            modifiable=True,
-                           with_upstream=True,  # not context.config.push_to_local
                            in_sync_with_upstream=True,
                            fail_message=_("Build failed."),
                            allow_unversioned_changes=False
