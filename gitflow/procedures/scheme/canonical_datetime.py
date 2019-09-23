@@ -40,7 +40,7 @@ class CanonicalDateTime(VersioningSchemeImpl):
             None,
             context.config_properties.get(
                 const.CONFIG_RELEASE_BRANCH_PATTERN,
-                const.DEFAULT_RELEASE_BRANCH_PATTERN),
+                const.DEFAULT_CENTRAL_RELEASE_BRANCH_PATTERN),
         )
 
         self.work_branch_matcher = IncrementalVersionMatcher(

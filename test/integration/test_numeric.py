@@ -21,9 +21,9 @@ class TestFlow(TestFlowBase):
             const.CONFIG_VERSION_PROPERTY: 'version',
             const.CONFIG_SEQUENCE_NUMBER_PROPERTY: 'seq',
             const.CONFIG_VERSION_TAG_PREFIX: None,
-            const.CONFIG_VERSION_TAG_PATTERN: '(?P<unique_code>0|[1-9][0-9]*)',
+            # const.CONFIG_VERSION_TAG_PATTERN: ...
             const.CONFIG_RELEASE_BRANCH_PREFIX: None,
-            const.CONFIG_RELEASE_BRANCH_PATTERN: 'master'
+            # const.CONFIG_RELEASE_BRANCH_PATTERN: ...
         }
 
         PropertyIO.write_file(config_file, config)

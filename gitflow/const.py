@@ -71,6 +71,8 @@ DEFAULT_RELEASE_BRANCH_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)'
 
 DEFAULT_WORK_BRANCH_PATTERN = r'(?P<type>feature|fix|chore|issue)/(?P<name>[^/]+)'
 
+DEFAULT_CENTRAL_RELEASE_BRANCH_PATTERN = 'master'
+
 DEFAULT_VERSION_VAR_NAME = 'version'
 DEFAULT_VERSION_TAG_PREFIX = None
 
@@ -82,6 +84,7 @@ DEFAULT_SEMVER_WITH_SEQ_VERSION_TAG_PATTERN = r'(?P<major>\d+)\.(?P<minor>\d+)\.
                                               r'-((?P<prerelease_type>(0|[1-9][0-9]*))?' \
                                               r'([.-](?P<prerelease_version>\d+))?)?'
 
+DEFAULT_NUMERIC_VERSION_TAG_PATTERN = r'(?P<unique_code>0|[1-9][0-9]*)'
 DEFAULT_CANONICAL_DATETIME_VERSION_TAG_PATTERN = r'(?P<unique_code>(?P<year>[0-9]+)(?P<month>[0-9]{2})(?P<day>[0-9]{2})(?P<hour>[0-9]{2})(?P<minute>[0-9]{2})(?P<second>[0-9]{2}))'
 
 DEFAULT_DISCONTINUATION_TAG_PREFIX = 'discontinued/'
