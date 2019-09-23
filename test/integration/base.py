@@ -8,6 +8,12 @@ from typing import Tuple, Optional, Union, List
 from gitflow import __main__
 from gitflow.properties import PropertyIO
 
+git_flow_test_installed = os.environ.get('GIT_FLOW_TEST_INSTALLED')
+if git_flow_test_installed is not None:
+    git_flow_test_installed = int(git_flow_test_installed) != 0
+else:
+    git_flow_test_installed = False
+
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -89,16 +95,30 @@ class TestInTempDir(object):
         os.chdir(self.orig_cwd)
 
     def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-B'] + [*args])
+        args_ = ['-B'] + [*args]
+
+        if git_flow_test_installed:
+            # git_flow_binary = shutil.which('git-flow')
+            # proc = subprocess.Popen(args=[git_flow_binary, '-B'] + [*args])
+            # return proc.wait()
+            proc = subprocess.Popen(args=['git-flow'] + [*args_], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
+            out, err = proc.communicate()
+            print(out.decode("utf-8"))
+            eprint(err.decode("utf-8"))
+            return proc.returncode
+        else:
+            return __main__.main([__name__] + [*args_])
 
     def git_flow_for_lines(self, *args) -> Tuple[int, str]:
         prev_stdout = sys.stdout
         sys.stdout = stdout_buf = StringIO()
 
-        exit_code = __main__.main([__name__, '-B'] + [*args])
+        exit_code = self.git_flow(*args)
 
         sys.stdout.flush()
         out_lines = stdout_buf.getvalue().splitlines()
+        while len(out_lines) and len(out_lines[-1]) == 0:
+            del out_lines[-1]
 
         sys.stdout = prev_stdout
 
@@ -163,22 +183,6 @@ class TestFlowBase(TestInTempDir):
             assert exit_code == os.EX_OK
         finally:
             super().teardown_method(self)
-
-    def git_flow(self, *args) -> int:
-        return __main__.main([__name__, '-B'] + [*args])
-
-    def git_flow_for_lines(self, *args) -> Tuple[int, str]:
-        prev_stdout = sys.stdout
-        sys.stdout = stdout_buf = StringIO()
-
-        exit_code = self.git_flow(*args)
-
-        sys.stdout.flush()
-        out_lines = stdout_buf.getvalue().splitlines()
-
-        sys.stdout = prev_stdout
-
-        return exit_code, out_lines
 
     def git(self, *args) -> int:
         proc = subprocess.Popen(args=['git'] + [*args])
