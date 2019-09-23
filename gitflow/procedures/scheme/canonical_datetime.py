@@ -1,19 +1,26 @@
 import datetime
 import re
+from typing import Optional
 
 import pytz as pytz
 import semver
 
 from gitflow import _, const, repotools
+from gitflow.common import Result
 from gitflow.const import BranchClass
 from gitflow.context import Context
 from gitflow.procedures import create_version
 from gitflow.procedures.common import get_command_context, check_in_repo, check_requirements, fetch_all_and_ff
-from gitflow.procedures.scheme import scheme_procedures
 from gitflow.procedures.scheme.versioning_scheme import VersioningSchemeImpl
-from gitflow.version import IncrementalVersionMatcher, VersionDelta
+from gitflow.version import IncrementalVersionMatcher, VersionDelta, VersionConfig
 import gitflow.procedures.begin
 import gitflow.procedures.end
+
+
+def version_bump_integer(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
+    result = Result()
+    result.value = str(int(version) + 1)
+    return result
 
 
 class CanonicalDateTime(VersioningSchemeImpl):
@@ -110,7 +117,7 @@ class CanonicalDateTime(VersioningSchemeImpl):
                            fail_message=_("Version creation failed.")
                            )
 
-        tag_result = create_version.create_branchless_version_tag(command_context, scheme_procedures.version_bump_integer)
+        tag_result = create_version.create_branchless_version_tag(command_context, version_bump_integer)
         command_context.add_subresult(tag_result)
 
         if not command_context.has_errors() \

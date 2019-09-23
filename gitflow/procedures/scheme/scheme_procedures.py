@@ -29,12 +29,6 @@ def filter_sequence_number(version_config, prev_version, global_seq):
     return global_seq
 
 
-def version_bump_integer(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
-    result = Result()
-    result.value = str(int(version) + 1)
-    return result
-
-
 def version_bump_major(version_config: VersionConfig, version: Optional[str], global_seq: Optional[int]):
     result = Result()
 
