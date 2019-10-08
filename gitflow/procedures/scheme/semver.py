@@ -163,6 +163,7 @@ def create_version_tag(command_context: CommandContext,
     preceding_branch_version_tag = None
     version_tags_on_same_commit = list()
     subsequent_version_tags = list()
+    subsequent_version_tags_on_selected_branch = list()
     enclosing_versions = set()
 
     # abort scan, when a preceding commit for each tag type has been processed.
@@ -250,6 +251,8 @@ def create_version_tag(command_context: CommandContext,
                         preceding_branch_version_tag = version_tag_refs[0]
                 else:
                     subsequent_version_tags.extend(version_tag_refs)
+                    if on_selected_branch:
+                        subsequent_version_tags_on_selected_branch.extend(version_tag_refs)
 
                 for tag_ref in version_tag_refs:
                     enclosing_versions.add(context.version_tag_matcher.format(tag_ref.name))
@@ -398,7 +401,7 @@ def create_version_tag(command_context: CommandContext,
                         )
 
     if not valid_tag:
-        if len(subsequent_version_tags):
+        if len(subsequent_version_tags_on_selected_branch):
             result.fail(os.EX_USAGE,
                         _("Tag creation failed."),
                         _("There are version tags in branch history following the selected commit {commit}:\n"
