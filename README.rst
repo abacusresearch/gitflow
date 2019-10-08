@@ -242,6 +242,20 @@ Python Project
     }
 
 
+API Project
+~~~~~~~~~~~
+::
+
+    {
+
+      "versioningScheme": "canonical_datetime",
+
+      "propertyFile": "rootmodule/config.ini",
+      "versionProperty": "version"
+
+    }
+
+
 Usage
 =====
 See CLI help::

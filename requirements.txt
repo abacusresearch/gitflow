@@ -4,3 +4,4 @@ ansicolors==1.1.8
 appdirs==1.4.3
 PyYAML==5.1.2
 pytz==2019.2
+docopt-subcommands==4.0.0
