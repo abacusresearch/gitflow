@@ -166,6 +166,42 @@ class TestFlow(TestFlowBase):
             'version': '1.0.1-alpha.1'
         })
 
+    def test_bump_patch_on_old_branch(self):
+        refs = {
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
+        }
+
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/1.0',
+            'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
+        })
+
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        exit_code = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/2.0',
+            'refs/tags/' + self.version_tag_prefix + '2.0.0-alpha.1'
+        })
+
+        head = self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/release/1.0')
+
+        exit_code = self.git_flow('bump-patch', '--assume-yes', '1.0')
+        assert exit_code == os.EX_OK
+
+        head = self.current_head()
+
+        self.assert_refs(refs, added={
+            'refs/tags/' + self.version_tag_prefix + '1.0.1-alpha.1'
+        }, updated={
+            'refs/heads/release/1.0': head,
+            'refs/remotes/' + self.remote_name + '/release/1.0': head,
+        })
+
     def test_bump_patch_on_untagged_branch(self):
         refs = {
             'refs/heads/master': None,
