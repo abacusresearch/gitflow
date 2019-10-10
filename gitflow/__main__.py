@@ -2,37 +2,16 @@
 git-flow - Manage version branches and tags
 
 Usage:
- git-flow status
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [(-a|--all) | <object>]
- git-flow (bump-major|bump-minor)
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [-y|--assume-yes] [<object>]
- git-flow (bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release)
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [-y|--assume-yes] [<object>]
- git-flow bump-to
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [-y|--assume-yes] <version> [<object>]
- git-flow discontinue
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [-y|--assume-yes] [--reintegrate|--no-reintegrate] [<object>]
- git-flow start
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [-y|--assume-yes] (<supertype> <type> <name>|<work-branch>) [<base-object>]
- git-flow finish
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [-y|--assume-yes] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
- git-flow log
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [<object>] [-- <git-arg>...]
- git-flow (assemble|test|integration-test)
-        [--root=DIR] [--config=FILE] [--remote=<remote>] [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run] [--inplace| [<object>]]
- git-flow drop-cache
-        [-B|--batch] [-v|--verbose] [-p|--pretty]
-        [-d|--dry-run]
- git-flow convert-config <input-file> <output-file>
+ git-flow [options] status [(-a|--all) | [--] <object>]
+ git-flow [options] (bump-major|bump-minor|bump-patch|bump-prerelease-type|bump-prerelease|bump-to-release) [--] [<object>]
+ git-flow [options] bump-to [--] <version> [<object>]
+ git-flow [options] discontinue [--reintegrate|--no-reintegrate] [--] [<object>]
+ git-flow [options] start [--] (<supertype> <type> <name>|<work-branch>) [<base-object>]
+ git-flow [options] finish [--] [(<supertype> <type> <name>|<work-branch>) [<base-object>]]
+ git-flow [options] log [<object>] [-- <git-arg>...]
+ git-flow [options] (assemble|test|integration-test) [--inplace| [--] [<object>]]
+ git-flow [options] drop-cache
+ git-flow [options] convert-config [--] <input-file> <output-file>
  git-flow (-h|--help)
  git-flow --version
  git-flow --hook=<hook-name> [<hook-args>...]
