@@ -171,7 +171,11 @@ class TestInTempDir(object):
             # git_flow_binary = shutil.which('git-flow')
             # proc = subprocess.Popen(args=[git_flow_binary, '-B'] + [*args])
             # return proc.wait()
-            proc = subprocess.Popen(args=['git-flow'] + args_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            proc_args = ['git-flow'] + args_
+
+            print(' '.join(proc_args))
+
+            proc = subprocess.Popen(args=proc_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     cwd=os.getcwd())
             out, err = proc.communicate()
             print(out.decode("utf-8"))
