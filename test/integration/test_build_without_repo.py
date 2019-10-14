@@ -55,7 +55,7 @@ class TestBuildWithoutRepo(TestInTempDir):
         os.chdir(self.git_working_copy)
 
     def test_assemble(self):
-        exit_code, out_lines = self.git_flow_for_lines('assemble')
+        exit_code, out_lines, err_lines = self.git_flow_for_lines('assemble')
 
         assert exit_code == os.EX_OK
         assert out_lines == [
@@ -63,7 +63,7 @@ class TestBuildWithoutRepo(TestInTempDir):
         ]
 
     def test_assemble_inplace(self):
-        exit_code, out_lines = self.git_flow_for_lines('assemble', '--inplace')
+        exit_code, out_lines, err_lines = self.git_flow_for_lines('assemble', '--inplace')
 
         assert exit_code == os.EX_OK
         assert out_lines == [
@@ -71,7 +71,7 @@ class TestBuildWithoutRepo(TestInTempDir):
         ]
 
     def test_test(self):
-        exit_code, out_lines = self.git_flow_for_lines('test')
+        exit_code, out_lines, err_lines = self.git_flow_for_lines('test')
 
         assert exit_code == os.EX_OK
         assert out_lines == [
@@ -79,7 +79,7 @@ class TestBuildWithoutRepo(TestInTempDir):
         ]
 
     def test_integration_test(self):
-        exit_code, out_lines = self.git_flow_for_lines('integration-test')
+        exit_code, out_lines, err_lines = self.git_flow_for_lines('integration-test')
 
         assert exit_code == os.EX_OK
         assert out_lines == [

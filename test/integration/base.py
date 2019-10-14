@@ -163,9 +163,11 @@ class TestInTempDir(object):
         lines = self.git_for_lines('git', 'rev-parse', '--revs-only', 'HEAD')
         return lines[0]
 
-    def git_flow(self, *args) -> int:
+    def git_flow(self, *args) -> Tuple[int, str, str]:
         args_ = (['--remote', self.remote_name] if self.remote_name is not None else []) + ['-B'] + [*args]
         returncode = None
+        out = ''
+        err = ''
 
         if git_flow_test_installed:
             # git_flow_binary = shutil.which('git-flow')
@@ -178,13 +180,27 @@ class TestInTempDir(object):
             proc = subprocess.Popen(args=proc_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     cwd=os.getcwd())
             out, err = proc.communicate()
-            print(out.decode("utf-8"))
-            eprint(err.decode("utf-8"))
-            returncode = proc.returncode
-        else:
-            returncode = __main__.main([__name__] + [*args_])
 
-        return returncode
+            returncode = proc.returncode
+            out = out.decode('utf-8')
+            err = err.decode('utf-8')
+        else:
+            prev_stdout = sys.stdout
+            prev_stderr = sys.stderr
+
+            sys.stdout = stdout_buf = StringIO()
+            sys.stderr = stderr_buf = StringIO()
+
+            returncode = __main__.main([__name__] + [*args_])
+            out = stdout_buf.getvalue()
+            err = stderr_buf.getvalue()
+
+            sys.stdout = prev_stdout
+            sys.stderr = prev_stderr
+        if len(err):
+            eprint(err)
+
+        return returncode, out, err
 
     def assert_in_sync_with_remote(self, local_ref=None):
         if local_ref is None:
@@ -205,20 +221,18 @@ class TestInTempDir(object):
 
                 assert remote_hash is None or local_hash == remote_hash
 
-    def git_flow_for_lines(self, *args) -> Tuple[int, List[str]]:
-        prev_stdout = sys.stdout
-        sys.stdout = stdout_buf = StringIO()
+    def git_flow_for_lines(self, *args) -> Tuple[int, List[str], List[str]]:
+        exit_code, out, err = self.git_flow(*args)
 
-        exit_code = self.git_flow(*args)
+        out_lines = out.splitlines()
+        err_lines = err.splitlines()
 
-        sys.stdout.flush()
-        out_lines = stdout_buf.getvalue().splitlines()
         while len(out_lines) and len(out_lines[-1]) == 0:
             del out_lines[-1]
+        while len(err_lines) and len(err_lines[-1]) == 0:
+            del err_lines[-1]
 
-        sys.stdout = prev_stdout
-
-        return exit_code, out_lines
+        return exit_code, out_lines, err_lines
 
     def assert_same_elements(self, expected: set, actual: set):
         diff = SetDiffer(expected, actual)
@@ -295,7 +309,7 @@ class TestFlowBase(TestInTempDir):
 
     def teardown_method(self, method):
         try:
-            exit_code = self.git_flow('status')
+            exit_code, out, err = self.git_flow('status')
             assert exit_code == os.EX_OK
         finally:
             super().teardown_method(self)
