@@ -804,13 +804,13 @@ def create_version_branch(command_context: CommandContext,
             execute_version_change_actions(clone_context, latest_branch_version, new_version)
 
         if commit_info is not None:
-            if command_context.selected_commit != command_context.selected_ref.target.obj_name:
-                result.fail(os.EX_USAGE,
-                            _("Failed to commit version update."),
-                            _("The selected parent commit {commit} does not represent the tip of {branch}.")
-                            .format(commit=command_context.selected_commit,
-                                    branch=repr(command_context.selected_ref.name))
-                            )
+            # if command_context.selected_commit != command_context.selected_ref.target.obj_name:
+            #     result.fail(os.EX_USAGE,
+            #                 _("Failed to commit version update."),
+            #                 _("The selected parent commit {commit} does not represent the tip of {branch}.")
+            #                 .format(commit=command_context.selected_commit,
+            #                         branch=repr(command_context.selected_ref.name))
+            #                 )
 
             # commit changes
             commit_info.add_parent(command_context.selected_commit)
