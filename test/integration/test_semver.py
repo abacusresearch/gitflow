@@ -75,6 +75,56 @@ class TestFlow(TestFlowBase):
             'version': '1.0.0-alpha.1'
         })
 
+    def test_bump_first_major_from_commit_behind_head(self):
+        refs = {
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
+        }
+
+        branch_point = self.git_for_line('git', 'rev-parse', 'HEAD')
+
+        self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        exit_code, out, err = self.git_flow('bump-major', '--assume-yes', branch_point)
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/1.0',
+            'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
+        })
+
+        assert branch_point == self.git_for_line('git', 'rev-parse', 'refs/remotes/' + self.remote_name + '/release/1.0^')
+
+    def test_bump_second_major_from_commit_behind_head(self):
+        refs = {
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
+        }
+
+        exit_code, out, err = self.git_flow('bump-major', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/1.0',
+            'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
+        })
+
+        exit_code, out, err = self.git_flow('bump-major', '--assume-yes', 'master')
+        assert exit_code == os.EX_USAGE
+
+        self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        branch_point = self.git_for_line('git', 'rev-parse', 'master')
+
+        self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        exit_code, out, err = self.git_flow('bump-major', '--assume-yes', branch_point)
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/2.0',
+            'refs/tags/' + self.version_tag_prefix + '2.0.0-alpha.1'
+        })
+
+        assert branch_point == self.git_for_line('git', 'rev-parse', 'refs/remotes/' + self.remote_name + '/release/2.0^')
+
     def test_bump_minor(self):
         refs = {
             'refs/heads/master': None,
@@ -116,6 +166,54 @@ class TestFlow(TestFlowBase):
         })
         self.assert_project_properties_contain({
             'version': '1.1.0-alpha.1'
+        })
+
+    def test_bump_first_minor_from_commit_behind_head(self):
+        refs = {
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
+        }
+
+        branch_point = self.git_for_line('git', 'rev-parse', 'HEAD')
+
+        self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        exit_code, out, err = self.git_flow('bump-minor', '--assume-yes', branch_point)
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/1.0',
+            'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
+        })
+
+        assert branch_point == self.git_for_line('git', 'rev-parse', 'refs/remotes/' + self.remote_name + '/release/1.0^')
+
+    def test_bump_second_minor_from_commit_behind_head(self):
+        refs = {
+            'refs/heads/master': None,
+            'refs/remotes/' + self.remote_name + '/master': None
+        }
+
+        exit_code, out, err = self.git_flow('bump-minor', '--assume-yes')
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/1.0',
+            'refs/tags/' + self.version_tag_prefix + '1.0.0-alpha.1'
+        })
+
+        exit_code, out, err = self.git_flow('bump-major', '--assume-yes', 'master')
+        assert exit_code == os.EX_USAGE
+
+        self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        branch_point = self.git_for_line('git', 'rev-parse', 'master')
+
+        self.checkout_commit_and_push(refs=refs, local_branch_name='refs/heads/master')
+
+        exit_code, out, err = self.git_flow('bump-minor', '--assume-yes', branch_point)
+        assert exit_code == os.EX_OK
+        self.assert_refs(refs, added={
+            'refs/remotes/' + self.remote_name + '/release/1.1',
+            'refs/tags/' + self.version_tag_prefix + '1.1.0-alpha.1'
         })
 
     def test_bump_patch(self):
