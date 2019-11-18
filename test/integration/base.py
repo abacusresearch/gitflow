@@ -9,12 +9,7 @@ from typing import Tuple, Optional, Union, List, Callable
 from gitflow import __main__, repotools, const
 from gitflow.properties import PropertyIO
 
-git_flow_test_installed = os.environ.get('GIT_FLOW_TEST_INSTALLED')
-if git_flow_test_installed is not None:
-    git_flow_test_installed = int(git_flow_test_installed) != 0
-else:
-    git_flow_test_installed = False
-
+git_flow_executable = os.environ.get('GIT_FLOW_EXECUTABLE')
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -169,11 +164,8 @@ class TestInTempDir(object):
         out = ''
         err = ''
 
-        if git_flow_test_installed:
-            # git_flow_binary = shutil.which('git-flow')
-            # proc = subprocess.Popen(args=[git_flow_binary, '-B'] + [*args])
-            # return proc.wait()
-            proc_args = ['git-flow'] + args_
+        if git_flow_executable is not None:
+            proc_args = ['bash', git_flow_executable] + args_
 
             print(' '.join(proc_args))
 
