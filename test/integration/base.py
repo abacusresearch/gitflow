@@ -262,6 +262,7 @@ class TestFlowBase(TestInTempDir):
     git_origin: str = None
     git_working_copy: str = None
     project_property_file: str = None
+    refs: dict = {}
 
     def setup_method(self, method):
         super().setup_method(self)
@@ -314,7 +315,7 @@ class TestFlowBase(TestInTempDir):
         finally:
             super().teardown_method(self)
 
-    def checkout_commit_and_push(self, refs: dict, local_branch_name: str):
+    def checkout_commit_and_push(self, local_branch_name: str):
         head = None
 
         assert local_branch_name.startswith(const.LOCAL_BRANCH_PREFIX)
@@ -340,7 +341,7 @@ class TestFlowBase(TestInTempDir):
         (updated if local_exists else added)[local_branch_name] = head
         (updated if remote_exists else added)[remote_branch_name] = head
 
-        self.assert_refs(refs, updated=updated, added=added)
+        self.assert_refs(updated=updated, added=added)
 
         return head
 
@@ -356,12 +357,13 @@ class TestFlowBase(TestInTempDir):
             raise RuntimeError("illegal argument: pattern type is not supported: " + type(pattern))
 
     def assert_refs(self,
-                    refs: dict,
                     updated: Optional[Union[dict]] = None,
                     added: Optional[Union[set, dict]] = None,
                     removed: Optional[Union[set, dict]] = None,
                     key_matcher: Callable = None,
                     value_matcher: Callable = None) -> List[str]:
+
+        refs = self.refs
 
         """
         :return: added refs ordered as specified in 'added'
