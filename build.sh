@@ -11,4 +11,9 @@ pip install -r build_requirements.txt -r requirements.txt -r test_requirements.t
 python setup.py sdist --formats=gztar
 python setup.py bdist
 python setup.py bdist_wheel
-pytest --verbose --workers auto --tests-per-worker 1 test
+
+# run tests
+./test.sh
+
+# run test against the installed package
+./integration_test.sh
