@@ -4,3 +4,7 @@ python:
 
 script:
   - ./build.sh
+
+cache:
+  directories:
+    - $HOME/.cache/pip
